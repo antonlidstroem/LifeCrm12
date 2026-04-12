@@ -1,0 +1,90 @@
+@page "/reports/{Id:guid}"
+@inject ApiClient Api
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+@if (_loading) { <MudProgressLinear Color="Color.Primary" Indeterminate="true" /> }
+else if (_report is not null)
+{
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/reports"))" />
+        <div>
+            <MudText Typo="Typo.h5">@_report.Title</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@_report.ReportDate.ToString("MMMM d, yyyy")@if (!string.IsNullOrEmpty(_report.Location)) { <text> · @_report.Location</text> }</MudText>
+        </div>
+        <MudSpacer />
+        @if (AppState.IsFinanceOrAdmin && _report.Status == ReportStatus.Submitted)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.CheckCircle" OnClick="ApproveReport">Approve</MudButton>
+        }
+    </MudStack>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="3">
+            <MudCard Elevation="2" Class="mb-3">
+                <MudCardContent>
+                    <ReportStatusChip Status="@_report.Status" />
+                    <MudDivider Class="my-3" />
+                    <MudList T="string" Dense="true">
+                        <MudListItem Icon="@Icons.Material.Filled.Person"><MudText Typo="Typo.caption" Color="Color.Secondary">Author</MudText><MudText Typo="Typo.body2">@_report.AuthorName</MudText></MudListItem>
+                        @if (_report.CampaignName is not null) { <MudListItem Icon="@Icons.Material.Filled.Campaign"><MudText Typo="Typo.caption" Color="Color.Secondary">Campaign</MudText><MudLink Href="@($"/campaigns/{_report.CampaignId}")" Typo="Typo.body2">@_report.CampaignName</MudLink></MudListItem> }
+                        @if (_report.ProjectName is not null) { <MudListItem Icon="@Icons.Material.Filled.FolderOpen"><MudText Typo="Typo.caption" Color="Color.Secondary">Project</MudText><MudLink Href="@($"/projects/{_report.ProjectId}")" Typo="Typo.body2">@_report.ProjectName</MudLink></MudListItem> }
+                        @if (_report.ApprovedAt.HasValue) { <MudListItem Icon="@Icons.Material.Filled.Verified"><MudText Typo="Typo.caption" Color="Color.Secondary">Approved</MudText><MudText Typo="Typo.body2">@_report.ApprovedAt.Value.ToLocalTime().ToString("yyyy-MM-dd") by @_report.ApprovedBy</MudText></MudListItem> }
+                    </MudList>
+                    @if (_report.Decisions.Any(d => d.Count > 0))
+                    {
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">Decisions (@_report.DecisionTotal total)</MudText>
+                        @foreach (var d in _report.Decisions.Where(d => d.Count > 0))
+                        {
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" Class="px-2 py-1">
+                                <MudText Typo="Typo.body2">@d.DecisionType</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">@d.Count</MudChip>
+                            </MudStack>
+                        }
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" md="9">
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+                <MudTabPanel Text="Narrative" Icon="@Icons.Material.Filled.Article">
+                    @if (string.IsNullOrWhiteSpace(_report.HtmlBody)) { <EmptyState Title="No narrative" Icon="@Icons.Material.Outlined.Article" /> }
+                    else { <div style="font-family:sans-serif;font-size:15px;color:inherit;line-height:1.7;max-width:720px">@((MarkupString)_report.HtmlBody)</div> }
+                </MudTabPanel>
+                <MudTabPanel Text="@($"Prayer Points ({_report.PrayerPoints.Count})")" Icon="@Icons.Material.Filled.VolunteerActivism">
+                    @foreach (var pp in _report.PrayerPoints)
+                    {
+                        <MudPaper Elevation="0" Class="pa-3 mb-2" Style="border:1px solid var(--mud-palette-divider);border-radius:6px">
+                            <MudText Typo="Typo.body1"><b>@pp.Title</b></MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">@pp.Detail</MudText>
+                            @if (pp.Status == PrayerStatus.Answered && pp.AnsweredAt.HasValue) { <MudAlert Severity="Severity.Success" Dense="true" Class="mt-2">Answered @pp.AnsweredAt.Value.ToLocalTime().ToString("yyyy-MM-dd")@if (!string.IsNullOrEmpty(pp.AnsweredNote)) { <text> — @pp.AnsweredNote</text> }</MudAlert> }
+                        </MudPaper>
+                    }
+                </MudTabPanel>
+            </MudTabs>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private MissionReportDetailDto? _report;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var res = await Api.GetReportAsync(Id);
+        _report = res.Data;
+        if (_report?.Status is ReportStatus.Draft or ReportStatus.ReturnedForRevision) Nav.NavigateTo($"/reports/{Id}/edit");
+        _loading = false;
+    }
+
+    private async Task ApproveReport()
+    {
+        var res = await Api.ApproveReportAsync(Id);
+        if (res.Success) { Snackbar.Add("Report approved.", Severity.Success); var r2 = await Api.GetReportAsync(Id); _report = r2.Data; StateHasChanged(); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+}

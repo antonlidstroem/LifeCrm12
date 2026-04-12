@@ -1,0 +1,63 @@
+@page "/admin/signalr"
+@inject SignalRSettingsApiClient SettingsApi
+@inject AppState AppState
+@inject ISnackbar Snackbar
+
+@if (!AppState.IsAdmin)
+{
+    <MudAlert Severity="Severity.Error">Du har inte behörighet att se den här sidan.</MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.h4" Class="mb-4">SignalR-inställningar</MudText>
+    <MudCard Elevation="2" Style="max-width:480px">
+        <MudCardContent>
+            <MudText Typo="Typo.body1" Class="mb-2">
+                Stäng av realtidsuppdateringar (SignalR) för att minska CPU-belastning.
+                Applikationen fungerar fullt ut oavsett inställning.
+            </MudText>
+            @if (_loading)
+            {
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="48px" />
+            }
+            else
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                    <MudSwitch @bind-Value="_enabled" Color="Color.Primary" Label="@(_enabled ? "Aktiverad" : "Inaktiverad")" Disabled="_saving" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save" Disabled="_saving">
+                        @(_saving ? "Sparar…" : "Spara")
+                    </MudButton>
+                </MudStack>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+                    Ändringen gäller inom 30 sekunder på alla instanser.
+                </MudText>
+            }
+        </MudCardContent>
+    </MudCard>
+}
+
+@code {
+    private bool _enabled = true;
+    private bool _loading = true;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var res = await SettingsApi.GetAsync();
+        _enabled = res.Data;
+        _loading = false;
+    }
+
+    private async Task Save()
+    {
+        _saving = true;
+        var res = await SettingsApi.SetAsync(_enabled);
+        _saving = false;
+        if (res.Success)
+        {
+            AppState.SignalREnabled = _enabled;
+            Snackbar.Add(_enabled ? "SignalR aktiverat." : "SignalR inaktiverat.", Severity.Success);
+        }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Fel.", Severity.Error);
+    }
+}

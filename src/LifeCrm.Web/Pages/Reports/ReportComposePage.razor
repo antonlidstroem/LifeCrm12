@@ -1,0 +1,108 @@
+@page "/reports/{Id:guid}/edit"
+@using System.Timers
+@implements IDisposable
+@inject ApiClient Api
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+@if (_loading) { <MudProgressLinear Color="Color.Primary" Indeterminate="true" /> }
+else if (_report is not null)
+{
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/reports"))" />
+        <MudText Typo="Typo.h5">@(_isDirty ? "✎ " : "")@_title</MudText><MudSpacer />
+        @if (_saving) { <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mr-3">Saving…</MudText> }
+        else if (_lastSaved.HasValue) { <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mr-3">Saved @_lastSaved.Value.ToString("HH:mm:ss")</MudText> }
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Save" OnClick="AutoSave" Disabled="_saving" Class="mr-2">Save</MudButton>
+        @if (_report.Status != ReportStatus.Submitted) { <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Send" OnClick="SubmitReport" Disabled="@string.IsNullOrWhiteSpace(_title)">Submit for approval</MudButton> }
+    </MudStack>
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="8">
+            <MudCard Elevation="2" Class="mb-3">
+                <MudCardContent>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12"><MudTextField @bind-Value="_title" Label="Report title *" Variant="Variant.Outlined" Immediate="true" TextChanged="@((string _) => OnTextChanged())" /></MudItem>
+                        <MudItem xs="12" sm="4"><MudDatePicker @bind-Date="_reportDate" Label="Report date *" Variant="Variant.Outlined" Editable="true" /></MudItem>
+                        <MudItem xs="12" sm="4"><MudTextField @bind-Value="_location" Label="Location" Variant="Variant.Outlined" Immediate="true" TextChanged="@((string _) => OnTextChanged())" /></MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudSelect T="ReportLanguage" @bind-Value="_language" Label="Language" Variant="Variant.Outlined">
+                                <MudSelectItem Value="ReportLanguage.English">English</MudSelectItem>
+                                <MudSelectItem Value="ReportLanguage.Swedish">Swedish</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+            <MudCard Elevation="2" Class="mb-3">
+                <MudCardHeader><CardHeaderContent><MudText Typo="Typo.subtitle1">Field Narrative</MudText></CardHeaderContent></MudCardHeader>
+                <MudCardContent>
+                    <MudTextField @bind-Value="_htmlBody" Variant="Variant.Outlined" Lines="12" Placeholder="Describe what happened in the field. HTML tags supported." Immediate="true" TextChanged="@((string _) => OnTextChanged())" />
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="2" Class="mb-3">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Status</MudText>
+                    <ReportStatusChip Status="@_report.Status" />
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Author: @_report.AuthorName</MudText>
+                </MudCardContent>
+            </MudCard>
+            @if (!string.IsNullOrWhiteSpace(_htmlBody))
+            {
+                <MudCard Elevation="2">
+                    <MudCardHeader><CardHeaderContent><MudText Typo="Typo.subtitle2">Narrative Preview</MudText></CardHeaderContent></MudCardHeader>
+                    <MudCardContent Style="max-height:360px;overflow-y:auto">
+                        <div style="font-family:sans-serif;font-size:14px;color:inherit;line-height:1.6">@((MarkupString)_htmlBody)</div>
+                    </MudCardContent>
+                </MudCard>
+            }
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private string _title = string.Empty, _htmlBody = string.Empty, _location = string.Empty;
+    private DateTime? _reportDate = DateTime.Today;
+    private ReportLanguage _language = ReportLanguage.English;
+    private bool _loading = true, _saving, _isDirty;
+    private DateTime? _lastSaved;
+    private Timer? _saveTimer;
+    private MissionReportDetailDto? _report;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var res = await Api.GetReportAsync(Id);
+        if (res.Data is null) { Nav.NavigateTo("/reports"); return; }
+        _report = res.Data;
+        if (_report.Status == ReportStatus.Approved) { Nav.NavigateTo($"/reports/{Id}"); return; }
+        _title = _report.Title; _htmlBody = _report.HtmlBody; _location = _report.Location ?? string.Empty;
+        _reportDate = _report.ReportDate.ToDateTime(TimeOnly.MinValue); _language = _report.Language;
+        _loading = false;
+        _saveTimer = new Timer(2000) { AutoReset = false };
+        _saveTimer.Elapsed += (_, _) => InvokeAsync(AutoSave);
+    }
+
+    private void OnTextChanged() { _isDirty = true; _saveTimer?.Stop(); _saveTimer?.Start(); StateHasChanged(); }
+
+    private async Task AutoSave()
+    {
+        if (!_isDirty || _saving) return;
+        _saving = true; StateHasChanged();
+        var res = await Api.UpdateReportAsync(Id, new UpdateReportRequest { Id = Id, Title = string.IsNullOrWhiteSpace(_title) ? "Untitled" : _title, ReportDate = DateOnly.FromDateTime(_reportDate ?? DateTime.Today), Location = _location.NullIfEmpty(), Language = _language, HtmlBody = _htmlBody });
+        _saving = false; _isDirty = false; _lastSaved = res.Success ? DateTime.Now : _lastSaved; StateHasChanged();
+    }
+
+    private async Task SubmitReport()
+    {
+        if (_isDirty) await AutoSave();
+        var res = await Api.SubmitReportAsync(Id);
+        if (res.Success) { Snackbar.Add("Report submitted for approval.", Severity.Success); Nav.NavigateTo("/reports"); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+
+    public void Dispose() { _saveTimer?.Stop(); _saveTimer?.Dispose(); }
+}

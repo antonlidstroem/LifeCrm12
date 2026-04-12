@@ -1,0 +1,27 @@
+@using LifeCrm.Core.Enums
+
+<MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@StatusColor(Status)">
+    @StatusLabel(Status)
+</MudChip>
+
+@code {
+    [Parameter, EditorRequired] public ReportStatus Status { get; set; }
+
+    private static Color StatusColor(ReportStatus s) => s switch
+    {
+        ReportStatus.Draft               => Color.Default,
+        ReportStatus.Submitted           => Color.Warning,
+        ReportStatus.Approved            => Color.Success,
+        ReportStatus.ReturnedForRevision => Color.Error,
+        _                                => Color.Default
+    };
+
+    private static string StatusLabel(ReportStatus s) => s switch
+    {
+        ReportStatus.Draft               => "Draft",
+        ReportStatus.Submitted           => "Submitted",
+        ReportStatus.Approved            => "Approved",
+        ReportStatus.ReturnedForRevision => "Revision needed",
+        _                                => s.ToString()
+    };
+}

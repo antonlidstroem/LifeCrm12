@@ -1,0 +1,127 @@
+@page "/newsletters/{Id:guid}/edit"
+@using System.Timers
+@implements IDisposable
+@inject ApiClient Api
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+@if (_loading) { <MudProgressLinear Color="Color.Primary" Indeterminate="true" /> }
+else
+{
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/newsletters"))" />
+        <MudText Typo="Typo.h5">@(_isDirty ? "✎ " : "")@_title</MudText><MudSpacer />
+        @if (_saving) { <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mr-3">Sparar…</MudText> }
+        else if (_lastSaved.HasValue) { <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mr-3">Sparad @_lastSaved.Value.ToString("HH:mm:ss")</MudText> }
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Send" OnClick="OpenSendPanel" Disabled="@(string.IsNullOrWhiteSpace(_subject) || string.IsNullOrWhiteSpace(_htmlBody))">Skicka nyhetsbrev</MudButton>
+    </MudStack>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="8">
+            <MudCard Elevation="2" Class="mb-3">
+                <MudCardContent>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12"><MudTextField @bind-Value="_title" Label="Intern titel" Variant="Variant.Outlined" Immediate="true" TextChanged="OnFieldChanged" /></MudItem>
+                        <MudItem xs="12"><MudTextField @bind-Value="_subject" Label="Ämnesrad *" Variant="Variant.Outlined" Immediate="true" TextChanged="OnFieldChanged" /></MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+            <MudCard Elevation="2" Class="mb-3">
+                <MudCardHeader><CardHeaderContent><MudText Typo="Typo.subtitle1">Innehåll *</MudText></CardHeaderContent></MudCardHeader>
+                <MudCardContent>
+                    <MudTextField @bind-Value="_htmlBody" Variant="Variant.Outlined" Lines="18" Placeholder="&lt;p&gt;Hej!&lt;/p&gt;" Immediate="true" TextChanged="OnFieldChanged" Style="font-family:monospace;font-size:13px" />
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="2" Class="mb-3">
+                <MudCardHeader><CardHeaderContent><MudText Typo="Typo.subtitle1">Förhandsgranskning</MudText></CardHeaderContent></MudCardHeader>
+                <MudCardContent Style="max-height:440px;overflow-y:auto;">
+                    @if (!string.IsNullOrWhiteSpace(_subject)) { <MudText Typo="Typo.caption" Color="Color.Secondary">Ämne: @_subject</MudText><MudDivider Class="my-2" /> }
+                    @if (!string.IsNullOrWhiteSpace(_htmlBody)) { <div style="font-family:sans-serif;font-size:14px;color:inherit;line-height:1.6">@((MarkupString)_htmlBody)</div> }
+                    else { <MudText Typo="Typo.body2" Color="Color.Secondary">Börja skriva så visas förhandsgranskningen här.</MudText> }
+                </MudCardContent>
+            </MudCard>
+            @if (_sendPanelOpen)
+            {
+                <MudCard Elevation="4" Style="border:2px solid var(--mud-palette-primary)">
+                    <MudCardHeader><CardHeaderContent><MudText Typo="Typo.subtitle1" Color="Color.Primary">Skicka till mottagare</MudText></CardHeaderContent></MudCardHeader>
+                    <MudCardContent>
+                        <MudTextField @bind-Value="_tagFilter" Label="Taggar (valfritt)" Variant="Variant.Outlined" Immediate="true" DebounceInterval="500" TextChanged="@(_ => InvokeAsync(LoadPreview))" />
+                        @if (_previewing) { <MudSkeleton SkeletonType="SkeletonType.Text" Width="180px" Class="mt-2" /> }
+                        else if (_preview is not null) { <MudPaper Elevation="0" Class="pa-3 mt-2" Style="background:var(--mud-palette-background-grey)"><MudText Typo="Typo.body1"><b>@_preview.EligibleCount</b> mottagare</MudText>@if (_preview.OptedOutCount > 0) { <MudText Typo="Typo.caption" Color="Color.Warning">@_preview.OptedOutCount avsagda hoppas över</MudText> }</MudPaper> }
+                    </MudCardContent>
+                    <MudCardActions Class="px-4 pb-4 flex-column" Style="gap:8px">
+                        @if (_sendResult is null)
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" StartIcon="@Icons.Material.Filled.Send" OnClick="ConfirmSend" Disabled="@(_sending || _preview?.EligibleCount == 0)">
+                                @if (_sending) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /><span>Skickar…</span> } else { <span>Skicka till @(_preview?.EligibleCount ?? 0) kontakter</span> }
+                            </MudButton>
+                            <MudButton Variant="Variant.Text" FullWidth="true" OnClick="CloseSendPanel">Avbryt</MudButton>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="@(_sendResult.ErrorCount == 0 ? Severity.Success : Severity.Warning)" Dense="true" Class="mb-2">Skickat till @_sendResult.SentCount mottagare.@if (_sendResult.ErrorCount > 0) { <text> @_sendResult.ErrorCount misslyckades.</text> }</MudAlert>
+                            <MudButton Variant="Variant.Outlined" FullWidth="true" OnClick="@(() => Nav.NavigateTo("/newsletters"))">Tillbaka till listan</MudButton>
+                        }
+                    </MudCardActions>
+                </MudCard>
+            }
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private string _title = string.Empty, _subject = string.Empty, _htmlBody = string.Empty;
+    private bool _loading = true, _saving, _isDirty;
+    private DateTime? _lastSaved;
+    private Timer? _saveTimer;
+    private bool _sendPanelOpen, _sending, _previewing;
+    private string _tagFilter = string.Empty;
+    private NewsletterPreviewDto? _preview;
+    private NewsletterSendResultDto? _sendResult;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var res = await Api.GetNewsletterAsync(Id);
+        if (res.Data is null) { Nav.NavigateTo("/newsletters"); return; }
+        var nl = res.Data;
+        if (nl.Status == NewsletterStatus.Sent) { Nav.NavigateTo($"/newsletters/{Id}"); return; }
+        _title = nl.Title; _subject = nl.Subject; _htmlBody = nl.HtmlBody; _loading = false;
+        _saveTimer = new Timer(2000) { AutoReset = false };
+        _saveTimer.Elapsed += async (_, _) => await InvokeAsync(AutoSave);
+    }
+
+    private void OnFieldChanged(string _) { _isDirty = true; _saveTimer?.Stop(); _saveTimer?.Start(); StateHasChanged(); }
+
+    private async Task AutoSave()
+    {
+        if (!_isDirty || _saving) return;
+        _saving = true; StateHasChanged();
+        var res = await Api.UpdateNewsletterAsync(Id, new UpdateNewsletterRequest { Id = Id, Title = _title, Subject = _subject, HtmlBody = _htmlBody });
+        _saving = false; _isDirty = false; _lastSaved = res.Success ? DateTime.Now : _lastSaved; StateHasChanged();
+    }
+
+    private async Task OpenSendPanel() { if (_isDirty) await AutoSave(); _sendPanelOpen = true; await LoadPreview(); }
+    private void CloseSendPanel() { _sendPanelOpen = false; _sendResult = null; }
+
+    private async Task LoadPreview()
+    {
+        _previewing = true; StateHasChanged();
+        var res = await Api.PreviewNewsletterRecipientsAsync(_tagFilter.NullIfEmpty(), null);
+        _preview = res.Data; _previewing = false; StateHasChanged();
+    }
+
+    private async Task ConfirmSend()
+    {
+        _sending = true;
+        var res = await Api.SendNewsletterAsync(Id, new SendNewsletterRequest { TagFilter = _tagFilter.NullIfEmpty() });
+        _sending = false;
+        if (res.Success) { _sendResult = res.Data; Snackbar.Add($"Nyhetsbrevet skickades till {_sendResult!.SentCount} mottagare.", _sendResult.ErrorCount == 0 ? Severity.Success : Severity.Warning); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Sändning misslyckades.", Severity.Error);
+    }
+
+    public void Dispose() { _saveTimer?.Stop(); _saveTimer?.Dispose(); }
+}
