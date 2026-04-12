@@ -19,17 +19,26 @@ public class NewslettersApiClient : ApiClientBase
         return await GetAsync<PagedResult<NewsletterListDto>>(url);
     }
 
-    public async Task<ApiResponse<NewsletterDetailDto>> GetNewsletterAsync(Guid id)       => await GetAsync<NewsletterDetailDto>($"api/v1/newsletters/{id}");
-    public async Task<ApiResponse<Guid>> CreateNewsletterAsync(CreateNewsletterRequest req) => await PostAsync<Guid>("api/v1/newsletters", req);
-    public async Task<ApiResponse> UpdateNewsletterAsync(Guid id, UpdateNewsletterRequest req) => await PutAsync($"api/v1/newsletters/{id}", req);
-    public async Task<ApiResponse> DeleteNewsletterAsync(Guid id)                          => await DeleteAsync($"api/v1/newsletters/{id}");
+    public async Task<ApiResponse<NewsletterDetailDto>> GetNewsletterAsync(Guid id)
+        => await GetAsync<NewsletterDetailDto>($"api/v1/newsletters/{id}");
+
+    public async Task<ApiResponse<Guid>> CreateNewsletterAsync(CreateNewsletterRequest req)
+        => await PostAsync<Guid>("api/v1/newsletters", req);
+
+    public async Task<ApiResponse> UpdateNewsletterAsync(Guid id, UpdateNewsletterRequest req)
+        => await PutAsync($"api/v1/newsletters/{id}", req);
+
+    public async Task<ApiResponse> DeleteNewsletterAsync(Guid id)
+        => await DeleteAsync($"api/v1/newsletters/{id}");
 
     public async Task<ApiResponse<NewsletterPreviewDto>> PreviewNewsletterRecipientsAsync(string? tagFilter, string? contactTypeFilter)
     {
         var url = "api/v1/newsletters/recipients/preview";
-        var sep = "?";
-        if (!string.IsNullOrWhiteSpace(tagFilter))         { url += $"{sep}tagFilter={Uri.EscapeDataString(tagFilter)}"; sep = "&"; }
-        if (!string.IsNullOrWhiteSpace(contactTypeFilter))   url += $"{sep}contactTypeFilter={Uri.EscapeDataString(contactTypeFilter)}";
+        var queryParams = new List<string>();
+        if (!string.IsNullOrWhiteSpace(tagFilter)) queryParams.Add($"tagFilter={Uri.EscapeDataString(tagFilter)}");
+        if (!string.IsNullOrWhiteSpace(contactTypeFilter)) queryParams.Add($"contactTypeFilter={Uri.EscapeDataString(contactTypeFilter)}");
+        if (queryParams.Any()) url += "?" + string.Join("&", queryParams);
+
         return await GetAsync<NewsletterPreviewDto>(url);
     }
 
@@ -41,20 +50,21 @@ public class NewslettersApiClient : ApiClientBase
         await AttachTokenAsync();
         try
         {
-            using var ms = new MemoryStream();
-            await fileStream.CopyToAsync(ms);
             var content = new MultipartFormDataContent();
-            var fileContent = new ByteArrayContent(ms.ToArray());
+            var fileContent = new StreamContent(fileStream);
             fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
             content.Add(fileContent, "file", fileName);
+
             var resp = await _http.PostAsync($"api/v1/newsletters/{newsletterId}/attachments", content);
-            return await resp.Content.ReadFromJsonAsync<ApiResponse<AttachmentDto>>(JsonOpts) ?? ApiResponse<AttachmentDto>.Fail("Upload failed.");
+            return await resp.Content.ReadFromJsonAsync<ApiResponse<AttachmentDto>>(JsonOpts)
+                   ?? ApiResponse<AttachmentDto>.Fail("Upload failed.");
         }
         catch (Exception ex) { return ApiResponse<AttachmentDto>.Fail(ex.Message); }
     }
 
     public async Task<ApiResponse> DeleteNewsletterAttachmentAsync(Guid newsletterId, Guid attachmentId)
         => await DeleteAsync($"api/v1/newsletters/{newsletterId}/attachments/{attachmentId}");
+
     public async Task<ApiResponse> DownloadNewsletterAttachmentAsync(Guid newsletterId, Guid attachmentId, string fileName)
         => await DownloadFileAsync($"api/v1/newsletters/{newsletterId}/attachments/{attachmentId}/download", fileName);
 }
