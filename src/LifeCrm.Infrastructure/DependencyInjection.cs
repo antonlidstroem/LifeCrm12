@@ -32,7 +32,8 @@ public static class DependencyInjection
         services.AddScoped<ICsvService,                CsvService>();
         services.AddScoped<IPdfService,                PdfService>();
         services.AddScoped<IEmailService,              EmailService>();
-        services.AddScoped<ISignalRSettings,           SignalRSettingsService>();
+        //services.AddScoped<ISignalRSettings,           SignalRSettingsService>();
+        services.AddSingleton<ISignalRSettings, SignalRSettingsService>();
         services.AddScoped<IUnsubscribeTokenService,   UnsubscribeTokenService>();
         services.AddScoped<DatabaseSeeder>();
 

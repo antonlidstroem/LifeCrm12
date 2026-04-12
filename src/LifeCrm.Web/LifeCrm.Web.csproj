@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>LifeCrm.Web</RootNamespace>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+    <UserSecretsId>540bc006-a079-4f1d-af9a-5a261cdad700</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\LifeCrm.Application\LifeCrm.Application.csproj" />

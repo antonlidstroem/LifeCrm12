@@ -1,29 +1,34 @@
 using LifeCrm.Core.Interfaces;
 using LifeCrm.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection; // Viktigt för IServiceScopeFactory
 using Microsoft.Extensions.Logging;
 
 namespace LifeCrm.Infrastructure.Services;
 
 /// <summary>
 /// Persists the SignalR enabled/disabled toggle in the AppSettings table.
-/// Uses a volatile bool cache (30-second TTL) so every hub message does not
-/// require a database round-trip. Thread-safe via Interlocked.
+/// Registered as Singleton to allow injection into other Singletons (like IActivityNotifier).
+/// Uses IServiceScopeFactory to access the scoped AppDbContext.
 /// </summary>
 public class SignalRSettingsService : ISignalRSettings
 {
     private const string Key = "SignalR:Enabled";
 
-    // Static cache — shared across all scoped instances in the process
-    private static volatile bool   _cachedValue  = true;
-    private static DateTimeOffset  _cacheExpiry  = DateTimeOffset.MinValue;
-    private static readonly object _cacheLock    = new();
+    // Eftersom klassen nu är Singleton behövs inte 'static' egentligen, 
+    // men vi behåller logiken för trådsäkerhet.
+    private volatile bool _cachedValue = true;
+    private DateTimeOffset _cacheExpiry = DateTimeOffset.MinValue;
+    private readonly object _cacheLock = new();
 
-    private readonly AppDbContext _db;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<SignalRSettingsService> _logger;
 
-    public SignalRSettingsService(AppDbContext db, ILogger<SignalRSettingsService> logger)
-    { _db = db; _logger = logger; }
+    public SignalRSettingsService(IServiceScopeFactory scopeFactory, ILogger<SignalRSettingsService> logger)
+    {
+        _scopeFactory = scopeFactory;
+        _logger = logger;
+    }
 
     public async Task<bool> GetEnabledAsync(CancellationToken ct = default)
     {
@@ -31,10 +36,20 @@ public class SignalRSettingsService : ISignalRSettings
 
         try
         {
-            var row = await _db.AppSettings.IgnoreQueryFilters()
+            // Vi skapar ett eget scope för att kunna hämta ut AppDbContext
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var row = await db.AppSettings.IgnoreQueryFilters()
                 .FirstOrDefaultAsync(s => s.Key == Key, ct);
-            var value = row is null || bool.TryParse(row.Value, out var b) && b;
-            lock (_cacheLock) { _cachedValue = value; _cacheExpiry = DateTimeOffset.UtcNow.AddSeconds(30); }
+
+            var value = row is null || !bool.TryParse(row.Value, out var b) || b;
+
+            lock (_cacheLock)
+            {
+                _cachedValue = value;
+                _cacheExpiry = DateTimeOffset.UtcNow.AddSeconds(30);
+            }
             return value;
         }
         catch (Exception ex)
@@ -46,24 +61,44 @@ public class SignalRSettingsService : ISignalRSettings
 
     public async Task SetEnabledAsync(bool enabled, CancellationToken ct = default)
     {
-        var row = await _db.AppSettings.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(s => s.Key == Key, ct);
-
-        if (row is null)
+        try
         {
-            row = new Core.Entities.AppSettings { Id = Guid.NewGuid(), Key = Key, Value = enabled.ToString() };
-            _db.AppSettings.Add(row);
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var row = await db.AppSettings.IgnoreQueryFilters()
+                .FirstOrDefaultAsync(s => s.Key == Key, ct);
+
+            if (row is null)
+            {
+                row = new Core.Entities.AppSettings
+                {
+                    Id = Guid.NewGuid(),
+                    Key = Key,
+                    Value = enabled.ToString().ToLower() // Sparar som "true"/"false"
+                };
+                db.AppSettings.Add(row);
+            }
+            else
+            {
+                row.Value = enabled.ToString().ToLower();
+                db.Entry(row).State = EntityState.Modified;
+            }
+
+            await db.SaveChangesAsync(ct);
+
+            // Uppdatera cachen direkt
+            lock (_cacheLock)
+            {
+                _cachedValue = enabled;
+                _cacheExpiry = DateTimeOffset.UtcNow.AddSeconds(30);
+            }
+            _logger.LogInformation("SignalR hub {State} by admin.", enabled ? "enabled" : "disabled");
         }
-        else
+        catch (Exception ex)
         {
-            row.Value = enabled.ToString();
-            _db.Entry(row).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+            _logger.LogError(ex, "Failed to save SignalR:Enabled to DB.");
+            throw; // Kasta vidare så UI kan visa felmeddelande
         }
-
-        await _db.SaveChangesAsync(ct);
-
-        // Invalidate cache immediately
-        lock (_cacheLock) { _cachedValue = enabled; _cacheExpiry = DateTimeOffset.UtcNow.AddSeconds(30); }
-        _logger.LogInformation("SignalR hub {State} by admin.", enabled ? "enabled" : "disabled");
     }
 }
