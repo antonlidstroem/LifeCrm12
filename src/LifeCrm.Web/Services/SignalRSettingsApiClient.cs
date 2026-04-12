@@ -1,3 +1,6 @@
+using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
 using Blazored.LocalStorage;
 using LifeCrm.Application.Common.DTOs;
 using Microsoft.JSInterop;
@@ -16,20 +19,16 @@ public class SignalRSettingsApiClient : ApiClientBase
         => await GetAsync<bool>("api/v1/signalrsettings");
 
     public async Task<ApiResponse<bool>> SetAsync(bool enabled, CancellationToken ct = default)
-        => await PatchAsync<bool>("api/v1/signalrsettings", enabled);
-
-    private async Task<ApiResponse<T>> PatchAsync<T>(string url, object body)
     {
         await AttachTokenAsync();
         try
         {
-            var content = new System.Net.Http.StringContent(
-                System.Text.Json.JsonSerializer.Serialize(body, JsonOpts),
-                System.Text.Encoding.UTF8, "application/json");
-            var resp = await _http.PatchAsync(url, content);
-            return await resp.Content.ReadFromJsonAsync<ApiResponse<T>>(JsonOpts)
-                ?? ApiResponse<T>.Fail("Empty response.");
+            var json    = JsonSerializer.Serialize(enabled, JsonOpts);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var resp    = await _http.PatchAsync("api/v1/signalrsettings", content);
+            return await resp.Content.ReadFromJsonAsync<ApiResponse<bool>>(JsonOpts)
+                ?? ApiResponse<bool>.Fail("Empty response.");
         }
-        catch (Exception ex) { return ApiResponse<T>.Fail(ex.Message); }
+        catch (Exception ex) { return ApiResponse<bool>.Fail(ex.Message); }
     }
 }

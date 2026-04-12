@@ -2,6 +2,7 @@ using LifeCrm.Application.Campaigns.Commands;
 using LifeCrm.Application.Campaigns.DTOs;
 using LifeCrm.Application.Campaigns.Queries;
 using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Application.Newsletters.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -51,6 +52,6 @@ public class CampaignsController : ApiControllerBase
 
     [HttpPost("{id:guid}/newsletter/send")]
     [Authorize(Policy = "FinanceOrAdmin")]
-    public async Task<IActionResult> SendNewsletter(Guid id, [FromBody] SendNewsletterRequest request, CancellationToken ct)
-        => OkResponse(await Mediator.Send(new SendNewsletterCommand(id, request), ct));
+    public async Task<IActionResult> SendNewsletter(Guid id, [FromBody] CampaignSendNewsletterRequest request, CancellationToken ct)
+        => OkResponse(await Mediator.Send(new CampaignSendNewsletterCommand(id, request), ct));
 }

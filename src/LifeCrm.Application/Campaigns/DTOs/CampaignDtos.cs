@@ -48,3 +48,20 @@ public record UpdateCampaignRequest : CreateCampaignRequest
 {
     [Required] public Guid Id { get; init; }
 }
+
+// ── Campaign-specific newsletter send request ───────────────────────────────
+// NOTE: Preview/Result DTOs come from LifeCrm.Application.Newsletters.DTOs
+// to avoid duplication. Only the campaign-scoped send request is defined here.
+public record CampaignSendNewsletterRequest
+{
+    [System.ComponentModel.DataAnnotations.Required]
+    [System.ComponentModel.DataAnnotations.MaxLength(500)]
+    public string Subject { get; init; } = string.Empty;
+
+    [System.ComponentModel.DataAnnotations.Required]
+    [System.ComponentModel.DataAnnotations.MaxLength(100_000)]
+    public string HtmlBody { get; init; } = string.Empty;
+
+    [System.ComponentModel.DataAnnotations.MaxLength(500)]
+    public string? TagFilter { get; init; }
+}
