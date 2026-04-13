@@ -1,0 +1,168 @@
+@page "/prayer-points"
+@inject ApiClient Api
+@inject AppState AppState
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h4">Prayer Points</MudText>
+    <MudSpacer />
+    @if (AppState.CanWrite)
+    {
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenCreateDialog">New Prayer Point</MudButton>
+    }
+</MudStack>
+
+<MudGrid>
+    <MudItem xs="12" md="8">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.VolunteerActivism" Color="Color.Primary" Size="Size.Small" Class="mr-1 mb-n1" />
+            Active Prayer Requests
+        </MudText>
+
+        @if (_loading) { <LoadingSkeleton Rows="5" /> }
+        else if (!_active.Any())
+        {
+            <EmptyState Title="No active prayer requests" Icon="@Icons.Material.Outlined.VolunteerActivism"
+                        Description="Active prayer points from field reports and standalone requests appear here.">
+                <ActionContent>
+                    @if (AppState.CanWrite)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog">Add Prayer Point</MudButton>
+                    }
+                </ActionContent>
+            </EmptyState>
+        }
+        else
+        {
+            @foreach (var pp in _active)
+            {
+                <MudPaper Elevation="2" Class="pa-4 mb-3" Style="border-left:4px solid var(--mud-palette-primary)">
+                    <MudStack Row="true" AlignItems="AlignItems.Start">
+                        <div style="flex:1">
+                            <MudText Typo="Typo.body1"><b>@pp.Title</b></MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">@pp.Detail</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+                                Added @pp.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")
+                                @if (pp.ReportId.HasValue)
+                                {
+                                    <text> · <MudLink Href="@($"/reports/{pp.ReportId}")">View report</MudLink></text>
+                                }
+                            </MudText>
+                        </div>
+                        @if (AppState.CanWrite)
+                        {
+                            <MudStack Row="true">
+                                <MudTooltip Text="Mark as answered">
+                                    <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success"
+                                                   Size="Size.Small" OnClick="@(() => OpenMarkAnsweredDialog(pp))" />
+                                </MudTooltip>
+                                <MudTooltip Text="Delete">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                                   Size="Size.Small" OnClick="@(() => DeletePrayerPoint(pp))" />
+                                </MudTooltip>
+                            </MudStack>
+                        }
+                    </MudStack>
+                </MudPaper>
+            }
+        }
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" Class="mr-1 mb-n1" />
+                        Answered This Month
+                    </MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent Class="pa-0">
+                @if (!_answeredThisMonth.Any())
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-4">No answered prayers this month yet.</MudText>
+                }
+                else
+                {
+                    <MudList T="string" Dense="true" DisablePadding="true">
+                        @foreach (var pp in _answeredThisMonth)
+                        {
+                            <MudListItem>
+                                <MudText Typo="Typo.body2"><b>@pp.Title</b></MudText>
+                                @if (!string.IsNullOrEmpty(pp.AnsweredNote))
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Success">@pp.AnsweredNote</MudText>
+                                }
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @pp.AnsweredAt.ToLocalTime().ToString("MMM d")
+                                    @if (pp.ReportTitle is not null)
+                                    {
+                                        <text> · <MudLink Href="@($"/reports/{pp.ReportId}")">@pp.ReportTitle</MudLink></text>
+                                    }
+                                </MudText>
+                            </MudListItem>
+                            <MudDivider />
+                        }
+                    </MudList>
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private IReadOnlyList<PrayerPointDto>          _active           = Array.Empty<PrayerPointDto>();
+    private IReadOnlyList<AnsweredPrayerWidgetDto>  _answeredThisMonth = Array.Empty<AnsweredPrayerWidgetDto>();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var t1 = Api.GetActivePrayerPointsAsync();
+        var t2 = Api.GetAnsweredPrayersThisMonthAsync();
+        await Task.WhenAll(t1, t2);
+        _active            = t1.Result.Data ?? Array.Empty<PrayerPointDto>();
+        _answeredThisMonth = t2.Result.Data ?? Array.Empty<AnsweredPrayerWidgetDto>();
+        _loading = false;
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var d = DialogService.Show<CreateStandalonePrayerDialog>("New Prayer Point", options);
+        var result = await d.Result;
+        if (!result.Canceled) await LoadAsync();
+    }
+
+    private async Task OpenMarkAnsweredDialog(PrayerPointDto pp)
+    {
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true };
+        var d = DialogService.Show<MarkAnsweredDialog>("Mark as Answered",
+            new DialogParameters { ["PrayerPointId"] = pp.Id }, options);
+        var result = await d.Result;
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Marked as answered.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeletePrayerPoint(PrayerPointDto pp)
+    {
+        var p = new DialogParameters
+        {
+            ["Title"]   = "Delete prayer point",
+            ["Message"] = $"Delete '{pp.Title}'?"
+        };
+        var confirm = DialogService.Show<ConfirmDialog>("", p);
+        if ((await confirm.Result).Canceled) return;
+        var res = await Api.DeletePrayerPointAsync(pp.Id);
+        if (res.Success) { Snackbar.Add("Deleted.", Severity.Success); await LoadAsync(); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+}

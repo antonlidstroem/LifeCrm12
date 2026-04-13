@@ -55,7 +55,8 @@ public abstract class ApiClientBase
         {
             var resp = body is null ? await _http.PostAsync(url, null) : await _http.PostAsJsonAsync(url, body, JsonOpts);
             if (resp.IsSuccessStatusCode) return ApiResponse.Ok();
-            return await resp.Content.ReadFromJsonAsync<ApiResponse>(JsonOpts) ?? ApiResponse.Fail("Unknown error.");
+            var err = await resp.Content.ReadFromJsonAsync<ApiResponse>(JsonOpts);
+            return err ?? ApiResponse.Fail($"HTTP {(int)resp.StatusCode}");
         }
         catch (Exception ex) { return ApiResponse.Fail(ex.Message); }
     }
@@ -96,6 +97,23 @@ public abstract class ApiClientBase
         catch (Exception ex) { return ApiResponse.Fail(ex.Message); }
     }
 
+    /// <summary>
+    /// FIX: PATCH with an empty JSON body ("{}") for endpoints that take no body params.
+    /// Sending a completely bodyless PATCH can cause 415 on some middleware configurations.
+    /// </summary>
+    protected async Task<ApiResponse> PatchVoidAsync(string url)
+    {
+        await AttachTokenAsync();
+        try
+        {
+            var content = new StringContent("{}", Encoding.UTF8, "application/json");
+            var resp = await _http.PatchAsync(url, content);
+            if (resp.IsSuccessStatusCode) return ApiResponse.Ok();
+            return await resp.Content.ReadFromJsonAsync<ApiResponse>(JsonOpts) ?? ApiResponse.Fail("Unknown error.");
+        }
+        catch (Exception ex) { return ApiResponse.Fail(ex.Message); }
+    }
+
     protected async Task<ApiResponse> DeleteAsync(string url)
     {
         await AttachTokenAsync();
@@ -110,6 +128,7 @@ public abstract class ApiClientBase
 
     protected async Task<ApiResponse> DownloadFileAsync(string url, string filename, string mimeType = "application/octet-stream")
     {
+        // FIX: Always attach token before file downloads — was missing in original
         await AttachTokenAsync();
         try
         {

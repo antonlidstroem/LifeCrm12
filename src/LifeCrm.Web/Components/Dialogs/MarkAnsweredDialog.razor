@@ -1,0 +1,46 @@
+@inject ApiClient Api
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Class="mr-2 mb-n1" />
+            Mark as Answered
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-3">
+            Optionally describe how this prayer was answered.
+        </MudText>
+        <MudTextField @bind-Value="_note" Label="Answer note (optional)" Variant="Variant.Outlined" Lines="3"
+                      Placeholder="Describe how God answered this prayer..." />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="Submit" Disabled="_saving">
+            @(_saving ? "Saving…" : "Mark Answered")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid PrayerPointId { get; set; }
+
+    private string _note = string.Empty;
+    private bool _saving;
+
+    private async Task Submit()
+    {
+        _saving = true;
+        try
+        {
+            var res = await Api.MarkPrayerAnsweredAsync(PrayerPointId, new MarkAnsweredRequest { AnsweredNote = _note.NullIfEmpty() });
+            if (res.Success) MudDialog.Close(DialogResult.Ok(res.Data));
+            else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+        }
+        finally { _saving = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

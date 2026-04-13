@@ -1,0 +1,83 @@
+@inject ApiClient Api
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Summarize" Class="mr-2 mb-n1" />Generate Donation Summary
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-3">
+            Generate a PDF summary of all donations for <b>@ContactName</b> within the selected period.
+        </MudText>
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="_periodStart" Label="Period start *" Variant="Variant.Outlined" Editable="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="_periodEnd" Label="Period end *" Variant="Variant.Outlined" Editable="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudCheckBox @bind-Value="_sendByEmail" Label="Also send summary by email to donor" Color="Color.Primary" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit"
+                   Disabled="@(_generating || !_periodStart.HasValue || !_periodEnd.HasValue)">
+            @(_generating ? "Generating…" : "Generate Summary")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid   ContactId   { get; set; }
+    [Parameter] public string ContactName { get; set; } = string.Empty;
+
+    private DateTime? _periodStart = new DateTime(DateTime.Today.Year, 1, 1);
+    private DateTime? _periodEnd   = DateTime.Today;
+    private bool _sendByEmail;
+    private bool _generating;
+
+    private async Task Submit()
+    {
+        if (!_periodStart.HasValue || !_periodEnd.HasValue)
+        {
+            Snackbar.Add("Please select a period.", Severity.Warning);
+            return;
+        }
+        if (_periodStart > _periodEnd)
+        {
+            Snackbar.Add("Period start must be before period end.", Severity.Warning);
+            return;
+        }
+        _generating = true;
+        try
+        {
+            var req = new GenerateDonationSummaryRequest
+            {
+                ContactId   = ContactId,
+                PeriodStart = DateOnly.FromDateTime(_periodStart.Value),
+                PeriodEnd   = DateOnly.FromDateTime(_periodEnd.Value),
+                SendByEmail = _sendByEmail
+            };
+            var res = await Api.GenerateDonationSummaryAsync(req);
+            if (res.Success)
+            {
+                var msg = _sendByEmail ? "Summary generated and sent by email." : "Summary generated.";
+                Snackbar.Add(msg, Severity.Success);
+                // Download the generated PDF
+                if (res.Data is not null)
+                    await Api.DownloadDocumentAsync(res.Data.Id);
+                MudDialog.Close(DialogResult.Ok(res.Data));
+            }
+            else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error generating summary.", Severity.Error);
+        }
+        finally { _generating = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

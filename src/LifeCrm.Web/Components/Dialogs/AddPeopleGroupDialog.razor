@@ -1,0 +1,120 @@
+@inject ApiClient Api
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Groups" Class="mr-2 mb-n1" />Add People Group
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudAutocomplete T="PeopleGroupSearchDto"
+                                 Label="Search people group (name, country, language)"
+                                 @bind-Value="_selected"
+                                 SearchFunc="SearchGroups"
+                                 ToStringFunc="@(g => g is null ? "" : $"{g.Name} — {g.Country}")"
+                                 MinCharacters="2"
+                                 Variant="Variant.Outlined"
+                                 AdornmentIcon="@Icons.Material.Filled.Search" />
+            </MudItem>
+            @if (_selected is not null)
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        <b>@_selected.Name</b> · @_selected.Country
+                        @if (!string.IsNullOrEmpty(_selected.Language)) { <text> · @_selected.Language</text> }
+                        @if (_selected.Population.HasValue) { <text> · Pop: @_selected.Population.Value.ToString("N0")</text> }
+                        @if (_selected.IsUnreached) { <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Text">Unreached</MudChip> }
+                    </MudAlert>
+                </MudItem>
+            }
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_jpCode" Label="JP Code *" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_peopleGroupName" Label="People Group Name *" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_country" Label="Country *" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_language" Label="Language" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField @bind-Value="_estimatedReached" Label="Estimated Reached" Variant="Variant.Outlined"
+                                 Min="0" HideSpinButtons="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_notes" Label="Notes" Variant="Variant.Outlined" Lines="2" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="_saving">
+            @(_saving ? "Adding…" : "Add")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid ReportId { get; set; }
+
+    private PeopleGroupSearchDto? _selected;
+    private string _jpCode = string.Empty, _peopleGroupName = string.Empty, _country = string.Empty;
+    private string _language = string.Empty, _notes = string.Empty;
+    private int? _estimatedReached;
+    private bool _saving;
+
+    private async Task<IEnumerable<PeopleGroupSearchDto>> SearchGroups(string term, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(term) || term.Length < 2) return Enumerable.Empty<PeopleGroupSearchDto>();
+        var res = await Api.SearchPeopleGroupsAsync(term);
+        return res.Data ?? Enumerable.Empty<PeopleGroupSearchDto>();
+    }
+
+    private void OnGroupSelected(PeopleGroupSearchDto? g)
+    {
+        _selected = g;
+        if (g is null) return;
+        _jpCode          = g.JpCode;
+        _peopleGroupName = g.Name;
+        _country         = g.Country;
+        _language        = g.Language ?? string.Empty;
+    }
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_jpCode) || string.IsNullOrWhiteSpace(_peopleGroupName) || string.IsNullOrWhiteSpace(_country))
+        {
+            Snackbar.Add("JP Code, People Group Name and Country are required.", Severity.Warning);
+            return;
+        }
+        _saving = true;
+        try
+        {
+            var req = new AddPeopleGroupRequest
+            {
+                JpCode          = _jpCode.Trim(),
+                PeopleGroupName = _peopleGroupName.Trim(),
+                Country         = _country.Trim(),
+                Language        = _language.NullIfEmpty(),
+                EstimatedReached = _estimatedReached,
+                Notes           = _notes.NullIfEmpty()
+            };
+            var res = await Api.AddPeopleGroupAsync(ReportId, req);
+            if (res.Success)
+            {
+                Snackbar.Add("People group added.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(res.Data));
+            }
+            else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+        }
+        finally { _saving = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

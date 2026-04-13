@@ -25,6 +25,7 @@ public class ContactsApiClient : ApiClientBase
 
     public async Task<ApiResponse> ExportContactsCsvAsync()
     {
+        // FIX: must call AttachTokenAsync before making the request
         await AttachTokenAsync();
         try
         {

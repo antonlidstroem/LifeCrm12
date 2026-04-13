@@ -21,15 +21,15 @@ namespace LifeCrm.Web.Services;
 /// </summary>
 public class ApiClient : ApiClientBase
 {
-    private readonly ContactsApiClient      _contacts;
-    private readonly DonationsApiClient     _donations;
-    private readonly CampaignsApiClient     _campaigns;
-    private readonly ProjectsApiClient      _projects;
-    private readonly InteractionsApiClient  _interactions;
-    private readonly UsersApiClient         _users;
-    private readonly DashboardApiClient     _dashboard;
-    private readonly ReportsApiClient       _reports;
-    private readonly NewslettersApiClient   _newsletters;
+    private readonly ContactsApiClient     _contacts;
+    private readonly DonationsApiClient    _donations;
+    private readonly CampaignsApiClient    _campaigns;
+    private readonly ProjectsApiClient     _projects;
+    private readonly InteractionsApiClient _interactions;
+    private readonly UsersApiClient        _users;
+    private readonly DashboardApiClient    _dashboard;
+    private readonly ReportsApiClient      _reports;
+    private readonly NewslettersApiClient  _newsletters;
 
     public ApiClient(HttpClient http, ILocalStorageService storage, IJSRuntime js,
         ContactsApiClient contacts, DonationsApiClient donations, CampaignsApiClient campaigns,
@@ -70,9 +70,10 @@ public class ApiClient : ApiClientBase
     public Task<ApiResponse>              UpdateCampaignAsync(Guid id, UpdateCampaignRequest req) => _campaigns.UpdateCampaignAsync(id, req);
     public Task<ApiResponse>              DeleteCampaignAsync(Guid id) => _campaigns.DeleteCampaignAsync(id);
 
-    // Campaign-scoped newsletter (uses Newsletters.DTOs result types, campaign-specific request)
+    // Campaign-scoped newsletter
     public Task<ApiResponse<NewsletterPreviewDto>> PreviewCampaignNewsletterAsync(Guid campaignId, string? tagFilter)
         => GetAsync<NewsletterPreviewDto>($"api/v1/campaigns/{campaignId}/newsletter/preview{(tagFilter is not null ? $"?tagFilter={Uri.EscapeDataString(tagFilter)}" : "")}");
+
     public Task<ApiResponse<NewsletterSendResultDto>> SendCampaignNewsletterAsync(Guid campaignId, CampaignSendNewsletterRequest req)
         => PostAsync<NewsletterSendResultDto>($"api/v1/campaigns/{campaignId}/newsletter/send", req);
 
@@ -120,6 +121,8 @@ public class ApiClient : ApiClientBase
     public Task<ApiResponse>         DeleteReportAsync(Guid id) => _reports.DeleteReportAsync(id);
     public Task<ApiResponse>         SubmitReportAsync(Guid id) => _reports.SubmitReportAsync(id);
     public Task<ApiResponse>         ApproveReportAsync(Guid id) => _reports.ApproveReportAsync(id);
+    // FIX: was missing from facade
+    public Task<ApiResponse>         ReturnReportAsync(Guid id, ReturnForRevisionRequest req) => _reports.ReturnReportAsync(id, req);
     public Task<ApiResponse<DecisionCountDto>> UpsertDecisionCountAsync(Guid reportId, UpsertDecisionCountRequest req)
         => _reports.UpsertDecisionCountAsync(reportId, req);
     public Task<ApiResponse<IReadOnlyList<PeopleGroupSearchDto>>> SearchPeopleGroupsAsync(string q) => _reports.SearchPeopleGroupsAsync(q);
@@ -128,7 +131,16 @@ public class ApiClient : ApiClientBase
     public Task<ApiResponse> RemovePeopleGroupAsync(Guid reportId, Guid entryId) => _reports.RemovePeopleGroupAsync(reportId, entryId);
     public Task<ApiResponse<PrayerPointDto>> AddReportPrayerPointAsync(Guid reportId, CreatePrayerPointRequest req)
         => _reports.AddReportPrayerPointAsync(reportId, req);
-    public Task<ApiResponse<PrayerPointDto>> MarkPrayerAnsweredAsync(Guid id, MarkAnsweredRequest req) => _reports.MarkPrayerAnsweredAsync(id, req);
+    public Task<ApiResponse<IReadOnlyList<AnsweredPrayerWidgetDto>>> GetAnsweredPrayersThisMonthAsync()
+        => _reports.GetAnsweredPrayersThisMonthAsync();
+    // FIX: was missing from facade
+    public Task<ApiResponse<IReadOnlyList<PrayerPointDto>>> GetActivePrayerPointsAsync()
+        => _reports.GetActivePrayerPointsAsync();
+    // FIX: was missing from facade
+    public Task<ApiResponse<PrayerPointDto>> CreateStandalonePrayerPointAsync(CreatePrayerPointRequest req)
+        => _reports.CreateStandalonePrayerPointAsync(req);
+    public Task<ApiResponse<PrayerPointDto>> MarkPrayerAnsweredAsync(Guid id, MarkAnsweredRequest req)
+        => _reports.MarkPrayerAnsweredAsync(id, req);
     public Task<ApiResponse> DeletePrayerPointAsync(Guid id) => _reports.DeletePrayerPointAsync(id);
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
