@@ -1,0 +1,231 @@
+@page "/admin/email"
+@inject EmailSettingsApiClient Api
+@inject AppState AppState
+@inject ISnackbar Snackbar
+
+@if (!AppState.IsAdmin)
+{
+    <MudAlert Severity="Severity.Error">Du har inte behörighet att se den här sidan.</MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.h4" Class="mb-2">Utgående e-post</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+        Konfigurera SMTP-inställningar för nyhetsbrev, kvitton och andra utgående e-postmeddelanden.
+        Inställningarna sparas i databasen och åsidosätter appsettings.json.
+    </MudText>
+
+    @if (_loading)
+    {
+        <LoadingSkeleton Rows="8" />
+    }
+    else
+    {
+        <MudGrid>
+            <MudItem xs="12" md="7">
+                <MudCard Elevation="2">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">
+                                <MudIcon Icon="@Icons.Material.Filled.AlternateEmail" Class="mr-2 mb-n1" />
+                                SMTP-konfiguration
+                            </MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudGrid Spacing="3">
+                            <MudItem xs="12" sm="8">
+                                <MudTextField @bind-Value="_host" Label="SMTP-server *" Variant="Variant.Outlined"
+                                              Placeholder="smtp.gmail.com" />
+                            </MudItem>
+                            <MudItem xs="12" sm="4">
+                                <MudNumericField @bind-Value="_port" Label="Port *" Variant="Variant.Outlined"
+                                                 Min="1" Max="65535" HideSpinButtons="false" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="_username" Label="Användarnamn" Variant="Variant.Outlined"
+                                              Placeholder="user@example.com" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="_password" Label="Lösenord"
+                                              InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                                              Variant="Variant.Outlined"
+                                              Adornment="Adornment.End"
+                                              AdornmentIcon="@(_showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                              OnAdornmentClick="@(() => _showPassword = !_showPassword)"
+                                              HelperText="Lämna tomt för att behålla befintligt lösenord" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudDivider />
+                                <MudText Typo="Typo.subtitle2" Class="mt-3 mb-2">Avsändarinformation</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="_fromEmail" Label="Avsändar-e-post *" Variant="Variant.Outlined"
+                                              Placeholder="noreply@dinorg.se"
+                                              InputType="InputType.Email" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="_fromName" Label="Avsändarnamn *" Variant="Variant.Outlined"
+                                              Placeholder="Min Organisation" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudDivider />
+                                <MudText Typo="Typo.subtitle2" Class="mt-3 mb-2">Avancerat</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudSwitch @bind-Value="_useSsl" Label="Använd SSL/TLS" Color="Color.Primary" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Aktivera för port 587 (STARTTLS) eller 465 (SSL). Avaktivera för lokal dev (port 1025).
+                                </MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudSwitch @bind-Value="_dryRun" Label="Dry run (logga, skicka inte)" Color="Color.Warning" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    När aktiv loggas alla e-post men skickas inte. Bra för testmiljöer.
+                                </MudText>
+                            </MudItem>
+                        </MudGrid>
+                    </MudCardContent>
+                    <MudCardActions Class="pa-4">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save"
+                                   OnClick="Save" Disabled="_saving">
+                            @(_saving ? "Sparar…" : "Spara inställningar")
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" md="5">
+                <MudCard Elevation="2" Class="mb-3">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">
+                                <MudIcon Icon="@Icons.Material.Filled.Science" Class="mr-2 mb-n1" />
+                                Testa konfigurationen
+                            </MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                            Skicka ett testmejl för att verifiera att SMTP-konfigurationen fungerar.
+                            Spara inställningarna innan du testar.
+                        </MudText>
+                        <MudTextField @bind-Value="_testEmail" Label="Skicka testmejl till" Variant="Variant.Outlined"
+                                      InputType="InputType.Email" Placeholder="din@epost.se" Class="mb-3" />
+                        @if (_testResult is not null)
+                        {
+                            <MudAlert Severity="@(_testResult.StartsWith("Send failed") ? Severity.Error : Severity.Success)"
+                                      Dense="true" Class="mb-3">
+                                @_testResult
+                            </MudAlert>
+                        }
+                    </MudCardContent>
+                    <MudCardActions Class="pa-4 pt-0">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                                   StartIcon="@Icons.Material.Filled.Send"
+                                   OnClick="SendTest" Disabled="@(_testing || string.IsNullOrWhiteSpace(_testEmail))">
+                            @(_testing ? "Skickar…" : "Skicka testmejl")
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+
+                <MudCard Elevation="2">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.subtitle1">
+                                <MudIcon Icon="@Icons.Material.Filled.Help" Size="Size.Small" Class="mr-1 mb-n1" />
+                                Vanliga SMTP-inställningar
+                            </MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Class="pa-0">
+                        <MudList T="string" Dense="true" DisablePadding="true">
+                            <MudListItem>
+                                <MudText Typo="Typo.body2"><b>Gmail</b></MudText>
+                                <MudText Typo="Typo.caption">smtp.gmail.com · Port 587 · SSL på</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Kräver App Password (2FA aktiverat)</MudText>
+                            </MudListItem>
+                            <MudDivider />
+                            <MudListItem>
+                                <MudText Typo="Typo.body2"><b>Outlook / Microsoft 365</b></MudText>
+                                <MudText Typo="Typo.caption">smtp.office365.com · Port 587 · SSL på</MudText>
+                            </MudListItem>
+                            <MudDivider />
+                            <MudListItem>
+                                <MudText Typo="Typo.body2"><b>SendGrid</b></MudText>
+                                <MudText Typo="Typo.caption">smtp.sendgrid.net · Port 587 · SSL på</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Användarnamn: "apikey"</MudText>
+                            </MudListItem>
+                            <MudDivider />
+                            <MudListItem>
+                                <MudText Typo="Typo.body2"><b>Lokal dev (MailHog/Papercut)</b></MudText>
+                                <MudText Typo="Typo.caption">localhost · Port 1025 · SSL av · Dry run av</MudText>
+                            </MudListItem>
+                        </MudList>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+}
+
+@code {
+    private string _host = string.Empty, _username = string.Empty, _password = string.Empty;
+    private string _fromEmail = string.Empty, _fromName = string.Empty;
+    private string _testEmail = string.Empty;
+    private string? _testResult;
+    private int  _port = 587;
+    private bool _useSsl = true, _dryRun = false;
+    private bool _loading = true, _saving = false, _testing = false, _showPassword = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var res = await Api.GetAsync();
+        if (res.Success && res.Data is not null)
+        {
+            var s = res.Data;
+            _host      = s.Host;
+            _port      = s.Port;
+            _username  = s.Username;
+            _password  = s.Password; // will be masked "••••••••" if set
+            _fromEmail = s.FromEmail;
+            _fromName  = s.FromName;
+            _useSsl    = s.UseSsl;
+            _dryRun    = s.DryRun;
+        }
+        _loading = false;
+    }
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(_host)) { Snackbar.Add("SMTP-server krävs.", Severity.Warning); return; }
+        if (string.IsNullOrWhiteSpace(_fromEmail)) { Snackbar.Add("Avsändar-e-post krävs.", Severity.Warning); return; }
+        if (string.IsNullOrWhiteSpace(_fromName)) { Snackbar.Add("Avsändarnamn krävs.", Severity.Warning); return; }
+
+        _saving = true;
+        var req = new EmailSettingsRequest
+        {
+            Host      = _host.Trim(),
+            Port      = _port,
+            Username  = _username.Trim(),
+            Password  = _password,   // API preserves existing if "••••••••"
+            FromEmail = _fromEmail.Trim(),
+            FromName  = _fromName.Trim(),
+            UseSsl    = _useSsl,
+            DryRun    = _dryRun
+        };
+        var res = await Api.SaveAsync(req);
+        _saving = false;
+        if (res.Success) Snackbar.Add("E-postinställningar sparade.", Severity.Success);
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Fel vid sparning.", Severity.Error);
+    }
+
+    private async Task SendTest()
+    {
+        if (string.IsNullOrWhiteSpace(_testEmail)) return;
+        _testing = true; _testResult = null;
+        var res = await Api.TestAsync(_testEmail);
+        _testResult = res.Data ?? res.Errors.FirstOrDefault() ?? "Unknown result";
+        _testing = false;
+    }
+}

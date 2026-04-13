@@ -20,17 +20,34 @@ public sealed class GetCampaignByIdHandler : IRequestHandler<GetCampaignByIdQuer
 
     public async Task<CampaignDto> Handle(GetCampaignByIdQuery q, CancellationToken ct)
     {
-        var c = await _uow.Campaigns.GetByIdAsync(q.CampaignId, ct)
+        // Include Project navigation so we can return ProjectName
+        var c = await _uow.Campaigns.Query()
+            .Include(x => x.Project)
+            .FirstOrDefaultAsync(x => x.Id == q.CampaignId, ct)
             ?? throw new NotFoundException(nameof(Campaign), q.CampaignId);
-        var raised = await _uow.Donations.Query().Where(d => d.CampaignId == c.Id).SumAsync(d => (decimal?)d.Amount, ct) ?? 0;
+
+        var raised = await _uow.Donations.Query()
+            .Where(d => d.CampaignId == c.Id).SumAsync(d => (decimal?)d.Amount, ct) ?? 0;
         var count  = await _uow.Donations.CountAsync(d => d.CampaignId == c.Id, ct);
+
         return new CampaignDto
         {
-            Id = c.Id, Name = c.Name, Description = c.Description, Status = c.Status,
-            BudgetGoal = c.BudgetGoal, TotalRaised = raised,
-            ProgressPercent = c.BudgetGoal.HasValue && c.BudgetGoal > 0 ? Math.Round(raised / c.BudgetGoal.Value * 100, 1) : null,
-            StartDate = c.StartDate, EndDate = c.EndDate, Notes = c.Notes,
-            DonationCount = count, CreatedAt = c.CreatedAt, LastModifiedAt = c.LastModifiedAt
+            Id              = c.Id,
+            Name            = c.Name,
+            Description     = c.Description,
+            Status          = c.Status,
+            BudgetGoal      = c.BudgetGoal,
+            TotalRaised     = raised,
+            ProgressPercent = c.BudgetGoal.HasValue && c.BudgetGoal > 0
+                ? Math.Round(raised / c.BudgetGoal.Value * 100, 1) : null,
+            StartDate       = c.StartDate,
+            EndDate         = c.EndDate,
+            Notes           = c.Notes,
+            ProjectId       = c.ProjectId,
+            ProjectName     = c.Project?.Name ?? string.Empty,
+            DonationCount   = count,
+            CreatedAt       = c.CreatedAt,
+            LastModifiedAt  = c.LastModifiedAt
         };
     }
 }

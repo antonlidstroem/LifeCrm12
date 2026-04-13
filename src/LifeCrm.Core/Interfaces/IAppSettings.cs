@@ -1,3 +1,5 @@
+using LifeCrm.Core.Interfaces;
+
 namespace LifeCrm.Core.Interfaces;
 
 /// <summary>
@@ -6,6 +8,12 @@ namespace LifeCrm.Core.Interfaces;
 /// </summary>
 public interface IAppSettings
 {
-    string AppBaseUrl { get; }
+    string AppBaseUrl   { get; }
     string JwtSecretKey { get; }
+
+    /// <summary>
+    /// Default email settings read from appsettings.json.
+    /// Used as fallback when no DB override has been configured yet.
+    /// </summary>
+    EmailSettingsDto DefaultEmailSettings { get; }
 }

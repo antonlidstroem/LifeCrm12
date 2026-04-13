@@ -21,12 +21,23 @@ public sealed class CreateCampaignHandler : IRequestHandler<CreateCampaignComman
     public async Task<Guid> Handle(CreateCampaignCommand cmd, CancellationToken ct)
     {
         var orgId = _cu.OrganizationId ?? throw new ForbiddenException("No organization context.");
+
+        // Validate that the project exists and belongs to this org
+        var project = await _uow.Projects.GetByIdAsync(cmd.Request.ProjectId, ct)
+            ?? throw new NotFoundException(nameof(Project), cmd.Request.ProjectId);
+
         var c = new Campaign
         {
-            Id = Guid.NewGuid(), OrganizationId = orgId,
-            Name = cmd.Request.Name.Trim(), Description = cmd.Request.Description?.Trim(),
-            BudgetGoal = cmd.Request.BudgetGoal, StartDate = cmd.Request.StartDate,
-            EndDate = cmd.Request.EndDate, Status = cmd.Request.Status, Notes = cmd.Request.Notes?.Trim()
+            Id             = Guid.NewGuid(),
+            OrganizationId = orgId,
+            ProjectId      = cmd.Request.ProjectId,
+            Name           = cmd.Request.Name.Trim(),
+            Description    = cmd.Request.Description?.Trim(),
+            BudgetGoal     = cmd.Request.BudgetGoal,
+            StartDate      = cmd.Request.StartDate,
+            EndDate        = cmd.Request.EndDate,
+            Status         = cmd.Request.Status,
+            Notes          = cmd.Request.Notes?.Trim()
         };
         await _uow.Campaigns.AddAsync(c, ct);
         await _uow.SaveChangesAsync(ct);

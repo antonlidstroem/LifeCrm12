@@ -11,6 +11,7 @@ using LifeCrm.Application.Projects.DTOs;
 using LifeCrm.Application.Reports.DTOs;
 using LifeCrm.Application.Users.DTOs;
 using LifeCrm.Core.Enums;
+using LifeCrm.Core.Interfaces;
 using Microsoft.JSInterop;
 
 namespace LifeCrm.Web.Services;
@@ -64,16 +65,15 @@ public class ApiClient : ApiClientBase
     public Task<ApiResponse>              DownloadLatestReceiptAsync(Guid donationId) => _donations.DownloadLatestReceiptAsync(donationId);
 
     // ── Campaigns ─────────────────────────────────────────────────────────────
-    public Task<ApiResponse<PagedResult<CampaignListDto>>> GetCampaignsAsync(PaginationParams p) => _campaigns.GetCampaignsAsync(p);
+    public Task<ApiResponse<PagedResult<CampaignListDto>>> GetCampaignsAsync(PaginationParams p, Guid? projectId = null)
+        => _campaigns.GetCampaignsAsync(p, projectId);
     public Task<ApiResponse<CampaignDto>> GetCampaignAsync(Guid id) => _campaigns.GetCampaignAsync(id);
     public Task<ApiResponse<Guid>>        CreateCampaignAsync(CreateCampaignRequest req) => _campaigns.CreateCampaignAsync(req);
     public Task<ApiResponse>              UpdateCampaignAsync(Guid id, UpdateCampaignRequest req) => _campaigns.UpdateCampaignAsync(id, req);
     public Task<ApiResponse>              DeleteCampaignAsync(Guid id) => _campaigns.DeleteCampaignAsync(id);
 
-    // Campaign-scoped newsletter
     public Task<ApiResponse<NewsletterPreviewDto>> PreviewCampaignNewsletterAsync(Guid campaignId, string? tagFilter)
         => GetAsync<NewsletterPreviewDto>($"api/v1/campaigns/{campaignId}/newsletter/preview{(tagFilter is not null ? $"?tagFilter={Uri.EscapeDataString(tagFilter)}" : "")}");
-
     public Task<ApiResponse<NewsletterSendResultDto>> SendCampaignNewsletterAsync(Guid campaignId, CampaignSendNewsletterRequest req)
         => PostAsync<NewsletterSendResultDto>($"api/v1/campaigns/{campaignId}/newsletter/send", req);
 
@@ -121,7 +121,6 @@ public class ApiClient : ApiClientBase
     public Task<ApiResponse>         DeleteReportAsync(Guid id) => _reports.DeleteReportAsync(id);
     public Task<ApiResponse>         SubmitReportAsync(Guid id) => _reports.SubmitReportAsync(id);
     public Task<ApiResponse>         ApproveReportAsync(Guid id) => _reports.ApproveReportAsync(id);
-    // FIX: was missing from facade
     public Task<ApiResponse>         ReturnReportAsync(Guid id, ReturnForRevisionRequest req) => _reports.ReturnReportAsync(id, req);
     public Task<ApiResponse<DecisionCountDto>> UpsertDecisionCountAsync(Guid reportId, UpsertDecisionCountRequest req)
         => _reports.UpsertDecisionCountAsync(reportId, req);
@@ -133,10 +132,8 @@ public class ApiClient : ApiClientBase
         => _reports.AddReportPrayerPointAsync(reportId, req);
     public Task<ApiResponse<IReadOnlyList<AnsweredPrayerWidgetDto>>> GetAnsweredPrayersThisMonthAsync()
         => _reports.GetAnsweredPrayersThisMonthAsync();
-    // FIX: was missing from facade
     public Task<ApiResponse<IReadOnlyList<PrayerPointDto>>> GetActivePrayerPointsAsync()
         => _reports.GetActivePrayerPointsAsync();
-    // FIX: was missing from facade
     public Task<ApiResponse<PrayerPointDto>> CreateStandalonePrayerPointAsync(CreatePrayerPointRequest req)
         => _reports.CreateStandalonePrayerPointAsync(req);
     public Task<ApiResponse<PrayerPointDto>> MarkPrayerAnsweredAsync(Guid id, MarkAnsweredRequest req)
@@ -147,4 +144,9 @@ public class ApiClient : ApiClientBase
     public Task<ApiResponse<DashboardDto>> GetDashboardAsync() => _dashboard.GetDashboardAsync();
     public Task<ApiResponse<DocumentDto>>  GenerateDonationSummaryAsync(GenerateDonationSummaryRequest req) => _dashboard.GenerateDonationSummaryAsync(req);
     public Task<ApiResponse>               DownloadDocumentAsync(Guid id) => _dashboard.DownloadDocumentAsync(id);
+
+    // ── Direct Email ──────────────────────────────────────────────────────────
+    /// <summary>Sends a direct email to any recipient (Finance/Admin only).</summary>
+    public Task<ApiResponse<string>> SendDirectEmailAsync(string toEmail, string toName, string subject, string htmlBody)
+        => PostAsync<string>("api/v1/directemail/send", new { toEmail, toName, subject, htmlBody });
 }

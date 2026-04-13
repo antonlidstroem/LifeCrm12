@@ -27,23 +27,27 @@ else if (_report is not null)
         <MudSpacer />
         @if (_saving) { <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mr-3">Saving…</MudText> }
         else if (_lastSaved.HasValue) { <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mr-3">Saved @_lastSaved.Value.ToString("HH:mm:ss")</MudText> }
-        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Save" OnClick="AutoSave" Disabled="_saving" Class="mr-2">Save</MudButton>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Save" OnClick="ManualSave"
+                   Disabled="_saving" Class="mr-2">Save</MudButton>
         @if (_report.Status is ReportStatus.Draft or ReportStatus.ReturnedForRevision)
         {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Send" OnClick="SubmitReport" Disabled="@(string.IsNullOrWhiteSpace(_title) || _saving)">Submit for approval</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Send"
+                       OnClick="SubmitReport" Disabled="@(string.IsNullOrWhiteSpace(_title) || _saving)">
+                Submit for approval
+            </MudButton>
         }
     </MudStack>
 
     @if (_report.Status == ReportStatus.ReturnedForRevision && !string.IsNullOrEmpty(_report.ReviewComment))
     {
-        <MudAlert Severity="Severity.Warning" Class="mb-4" Icon="@Icons.Material.Filled.AssignmentReturn">
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
             <b>Returned for revision:</b> @_report.ReviewComment
         </MudAlert>
     }
 
-    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4" @bind-ActivePanelIndex="_activeTab">
 
-        <!-- ── Narrative Tab ──────────────────────────────────────────── -->
+        <!-- ── Narrative ──────────────────────────────────────────────── -->
         <MudTabPanel Text="Narrative" Icon="@Icons.Material.Filled.Article">
             <MudGrid Spacing="3">
                 <MudItem xs="12" md="8">
@@ -52,17 +56,21 @@ else if (_report is not null)
                             <MudGrid Spacing="2">
                                 <MudItem xs="12">
                                     <MudTextField @bind-Value="_title" Label="Report title *" Variant="Variant.Outlined"
-                                                  Immediate="true" TextChanged="@((string _) => OnTextChanged())" />
+                                                  Immediate="true" @bind-Value:after="MarkDirty" />
                                 </MudItem>
                                 <MudItem xs="12" sm="4">
-                                    <MudDatePicker @bind-Date="_reportDate" Label="Report date *" Variant="Variant.Outlined" Editable="true" />
+                                    <MudDatePicker @bind-Date="_reportDate" Label="Report date *"
+                                                   Variant="Variant.Outlined" Editable="true"
+                                                   DateChanged="@(d => { _reportDate = d; MarkDirty(); })" />
                                 </MudItem>
                                 <MudItem xs="12" sm="4">
                                     <MudTextField @bind-Value="_location" Label="Location" Variant="Variant.Outlined"
-                                                  Immediate="true" TextChanged="@((string _) => OnTextChanged())" />
+                                                  Immediate="true" @bind-Value:after="MarkDirty" />
                                 </MudItem>
                                 <MudItem xs="12" sm="4">
-                                    <MudSelect T="ReportLanguage" @bind-Value="_language" Label="Language" Variant="Variant.Outlined">
+                                    <MudSelect T="ReportLanguage" @bind-Value="_language" Label="Language"
+                                               Variant="Variant.Outlined"
+                                               ValueChanged="@((ReportLanguage v) => { _language = v; MarkDirty(); })">
                                         <MudSelectItem Value="ReportLanguage.English">English</MudSelectItem>
                                         <MudSelectItem Value="ReportLanguage.Swedish">Swedish</MudSelectItem>
                                     </MudSelect>
@@ -71,14 +79,14 @@ else if (_report is not null)
                         </MudCardContent>
                     </MudCard>
 
-                    <MudCard Elevation="0" Outlined="true" Class="mb-3">
+                    <MudCard Elevation="0" Outlined="true">
                         <MudCardHeader>
                             <CardHeaderContent><MudText Typo="Typo.subtitle1">Field Narrative</MudText></CardHeaderContent>
                         </MudCardHeader>
                         <MudCardContent>
                             <MudTextField @bind-Value="_htmlBody" Variant="Variant.Outlined" Lines="14"
                                           Placeholder="Describe what happened in the field. HTML is supported."
-                                          Immediate="true" TextChanged="@((string _) => OnTextChanged())"
+                                          Immediate="true" @bind-Value:after="MarkDirty"
                                           Style="font-family:monospace;font-size:13px" />
                         </MudCardContent>
                     </MudCard>
@@ -88,14 +96,30 @@ else if (_report is not null)
                     <MudCard Elevation="0" Outlined="true" Class="mb-3">
                         <MudCardContent>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Author: @_report.AuthorName</MudText>
+                            @if (_report.CampaignName is not null)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                    Campaign: @_report.CampaignName
+                                </MudText>
+                            }
+                            @if (_report.ProjectName is not null)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                    Project: @_report.ProjectName
+                                </MudText>
+                            }
                         </MudCardContent>
                     </MudCard>
                     @if (!string.IsNullOrWhiteSpace(_htmlBody))
                     {
                         <MudCard Elevation="0" Outlined="true">
-                            <MudCardHeader><CardHeaderContent><MudText Typo="Typo.subtitle2">Preview</MudText></CardHeaderContent></MudCardHeader>
+                            <MudCardHeader>
+                                <CardHeaderContent><MudText Typo="Typo.subtitle2">Preview</MudText></CardHeaderContent>
+                            </MudCardHeader>
                             <MudCardContent Style="max-height:360px;overflow-y:auto">
-                                <div style="font-family:sans-serif;font-size:14px;color:inherit;line-height:1.6">@((MarkupString)_htmlBody)</div>
+                                <div style="font-family:sans-serif;font-size:14px;color:inherit;line-height:1.6">
+                                    @((MarkupString)_htmlBody)
+                                </div>
                             </MudCardContent>
                         </MudCard>
                     }
@@ -103,35 +127,50 @@ else if (_report is not null)
             </MudGrid>
         </MudTabPanel>
 
-        <!-- ── Statistics Tab ────────────────────────────────────────── -->
+        <!-- ── Statistics ─────────────────────────────────────────────── -->
         <MudTabPanel Text="Statistics" Icon="@Icons.Material.Filled.BarChart">
             <MudGrid Spacing="3">
                 <MudItem xs="12" md="6">
                     <MudCard Elevation="0" Outlined="true">
-                        <MudCardHeader><CardHeaderContent><MudText Typo="Typo.subtitle1">Field Statistics</MudText></CardHeaderContent></MudCardHeader>
+                        <MudCardHeader>
+                            <CardHeaderContent><MudText Typo="Typo.subtitle1">Field Statistics</MudText></CardHeaderContent>
+                        </MudCardHeader>
                         <MudCardContent>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">
+                                Fill in the numbers for this reporting period. Click Save to persist.
+                            </MudText>
                             <MudGrid Spacing="2">
                                 <MudItem xs="12" sm="6">
-                                    <MudNumericField @bind-Value="_eventsHeld" Label="Events held" Variant="Variant.Outlined"
-                                                     Min="0" HideSpinButtons="true"
-                                                     TextChanged="@((string _) => OnTextChanged())" />
+                                    <!-- FIX: use ValueChanged to trigger dirty flag, not TextChanged -->
+                                    <MudNumericField T="int?" Value="_eventsHeld"
+                                                     ValueChanged="@(v => { _eventsHeld = v; MarkDirty(); })"
+                                                     Label="Events held" Variant="Variant.Outlined"
+                                                     Min="0" HideSpinButtons="false" />
                                 </MudItem>
                                 <MudItem xs="12" sm="6">
-                                    <MudNumericField @bind-Value="_totalAttendees" Label="Total attendees" Variant="Variant.Outlined"
-                                                     Min="0" HideSpinButtons="true"
-                                                     TextChanged="@((string _) => OnTextChanged())" />
+                                    <MudNumericField T="int?" Value="_totalAttendees"
+                                                     ValueChanged="@(v => { _totalAttendees = v; MarkDirty(); })"
+                                                     Label="Total attendees" Variant="Variant.Outlined"
+                                                     Min="0" HideSpinButtons="false" />
                                 </MudItem>
                                 <MudItem xs="12" sm="6">
-                                    <MudNumericField @bind-Value="_newContacts" Label="New contacts" Variant="Variant.Outlined"
-                                                     Min="0" HideSpinButtons="true"
-                                                     TextChanged="@((string _) => OnTextChanged())" />
+                                    <MudNumericField T="int?" Value="_newContacts"
+                                                     ValueChanged="@(v => { _newContacts = v; MarkDirty(); })"
+                                                     Label="New contacts" Variant="Variant.Outlined"
+                                                     Min="0" HideSpinButtons="false" />
                                 </MudItem>
                                 <MudItem xs="12" sm="6">
-                                    <MudNumericField @bind-Value="_materialsDistributed" Label="Materials distributed" Variant="Variant.Outlined"
-                                                     Min="0" HideSpinButtons="true"
-                                                     TextChanged="@((string _) => OnTextChanged())" />
+                                    <MudNumericField T="int?" Value="_materialsDistributed"
+                                                     ValueChanged="@(v => { _materialsDistributed = v; MarkDirty(); })"
+                                                     Label="Materials distributed" Variant="Variant.Outlined"
+                                                     Min="0" HideSpinButtons="false" />
                                 </MudItem>
                             </MudGrid>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4"
+                                       StartIcon="@Icons.Material.Filled.Save"
+                                       OnClick="ManualSave" Disabled="_saving">
+                                @(_saving ? "Saving…" : "Save Statistics")
+                            </MudButton>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
@@ -142,15 +181,19 @@ else if (_report is not null)
                             <CardHeaderContent><MudText Typo="Typo.subtitle1">Decision Counts</MudText></CardHeaderContent>
                         </MudCardHeader>
                         <MudCardContent>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">Record spiritual decisions made during this report period.</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">
+                                Changes are saved immediately when you adjust a count.
+                            </MudText>
                             @foreach (DecisionType dt in Enum.GetValues<DecisionType>())
                             {
                                 var count = _decisionCounts.GetValueOrDefault(dt, 0);
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2" Spacing="2">
-                                    <MudText Typo="Typo.body2" Style="min-width:160px">@dt</MudText>
-                                    <MudNumericField T="int" Value="count" ValueChanged="@(v => UpsertDecision(dt, v))"
-                                                     Variant="Variant.Outlined" Min="0" HideSpinButtons="false"
-                                                     Margin="Margin.Dense" Style="max-width:120px" />
+                                    <MudText Typo="Typo.body2" Style="min-width:180px">@dt</MudText>
+                                    <MudNumericField T="int" Value="count"
+                                                     ValueChanged="@(v => UpsertDecision(dt, v))"
+                                                     Variant="Variant.Outlined" Min="0"
+                                                     HideSpinButtons="false" Margin="Margin.Dense"
+                                                     Style="max-width:120px" />
                                 </MudStack>
                             }
                         </MudCardContent>
@@ -159,7 +202,7 @@ else if (_report is not null)
             </MudGrid>
         </MudTabPanel>
 
-        <!-- ── People Groups Tab ─────────────────────────────────────── -->
+        <!-- ── People Groups ──────────────────────────────────────────── -->
         <MudTabPanel Text="@($"People Groups ({_peopleGroups.Count})")" Icon="@Icons.Material.Filled.Groups">
             <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
                 <MudText Typo="Typo.subtitle1">People Groups Reached</MudText>
@@ -182,7 +225,7 @@ else if (_report is not null)
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd>@context.JpCode</MudTd>
-                        <MudTd><MudText Typo="Typo.body2"><b>@context.PeopleGroupName</b></MudText></MudTd>
+                        <MudTd><b>@context.PeopleGroupName</b></MudTd>
                         <MudTd>@context.Country</MudTd>
                         <MudTd>@(context.Language ?? "—")</MudTd>
                         <MudTd>@(context.EstimatedReached.HasValue ? context.EstimatedReached.Value.ToString("N0") : "—")</MudTd>
@@ -195,7 +238,7 @@ else if (_report is not null)
             }
         </MudTabPanel>
 
-        <!-- ── Prayer Points Tab ─────────────────────────────────────── -->
+        <!-- ── Prayer Points ──────────────────────────────────────────── -->
         <MudTabPanel Text="@($"Prayer Points ({_prayerPoints.Count})")" Icon="@Icons.Material.Filled.VolunteerActivism">
             <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
                 <MudText Typo="Typo.subtitle1">Prayer Points</MudText>
@@ -239,7 +282,6 @@ else if (_report is not null)
                 }
             }
         </MudTabPanel>
-
     </MudTabs>
 }
 
@@ -249,6 +291,8 @@ else if (_report is not null)
     private string _title = string.Empty, _htmlBody = string.Empty, _location = string.Empty;
     private DateTime? _reportDate = DateTime.Today;
     private ReportLanguage _language = ReportLanguage.English;
+
+    // FIX: these are bound with ValueChanged, not TextChanged
     private int? _eventsHeld, _totalAttendees, _newContacts, _materialsDistributed;
 
     private bool _loading = true, _saving, _isDirty;
@@ -256,6 +300,7 @@ else if (_report is not null)
     private DateTime? _lastSaved;
     private Timer? _saveTimer;
     private MissionReportDetailDto? _report;
+    private int _activeTab = 0;
 
     private Dictionary<DecisionType, int> _decisionCounts = new();
     private List<PeopleGroupReachedDto>   _peopleGroups   = new();
@@ -278,37 +323,57 @@ else if (_report is not null)
             return;
         }
 
-        _title       = _report.Title;
-        _htmlBody    = _report.HtmlBody;
-        _location    = _report.Location ?? string.Empty;
-        _reportDate  = _report.ReportDate.ToDateTime(TimeOnly.MinValue);
-        _language    = _report.Language;
-        _eventsHeld          = _report.EventsHeld;
-        _totalAttendees      = _report.TotalAttendees;
-        _newContacts         = _report.NewContacts;
+        _title    = _report.Title;
+        _htmlBody = _report.HtmlBody;
+        _location = _report.Location ?? string.Empty;
+        _reportDate = _report.ReportDate.ToDateTime(TimeOnly.MinValue);
+        _language   = _report.Language;
+
+        // FIX: load existing stats values so spinners show current values
+        _eventsHeld           = _report.EventsHeld;
+        _totalAttendees       = _report.TotalAttendees;
+        _newContacts          = _report.NewContacts;
         _materialsDistributed = _report.MaterialsDistributed;
 
-        // Load decisions into dictionary
         _decisionCounts = _report.Decisions.ToDictionary(d => d.DecisionType, d => d.Count);
         _peopleGroups   = _report.PeopleGroups.ToList();
         _prayerPoints   = _report.PrayerPoints.ToList();
 
         _loading = false;
 
+        // Auto-save timer — 2 second debounce
         _saveTimer = new Timer(2000) { AutoReset = false };
         _saveTimer.Elapsed += (_, _) => InvokeAsync(AutoSave);
     }
 
-    private void OnTextChanged() { _isDirty = true; _saveTimer?.Stop(); _saveTimer?.Start(); StateHasChanged(); }
+    // FIX: renamed from OnTextChanged — called by @bind-Value:after and ValueChanged lambdas
+    private void MarkDirty()
+    {
+        _isDirty = true;
+        _saveTimer?.Stop();
+        _saveTimer?.Start();
+        StateHasChanged();
+    }
 
     private async Task AutoSave()
     {
         if (!_isDirty || _saving) return;
+        await SaveCore();
+    }
+
+    private async Task ManualSave()
+    {
+        _saveTimer?.Stop();
+        await SaveCore();
+    }
+
+    private async Task SaveCore()
+    {
         _saving = true; StateHasChanged();
         var res = await Api.UpdateReportAsync(Id, new UpdateReportRequest
         {
             Id                   = Id,
-            Title                = string.IsNullOrWhiteSpace(_title) ? "Untitled" : _title,
+            Title                = string.IsNullOrWhiteSpace(_title) ? "Untitled" : _title.Trim(),
             ReportDate           = DateOnly.FromDateTime(_reportDate ?? DateTime.Today),
             Location             = _location.NullIfEmpty(),
             Language             = _language,
@@ -318,22 +383,21 @@ else if (_report is not null)
             NewContacts          = _newContacts,
             MaterialsDistributed = _materialsDistributed
         });
-        _saving = false; _isDirty = false;
-        if (res.Success) _lastSaved = DateTime.Now;
+        _saving = false;
+        if (res.Success) { _isDirty = false; _lastSaved = DateTime.Now; }
         else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Save failed.", Severity.Error);
         StateHasChanged();
     }
 
     private async Task SubmitReport()
     {
-        if (_isDirty) await AutoSave();
+        if (_isDirty) await ManualSave();
         var res = await Api.SubmitReportAsync(Id);
         if (res.Success) { Snackbar.Add("Report submitted for approval.", Severity.Success); Nav.NavigateTo("/reports"); }
         else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
     }
 
     // ── Decision Counts ──────────────────────────────────────────────────────
-
     private async Task UpsertDecision(DecisionType dt, int count)
     {
         _decisionCounts[dt] = count;
@@ -342,14 +406,13 @@ else if (_report is not null)
     }
 
     // ── People Groups ────────────────────────────────────────────────────────
-
     private async Task OpenAddPeopleGroupDialog()
     {
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-        var d = DialogService.Show<AddPeopleGroupDialog>("Add People Group", new DialogParameters { ["ReportId"] = Id }, options);
+        var d = DialogService.Show<AddPeopleGroupDialog>("Add People Group",
+            new DialogParameters { ["ReportId"] = Id }, options);
         var result = await d.Result;
-        if (!result.Canceled && result.Data is PeopleGroupReachedDto pg)
-            _peopleGroups.Add(pg);
+        if (!result.Canceled && result.Data is PeopleGroupReachedDto pg) _peopleGroups.Add(pg);
     }
 
     private async Task RemovePeopleGroup(PeopleGroupReachedDto pg)
@@ -360,32 +423,33 @@ else if (_report is not null)
     }
 
     // ── Prayer Points ────────────────────────────────────────────────────────
-
     private async Task OpenAddPrayerPointDialog()
     {
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-        var d = DialogService.Show<AddPrayerPointDialog>("Add Prayer Point", new DialogParameters { ["ReportId"] = Id }, options);
+        var d = DialogService.Show<AddPrayerPointDialog>("Add Prayer Point",
+            new DialogParameters { ["ReportId"] = Id }, options);
         var result = await d.Result;
-        if (!result.Canceled && result.Data is PrayerPointDto pp)
-            _prayerPoints.Add(pp);
+        if (!result.Canceled && result.Data is PrayerPointDto pp) _prayerPoints.Add(pp);
     }
 
     private async Task MarkPrayerAnswered(PrayerPointDto pp)
     {
-        var res = await Api.MarkPrayerAnsweredAsync(pp.Id, new MarkAnsweredRequest());
-        if (res.Success)
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true };
+        var d = DialogService.Show<MarkAnsweredDialog>("Mark as Answered",
+            new DialogParameters { ["PrayerPointId"] = pp.Id }, options);
+        var result = await d.Result;
+        if (!result.Canceled && result.Data is PrayerPointDto updated)
         {
             var idx = _prayerPoints.FindIndex(x => x.Id == pp.Id);
-            if (idx >= 0) _prayerPoints[idx] = res.Data!;
+            if (idx >= 0) _prayerPoints[idx] = updated;
             Snackbar.Add("Marked as answered.", Severity.Success);
         }
-        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
     }
 
     private async Task DeletePrayerPoint(PrayerPointDto pp)
     {
         var res = await Api.DeletePrayerPointAsync(pp.Id);
-        if (res.Success) _prayerPoints.Remove(pp);
+        if (res.Success) { _prayerPoints.Remove(pp); Snackbar.Add("Deleted.", Severity.Success); }
         else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
     }
 

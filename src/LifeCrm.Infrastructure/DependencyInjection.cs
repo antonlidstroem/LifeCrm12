@@ -25,16 +25,20 @@ public static class DependencyInjection
             opts.AddInterceptors(sp.GetRequiredService<AuditSaveInterceptor>());
         });
 
-        services.AddScoped<ICurrentUserService,        CurrentUserService>();
-        services.AddScoped<IUnitOfWork,                UnitOfWork>();
-        services.AddScoped<IOrganizationReader,        OrganizationReader>();
-        services.AddScoped<IAuditLogWriter,            AuditLogWriter>();
-        services.AddScoped<ICsvService,                CsvService>();
-        services.AddScoped<IPdfService,                PdfService>();
-        services.AddScoped<IEmailService,              EmailService>();
-        //services.AddScoped<ISignalRSettings,           SignalRSettingsService>();
-        services.AddSingleton<ISignalRSettings, SignalRSettingsService>();
-        services.AddScoped<IUnsubscribeTokenService,   UnsubscribeTokenService>();
+        services.AddScoped<ICurrentUserService,    CurrentUserService>();
+        services.AddScoped<IUnitOfWork,            UnitOfWork>();
+        services.AddScoped<IOrganizationReader,    OrganizationReader>();
+        services.AddScoped<IAuditLogWriter,        AuditLogWriter>();
+        services.AddScoped<ICsvService,            CsvService>();
+        services.AddScoped<IPdfService,            PdfService>();
+
+        // Email settings read from DB (Singleton so cache is shared across requests)
+        services.AddSingleton<IEmailSettingsService, EmailSettingsService>();
+        // EmailService is Scoped — it calls IEmailSettingsService.GetAsync per request
+        services.AddScoped<IEmailService,          EmailService>();
+
+        services.AddSingleton<ISignalRSettings,    SignalRSettingsService>();
+        services.AddScoped<IUnsubscribeTokenService, UnsubscribeTokenService>();
         services.AddScoped<DatabaseSeeder>();
 
         return services;

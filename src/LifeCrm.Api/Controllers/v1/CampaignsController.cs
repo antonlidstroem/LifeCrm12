@@ -13,8 +13,11 @@ public class CampaignsController : ApiControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<CampaignListDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll([FromQuery] PaginationParams paging, CancellationToken ct)
-        => OkResponse(await Mediator.Send(new GetCampaignsQuery(paging), ct));
+    public async Task<IActionResult> GetAll(
+        [FromQuery] PaginationParams paging,
+        [FromQuery] Guid? projectId,
+        CancellationToken ct)
+        => OkResponse(await Mediator.Send(new GetCampaignsQuery(paging, projectId), ct));
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)

@@ -3,22 +3,30 @@
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 
-<MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">Skapar rapport…</MudText>
+<MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="min-height:200px" Class="mt-8">
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-3">Creating field report…</MudText>
+</MudStack>
 
 @code {
-    [SupplyParameterFromQuery] public Guid? CampaignId { get; set; }
-    [SupplyParameterFromQuery] public Guid? ProjectId  { get; set; }
+    // FIX: Use [SupplyParameterFromQuery] — requires Blazor WASM >= .NET 7
+    [SupplyParameterFromQuery(Name = "campaignId")] public string? CampaignIdStr { get; set; }
+    [SupplyParameterFromQuery(Name = "projectId")]  public string? ProjectIdStr  { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender) return;
+
+        Guid? campaignId = Guid.TryParse(CampaignIdStr, out var cid) ? cid : null;
+        Guid? projectId  = Guid.TryParse(ProjectIdStr,  out var pid) ? pid : null;
+
         var req = new CreateReportRequest
         {
             Title      = $"Field Report {DateTime.Today:yyyy-MM-dd}",
             ReportDate = DateOnly.FromDateTime(DateTime.Today),
             Language   = ReportLanguage.English,
-            CampaignId = CampaignId,
-            ProjectId  = ProjectId
+            CampaignId = campaignId,
+            ProjectId  = projectId
         };
 
         var res = await Api.CreateReportAsync(req);
@@ -29,7 +37,13 @@
         else
         {
             Snackbar.Add(res.Errors.FirstOrDefault() ?? "Could not create report.", Severity.Error);
-            Nav.NavigateTo("/reports", replace: true);
+            // Navigate back to the context page if we know it
+            if (projectId.HasValue)
+                Nav.NavigateTo($"/projects/{projectId.Value}", replace: true);
+            else if (campaignId.HasValue)
+                Nav.NavigateTo($"/campaigns/{campaignId.Value}", replace: true);
+            else
+                Nav.NavigateTo("/reports", replace: true);
         }
     }
 }

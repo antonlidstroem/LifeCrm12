@@ -14,7 +14,14 @@
     <MudSpacer />
     @if (AppState.CanWrite && _contact is not null)
     {
-        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Edit" OnClick="OpenEditDialog">Redigera</MudButton>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Edit"
+                   OnClick="OpenEditDialog" Class="mr-2">Redigera</MudButton>
+    }
+    @if (AppState.IsFinanceOrAdmin && _contact is not null && !string.IsNullOrEmpty(_contact.Email))
+    {
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                   StartIcon="@Icons.Material.Filled.Email"
+                   OnClick="OpenSendEmailDialog">Skicka e-post</MudButton>
     }
 </MudStack>
 
@@ -27,9 +34,13 @@ else if (_contact is not null)
             <MudCard Elevation="2">
                 <MudCardContent>
                     <MudStack AlignItems="AlignItems.Center" Class="mb-4">
-                        <MudAvatar Color="Color.Primary" Style="height:90px;width:90px;font-size:2rem;">@_contact.Name[0]</MudAvatar>
+                        <MudAvatar Color="Color.Primary" Style="height:90px;width:90px;font-size:2rem;">
+                            @_contact.Name[0]
+                        </MudAvatar>
                         <MudText Typo="Typo.h5" Class="mt-3">@_contact.Name</MudText>
-                        <MudChip T="string" Color="@_contact.Type.ToMudColor()" Size="Size.Small" Variant="Variant.Text">@_contact.Type</MudChip>
+                        <MudChip T="string" Color="@_contact.Type.ToMudColor()" Size="Size.Small" Variant="Variant.Text">
+                            @_contact.Type
+                        </MudChip>
                     </MudStack>
                     <MudDivider Class="my-3" />
                     <MudList T="string" Dense="true">
@@ -51,16 +62,28 @@ else if (_contact is not null)
                     </MudList>
                     <MudDivider Class="my-3" />
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
-                        <div><MudText Typo="Typo.caption" Color="Color.Secondary">Gåvor</MudText><MudText Typo="Typo.h6">@_contact.DonationCount</MudText></div>
-                        <div><MudText Typo="Typo.caption" Color="Color.Secondary">Totalt</MudText><MudText Typo="Typo.h6">$@_contact.TotalDonated.ToString("N2")</MudText></div>
+                        <div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Gåvor</MudText>
+                            <MudText Typo="Typo.h6">@_contact.DonationCount</MudText>
+                        </div>
+                        <div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Totalt</MudText>
+                            <MudText Typo="Typo.h6">$@_contact.TotalDonated.ToString("N2")</MudText>
+                        </div>
                     </MudStack>
                     @if (AppState.IsFinanceOrAdmin)
                     {
                         <MudDivider Class="my-3" />
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AddCard"
-                                   FullWidth="true" OnClick="OpenDonationDialog" Class="mb-2">Registrera gåva</MudButton>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Summarize"
-                                   FullWidth="true" OnClick="OpenDonationSummaryDialog">Generera årsbesked</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.AddCard"
+                                   FullWidth="true" OnClick="OpenDonationDialog" Class="mb-2">
+                            Registrera gåva
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                                   StartIcon="@Icons.Material.Filled.Summarize"
+                                   FullWidth="true" OnClick="OpenDonationSummaryDialog">
+                            Generera årsbesked
+                        </MudButton>
                     }
                 </MudCardContent>
             </MudCard>
@@ -131,19 +154,21 @@ else if (_contact is not null)
                                 <MudTd>@context.Date.ToString("yyyy-MM-dd")</MudTd>
                                 <MudTd>$@context.Amount.ToString("N2")</MudTd>
                                 <MudTd>
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@context.Status.ToMudColor()">@context.Status</MudChip>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@context.Status.ToMudColor()">
+                                        @context.Status
+                                    </MudChip>
                                 </MudTd>
                                 <MudTd>
                                     @if (context.ReceiptDocumentId.HasValue)
                                     {
-                                        <MudTooltip Text="Download receipt">
+                                        <MudTooltip Text="Ladda ner kvitto">
                                             <MudIconButton Icon="@Icons.Material.Filled.Download" Size="Size.Small"
                                                            Color="Color.Primary" OnClick="@(() => DownloadReceipt(context))" />
                                         </MudTooltip>
                                     }
                                     else if (AppState.IsFinanceOrAdmin)
                                     {
-                                        <MudTooltip Text="Generate receipt">
+                                        <MudTooltip Text="Skapa kvitto">
                                             <MudIconButton Icon="@Icons.Material.Filled.Receipt" Size="Size.Small"
                                                            Color="Color.Secondary" OnClick="@(() => OpenGenerateReceiptDialog(context))" />
                                         </MudTooltip>
@@ -192,6 +217,19 @@ else if (_contact is not null)
         if (!(await d.Result).Canceled) await LoadAsync();
     }
 
+    private async Task OpenSendEmailDialog()
+    {
+        var d = DialogService.Show<SendEmailToContactDialog>("Skicka e-post",
+            new DialogParameters
+            {
+                ["ContactName"]  = _contact?.Name ?? string.Empty,
+                ["ContactEmail"] = _contact?.Email,
+                ["EmailOptOut"]  = _contact?.EmailOptOut ?? false
+            },
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        await d.Result;
+    }
+
     private async Task OpenDonationDialog()
     {
         var d = DialogService.Show<DonationFormDialog>("Registrera gåva",
@@ -210,7 +248,7 @@ else if (_contact is not null)
 
     private async Task OpenGenerateReceiptDialog(DonationListDto donation)
     {
-        var d = DialogService.Show<GenerateReceiptDialog>("Generate Receipt",
+        var d = DialogService.Show<GenerateReceiptDialog>("Skapa kvitto",
             new DialogParameters { ["DonationId"] = donation.Id },
             new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true });
         var result = await d.Result;
@@ -222,7 +260,7 @@ else if (_contact is not null)
         if (donation.ReceiptDocumentId.HasValue)
         {
             var res = await DonationsApi.DownloadReceiptAsync(donation.Id, donation.ReceiptDocumentId.Value);
-            if (!res.Success) Snackbar.Add(res.Errors.FirstOrDefault() ?? "Download failed.", Severity.Error);
+            if (!res.Success) Snackbar.Add(res.Errors.FirstOrDefault() ?? "Nedladdning misslyckades.", Severity.Error);
         }
     }
 
