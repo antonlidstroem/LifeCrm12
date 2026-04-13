@@ -59,18 +59,21 @@ else if (_report is not null)
                                                   Immediate="true" @bind-Value:after="MarkDirty" />
                                 </MudItem>
                                 <MudItem xs="12" sm="4">
-                                    <MudDatePicker @bind-Date="_reportDate" Label="Report date *"
-                                                   Variant="Variant.Outlined" Editable="true"
-                                                   DateChanged="@(d => { _reportDate = d; MarkDirty(); })" />
+                                    <MudDatePicker @bind-Date="_reportDate"
+                                                   Label="Report date *"
+                                                   Variant="Variant.Outlined"
+                                                   Editable="true"
+                                                   @bind-Date:after="MarkDirty" />
                                 </MudItem>
                                 <MudItem xs="12" sm="4">
                                     <MudTextField @bind-Value="_location" Label="Location" Variant="Variant.Outlined"
                                                   Immediate="true" @bind-Value:after="MarkDirty" />
                                 </MudItem>
                                 <MudItem xs="12" sm="4">
-                                    <MudSelect T="ReportLanguage" @bind-Value="_language" Label="Language"
+                                    <MudSelect T="ReportLanguage" @bind-Value="_language"
+                                               Label="Language"
                                                Variant="Variant.Outlined"
-                                               ValueChanged="@((ReportLanguage v) => { _language = v; MarkDirty(); })">
+                                               @bind-Value:after="MarkDirty">
                                         <MudSelectItem Value="ReportLanguage.English">English</MudSelectItem>
                                         <MudSelectItem Value="ReportLanguage.Swedish">Swedish</MudSelectItem>
                                     </MudSelect>
