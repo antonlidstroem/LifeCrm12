@@ -15,7 +15,6 @@ public class Project : TenantEntity
 
     public ICollection<Donation>    Donations    { get; set; } = new List<Donation>();
     public ICollection<Interaction> Interactions { get; set; } = new List<Interaction>();
-
     /// <summary>A project can have many campaigns.</summary>
     public ICollection<Campaign>    Campaigns    { get; set; } = new List<Campaign>();
 }

@@ -8,21 +8,26 @@ using Microsoft.Extensions.Logging;
 namespace LifeCrm.Infrastructure.Services;
 
 /// <summary>
-/// Stores outgoing email configuration as a JSON blob in the AppSettings table
-/// under the key "Email:Settings". Falls back to appsettings.json values if not set.
+/// Persists outgoing email (SMTP) configuration as a JSON blob in the AppSettings table
+/// under the key "Email:Settings". Falls back to appsettings.json values when not set.
+/// Registered as Singleton so the in-memory cache is shared across all requests.
 /// </summary>
 public class EmailSettingsService : IEmailSettingsService
 {
     private const string Key = "Email:Settings";
+
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IAppSettings _appConfig;
+    private readonly IAppSettings         _appConfig;
     private readonly ILogger<EmailSettingsService> _logger;
 
-    // Simple in-memory cache with 60-second TTL
-    private EmailSettingsDto? _cached;
+    // Thread-safe in-memory cache with 60-second TTL
+    private volatile EmailSettingsDto? _cached;
     private DateTimeOffset _cacheExpiry = DateTimeOffset.MinValue;
+    private readonly object _cacheLock  = new();
 
-    public EmailSettingsService(IServiceScopeFactory scopeFactory, IAppSettings appConfig,
+    public EmailSettingsService(
+        IServiceScopeFactory scopeFactory,
+        IAppSettings appConfig,
         ILogger<EmailSettingsService> logger)
     {
         _scopeFactory = scopeFactory;
@@ -32,33 +37,45 @@ public class EmailSettingsService : IEmailSettingsService
 
     public async Task<EmailSettingsDto> GetAsync(CancellationToken ct = default)
     {
-        if (_cached is not null && DateTimeOffset.UtcNow < _cacheExpiry)
-            return _cached;
+        // Return cached value if still fresh
+        lock (_cacheLock)
+        {
+            if (_cached is not null && DateTimeOffset.UtcNow < _cacheExpiry)
+                return _cached;
+        }
 
         try
         {
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var row = await db.AppSettings.IgnoreQueryFilters()
+
+            var row = await db.AppSettings
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(s => s.Key == Key, ct);
 
             if (row is not null && !string.IsNullOrWhiteSpace(row.Value))
             {
-                var settings = JsonSerializer.Deserialize<EmailSettingsDto>(row.Value);
-                if (settings is not null)
+                var fromDb = JsonSerializer.Deserialize<EmailSettingsDto>(row.Value,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (fromDb is not null)
                 {
-                    _cached      = settings;
-                    _cacheExpiry = DateTimeOffset.UtcNow.AddSeconds(60);
-                    return settings;
+                    lock (_cacheLock)
+                    {
+                        _cached      = fromDb;
+                        _cacheExpiry = DateTimeOffset.UtcNow.AddSeconds(60);
+                    }
+                    return fromDb;
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not read email settings from DB. Using config file fallback.");
+            _logger.LogWarning(ex,
+                "Could not read email settings from DB. Falling back to appsettings.json.");
         }
 
-        // Fallback: read from IConfiguration via IAppSettings
+        // Fallback: appsettings.json values
         return _appConfig.DefaultEmailSettings;
     }
 
@@ -69,28 +86,41 @@ public class EmailSettingsService : IEmailSettingsService
         {
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var row = await db.AppSettings.IgnoreQueryFilters()
+
+            var row = await db.AppSettings
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(s => s.Key == Key, ct);
+
             if (row is null)
             {
-                row = new Core.Entities.AppSettings { Id = Guid.NewGuid(), Key = Key, Value = json };
+                row = new Core.Entities.AppSettings
+                {
+                    Id    = Guid.NewGuid(),
+                    Key   = Key,
+                    Value = json
+                };
                 db.AppSettings.Add(row);
             }
             else
             {
                 row.Value = json;
-                db.Entry(row).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                db.Entry(row).State = EntityState.Modified;
             }
+
             await db.SaveChangesAsync(ct);
 
-            // Bust cache
-            _cached      = settings;
-            _cacheExpiry = DateTimeOffset.UtcNow.AddSeconds(60);
-            _logger.LogInformation("Email settings updated by admin.");
+            // Immediately update cache so the next request picks up the new config
+            lock (_cacheLock)
+            {
+                _cached      = settings;
+                _cacheExpiry = DateTimeOffset.UtcNow.AddSeconds(60);
+            }
+
+            _logger.LogInformation("Email settings updated and cached.");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save email settings.");
+            _logger.LogError(ex, "Failed to save email settings to DB.");
             throw;
         }
     }

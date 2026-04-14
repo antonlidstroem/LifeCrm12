@@ -1,5 +1,3 @@
-using LifeCrm.Core.Interfaces;
-
 namespace LifeCrm.Core.Interfaces;
 
 /// <summary>
@@ -13,7 +11,7 @@ public interface IAppSettings
 
     /// <summary>
     /// Default email settings read from appsettings.json.
-    /// Used as fallback when no DB override has been configured yet.
+    /// Used as fallback when no DB override has been saved yet.
     /// </summary>
     EmailSettingsDto DefaultEmailSettings { get; }
 }

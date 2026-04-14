@@ -22,11 +22,14 @@ public sealed class UpdateCampaignHandler : IRequestHandler<UpdateCampaignComman
         var c = await _uow.Campaigns.GetByIdAsync(cmd.Request.Id, ct)
             ?? throw new NotFoundException(nameof(Campaign), cmd.Request.Id);
 
-        // Validate new project if it changed
+        if (!cmd.Request.ProjectId.HasValue || cmd.Request.ProjectId.Value == Guid.Empty)
+            throw new ValidationException("ProjectId", "A campaign must be linked to a project.");
+
+        // Validate the project exists if it changed
         if (c.ProjectId != cmd.Request.ProjectId)
         {
-            _ = await _uow.Projects.GetByIdAsync(cmd.Request.ProjectId, ct)
-                ?? throw new NotFoundException(nameof(Project), cmd.Request.ProjectId);
+            _ = await _uow.Projects.GetByIdAsync(cmd.Request.ProjectId.Value, ct)
+                ?? throw new NotFoundException(nameof(Project), cmd.Request.ProjectId.Value);
         }
 
         c.Name        = cmd.Request.Name.Trim();

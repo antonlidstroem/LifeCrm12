@@ -10,7 +10,8 @@ public class CampaignConfiguration : IEntityTypeConfiguration<Campaign>
     {
         b.Property(c => c.BudgetGoal).HasPrecision(18, 2);
 
-        // Campaign → Project (many-to-one, nullable FK for backward compat with existing data)
+        // Campaign → Project: many campaigns under one project.
+        // ProjectId is nullable (Guid?) for backward compat with existing data.
         b.HasOne(c => c.Project)
          .WithMany(p => p.Campaigns)
          .HasForeignKey(c => c.ProjectId)

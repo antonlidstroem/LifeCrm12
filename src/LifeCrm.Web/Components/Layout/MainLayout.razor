@@ -28,16 +28,17 @@ else
             @if (_unreadActivity > 0)
             {
                 <MudBadge Content="@_unreadActivity" Color="Color.Error" Overlap="true" Class="mr-1">
-                    <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" OnClick="ToggleActivityDrawer" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Notifications"
+                                   Color="Color.Inherit" OnClick="ToggleActivityDrawer" />
                 </MudBadge>
             }
             else
             {
-                <MudIconButton Icon="@Icons.Material.Outlined.Notifications" Color="Color.Inherit" OnClick="ToggleActivityDrawer" />
+                <MudIconButton Icon="@Icons.Material.Outlined.Notifications"
+                               Color="Color.Inherit" OnClick="ToggleActivityDrawer" />
             }
-            <MudButton Color="Color.Inherit" StartIcon="@Icons.Material.Filled.AccountCircle" Href="/account">
-                @AppState.UserFullName
-            </MudButton>
+            <MudButton Color="Color.Inherit" StartIcon="@Icons.Material.Filled.AccountCircle"
+                       Href="/account">@AppState.UserFullName</MudButton>
         </MudAppBar>
 
         <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Elevation="2">
@@ -53,30 +54,35 @@ else
                 <MudNavLink Href="/reports"       Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Article">Field Reports</MudNavLink>
                 <MudNavLink Href="/prayer-points" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.VolunteerActivism">Prayer Points</MudNavLink>
                 <MudNavLink Href="/newsletters"   Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.MarkEmailRead">Nyhetsbrev</MudNavLink>
+
                 @if (AppState.IsAdmin)
                 {
                     <MudDivider Class="my-2" />
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="px-4 py-1">Admin</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="px-4 pb-1">Admin</MudText>
                     <MudNavLink Href="/admin/users"   Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ManageAccounts">Användare</MudNavLink>
                     <MudNavLink Href="/admin/email"   Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AlternateEmail">E-postinställningar</MudNavLink>
                     <MudNavLink Href="/admin/signalr" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SettingsInputAntenna">SignalR</MudNavLink>
                 }
+
                 <MudDivider Class="my-2" />
                 <MudNavLink Href="/account" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AccountCircle">Mitt konto</MudNavLink>
                 <MudNavLink Icon="@Icons.Material.Filled.Logout" OnClick="Logout">Logga ut</MudNavLink>
             </MudNavMenu>
         </MudDrawer>
 
-        <!-- Activity feed drawer -->
-        <MudDrawer @bind-Open="_activityOpen" Anchor="Anchor.End" Variant="DrawerVariant.Temporary" Width="320px" Elevation="2">
+        <!-- Activity feed drawer (right side) -->
+        <MudDrawer @bind-Open="_activityOpen" Anchor="Anchor.End"
+                   Variant="DrawerVariant.Temporary" Width="320px" Elevation="2">
             <MudDrawerHeader>
                 <MudText Typo="Typo.h6">Aktivitetsfeed</MudText>
                 <MudSpacer />
-                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="ToggleActivityDrawer" />
+                <MudIconButton Icon="@Icons.Material.Filled.Close"
+                               Size="Size.Small" OnClick="ToggleActivityDrawer" />
             </MudDrawerHeader>
             @if (_activityFeed.Count == 0)
             {
-                <EmptyState Title="Ingen aktivitet ännu" Description="Händelser visas här i realtid."
+                <EmptyState Title="Ingen aktivitet ännu"
+                            Description="Händelser visas här i realtid."
                             Icon="@Icons.Material.Outlined.NotificationsNone" />
             }
             else
@@ -87,7 +93,9 @@ else
                         <MudListItem>
                             <MudStack Spacing="0">
                                 <MudText Typo="Typo.body2">@item.Message</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@item.Time.ToString("HH:mm")</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @item.Time.ToString("HH:mm")
+                                </MudText>
                             </MudStack>
                         </MudListItem>
                         <MudDivider />
@@ -97,7 +105,9 @@ else
         </MudDrawer>
 
         <MudMainContent>
-            <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 pb-8">@Body</MudContainer>
+            <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 pb-8">
+                @Body
+            </MudContainer>
         </MudMainContent>
     </MudLayout>
 }
@@ -116,14 +126,17 @@ else
 
         if (AppState.IsAuthenticated && AppState.Token is not null)
         {
-            var settingsRes = await SignalRApi.GetAsync();
+            var settingsRes     = await SignalRApi.GetAsync();
             AppState.SignalREnabled = settingsRes.Success ? settingsRes.Data : true;
 
             if (AppState.SignalREnabled)
             {
                 var apiBaseUrl = Configuration["ApiBaseUrl"];
-                var hubBase    = !string.IsNullOrWhiteSpace(apiBaseUrl) ? apiBaseUrl.TrimEnd('/') : Nav.BaseUri.TrimEnd('/');
-                _ = Task.Run(() => SignalR.ConnectAsync(hubBase, AppState.Token, AppState.OrganizationId!, AppState.SignalREnabled));
+                var hubBase    = !string.IsNullOrWhiteSpace(apiBaseUrl)
+                    ? apiBaseUrl.TrimEnd('/')
+                    : Nav.BaseUri.TrimEnd('/');
+                _ = Task.Run(() => SignalR.ConnectAsync(
+                    hubBase, AppState.Token, AppState.OrganizationId!, AppState.SignalREnabled));
             }
         }
         _initializing = false;
@@ -148,7 +161,11 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
-    private void ToggleActivityDrawer() { _activityOpen = !_activityOpen; _unreadActivity = 0; }
+    private void ToggleActivityDrawer()
+    {
+        _activityOpen = !_activityOpen;
+        _unreadActivity = 0;
+    }
 
     private async Task Logout()
     {
@@ -159,7 +176,11 @@ else
         Nav.NavigateTo("/");
     }
 
-    public void Dispose() { AppState.StateChanged -= OnStateChanged; SignalR.OnActivity -= OnActivityReceived; }
+    public void Dispose()
+    {
+        AppState.StateChanged -= OnStateChanged;
+        SignalR.OnActivity    -= OnActivityReceived;
+    }
 
     private record FeedItem(string Message, DateTime Time);
 }

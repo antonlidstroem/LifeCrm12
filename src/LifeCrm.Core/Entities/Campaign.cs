@@ -13,10 +13,11 @@ public class Campaign : TenantEntity
     public string? Notes         { get; set; }
 
     /// <summary>
-    /// Every campaign must belong to exactly one project.
-    /// Project → many Campaigns relationship.
+    /// Every campaign must belong to a project.
+    /// Nullable in the DB/entity for backward compat with existing data,
+    /// but required by the application layer validators.
     /// </summary>
-    public Guid ProjectId    { get; set; }
+    public Guid? ProjectId   { get; set; }
     public Project? Project  { get; set; }
 
     public ICollection<Donation> Donations { get; set; } = new List<Donation>();

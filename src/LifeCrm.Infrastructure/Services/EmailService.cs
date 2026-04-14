@@ -18,20 +18,32 @@ public class EmailService : IEmailService
     }
 
     public async Task SendAsync(
-        string toEmail, string toName, string subject, string htmlBody,
-        IEnumerable<EmailAttachment>? attachments = null, CancellationToken ct = default)
+        string toEmail,
+        string toName,
+        string subject,
+        string htmlBody,
+        IEnumerable<EmailAttachment>? attachments = null,
+        CancellationToken ct = default)
     {
-        // Read settings from DB (with config fallback)
         var s = await _emailSettings.GetAsync(ct);
 
         if (s.DryRun)
         {
-            _logger.LogInformation("[Email DryRun] To={To} Subject={Subject}", toEmail, subject);
+            _logger.LogInformation(
+                "[Email DryRun] To={To} Subject={Subject} Body={BodyLen}chars",
+                toEmail, subject, htmlBody?.Length ?? 0);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(s.Host))
-            throw new InvalidOperationException("Email host is not configured. Please configure outgoing email in Admin → Email Settings.");
+            throw new InvalidOperationException(
+                "Outgoing email host is not configured. " +
+                "Please configure SMTP settings in Admin → E-postinställningar.");
+
+        if (string.IsNullOrWhiteSpace(s.FromEmail))
+            throw new InvalidOperationException(
+                "Sender email address is not configured. " +
+                "Please configure SMTP settings in Admin → E-postinställningar.");
 
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress(s.FromName, s.FromEmail));
@@ -40,16 +52,20 @@ public class EmailService : IEmailService
 
         var builder = new BodyBuilder { HtmlBody = htmlBody };
         if (attachments is not null)
+        {
             foreach (var att in attachments)
                 builder.Attachments.Add(att.FileName, att.Bytes, ContentType.Parse(att.ContentType));
+        }
         message.Body = builder.ToMessageBody();
 
-        // Determine SecureSocketOptions from port and UseSsl flag
+        // Auto-detect SecureSocketOptions from port number and UseSsl flag
         var secureSocket = s.Port switch
         {
-            465              => SecureSocketOptions.SslOnConnect,
+            465                => SecureSocketOptions.SslOnConnect,
             25 or 1025 or 2525 => SecureSocketOptions.None,
-            _                => s.UseSsl ? SecureSocketOptions.StartTlsWhenAvailable : SecureSocketOptions.None
+            _                  => s.UseSsl
+                                    ? SecureSocketOptions.StartTlsWhenAvailable
+                                    : SecureSocketOptions.None
         };
 
         using var client = new SmtpClient();
@@ -61,6 +77,6 @@ public class EmailService : IEmailService
         await client.SendAsync(message, ct);
         await client.DisconnectAsync(true, ct);
 
-        _logger.LogInformation("Email sent to {To} subject '{Subject}'", toEmail, subject);
+        _logger.LogInformation("Email sent → {To} | Subject: {Subject}", toEmail, subject);
     }
 }

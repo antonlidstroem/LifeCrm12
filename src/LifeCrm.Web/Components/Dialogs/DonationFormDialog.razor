@@ -27,17 +27,17 @@
                 </MudItem>
             }
 
-            <!-- Amount and date -->
             <MudItem xs="12" sm="6">
-                <MudNumericField @bind-Value="_amount" Label="Belopp *" Variant="Variant.Outlined"
-                                 Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                <MudNumericField @bind-Value="_amount" Label="Belopp *"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.Start"
+                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney"
                                  HideSpinButtons="true" Min="0.01m" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudDatePicker @bind-Date="_date" Label="Datum *" Variant="Variant.Outlined" Editable="true" />
+                <MudDatePicker @bind-Date="_date" Label="Datum *"
+                               Variant="Variant.Outlined" Editable="true" />
             </MudItem>
-
-            <!-- Status and payment method -->
             <MudItem xs="12" sm="6">
                 <MudSelect T="string" @bind-Value="_status" Label="Status" Variant="Variant.Outlined">
                     <MudSelectItem Value="@("Confirmed")">Bekräftad</MudSelectItem>
@@ -48,51 +48,52 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_paymentMethod" Label="Betalningsmetod" Variant="Variant.Outlined" />
+                <MudTextField @bind-Value="_paymentMethod" Label="Betalningsmetod"
+                              Variant="Variant.Outlined" />
             </MudItem>
 
-            <!-- Project selector first (campaigns filter by project) -->
+            <!-- Project selector (always shown; campaigns are filtered by project) -->
             <MudItem xs="12" sm="6">
                 <MudSelect T="Guid?" Value="_projectId"
                            ValueChanged="OnProjectChanged"
                            Label="Projekt" Variant="Variant.Outlined" Clearable="true">
-                    <MudSelectItem T="Guid?" Value="null">Inget projekt</MudSelectItem>
+                    <MudSelectItem T="Guid?" Value="@((Guid?)null)">Inget projekt</MudSelectItem>
                     @foreach (var p in _projects)
                     {
-                        <MudSelectItem T="Guid?" Value="@p.Id">@p.Name</MudSelectItem>
+                        <MudSelectItem T="Guid?" Value="@((Guid?)p.Id)">@p.Name</MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>
 
-            <!-- Campaign selector — filtered to selected project -->
+            <!-- Campaign selector — filtered to the selected project -->
             <MudItem xs="12" sm="6">
                 <MudSelect T="Guid?" Value="_campaignId"
                            ValueChanged="OnCampaignChanged"
-                           Label="Kampanj" Variant="Variant.Outlined" Clearable="true"
-                           Disabled="@(!_projectId.HasValue && !_campaigns.Any())">
-                    <MudSelectItem T="Guid?" Value="null">Ingen kampanj</MudSelectItem>
+                           Label="Kampanj" Variant="Variant.Outlined" Clearable="true">
+                    <MudSelectItem T="Guid?" Value="@((Guid?)null)">Ingen kampanj</MudSelectItem>
                     @foreach (var c in _filteredCampaigns)
                     {
-                        <MudSelectItem T="Guid?" Value="@c.Id">@c.Name</MudSelectItem>
+                        <MudSelectItem T="Guid?" Value="@((Guid?)c.Id)">@c.Name</MudSelectItem>
                     }
                 </MudSelect>
                 @if (_projectId.HasValue && !_filteredCampaigns.Any())
                 {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        Inga kampanjer för detta projekt.
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                        Inga kampanjer för valt projekt.
                     </MudText>
                 }
             </MudItem>
 
-            <!-- Notes -->
             <MudItem xs="12">
-                <MudTextField @bind-Value="_notes" Label="Anteckning" Variant="Variant.Outlined" Lines="2" />
+                <MudTextField @bind-Value="_notes" Label="Anteckning"
+                              Variant="Variant.Outlined" Lines="2" />
             </MudItem>
         </MudGrid>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text">Avbryt</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="_saving">
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   OnClick="Submit" Disabled="_saving">
             @(_saving ? "Sparar…" : (_isEdit ? "Spara" : "Skapa"))
         </MudButton>
     </DialogActions>
@@ -119,35 +120,31 @@
     {
         _isEdit = DonationId.HasValue;
 
-        // Load all projects and all campaigns up front
+        // Load all projects and all campaigns
         var pt = ProjectsApi.GetProjectsAsync(new PaginationParams { PageSize = 200 });
-        var ct = CampaignsApi.GetCampaignsAsync(new PaginationParams { PageSize = 500 });
-        await Task.WhenAll(pt, ct);
+        var ct2 = CampaignsApi.GetCampaignsAsync(new PaginationParams { PageSize = 500 });
+        await Task.WhenAll(pt, ct2);
 
         _projects  = pt.Result.Data?.Items.ToList() ?? new();
-        _campaigns = ct.Result.Data?.Items.ToList() ?? new();
+        _campaigns = ct2.Result.Data?.Items.ToList() ?? new();
 
         if (_isEdit)
         {
             var res = await DonationsApi.GetDonationAsync(DonationId!.Value);
-            if (res.Data is null) return;
-            var d = res.Data;
-            _originalContactId = d.ContactId;
-            _amount            = d.Amount;
-            _date              = d.Date.ToDateTime(TimeOnly.MinValue);
-            _status            = d.Status.ToString();
-            _projectId         = d.ProjectId;
-            _campaignId        = d.CampaignId;
-            _paymentMethod     = d.PaymentMethod ?? string.Empty;
-            _notes             = d.Notes ?? string.Empty;
-        }
-        else if (PresetContactId.HasValue)
-        {
-            // If creating from a project page, pre-select that project
-            // (passed via PresetProjectId if we want to extend)
+            if (res.Data is not null)
+            {
+                var d = res.Data;
+                _originalContactId = d.ContactId;
+                _amount            = d.Amount;
+                _date              = d.Date.ToDateTime(TimeOnly.MinValue);
+                _status            = d.Status.ToString();
+                _projectId         = d.ProjectId;
+                _campaignId        = d.CampaignId;
+                _paymentMethod     = d.PaymentMethod ?? string.Empty;
+                _notes             = d.Notes ?? string.Empty;
+            }
         }
 
-        // Refresh campaign filter based on loaded projectId
         RefreshFilteredCampaigns();
     }
 
@@ -155,21 +152,18 @@
     {
         _filteredCampaigns = _projectId.HasValue
             ? _campaigns.Where(c => c.ProjectId == _projectId.Value).ToList()
-            : _campaigns;
+            : _campaigns.ToList();
     }
 
-    /// <summary>
-    /// When the user picks a project, clear any campaign that doesn't belong to it.
-    /// </summary>
+    /// <summary>When project changes, clear any campaign belonging to a different project.</summary>
     private void OnProjectChanged(Guid? newProjectId)
     {
         _projectId = newProjectId;
 
-        // If a campaign was selected and it belongs to a different project, clear it
         if (_campaignId.HasValue)
         {
             var campaign = _campaigns.FirstOrDefault(c => c.Id == _campaignId.Value);
-            if (campaign is not null && campaign.ProjectId != newProjectId)
+            if (campaign?.ProjectId != newProjectId)
                 _campaignId = null;
         }
 
@@ -177,8 +171,7 @@
     }
 
     /// <summary>
-    /// When a campaign is picked, automatically set the project to match.
-    /// Issue 7 fix: donation linked to campaign must also be linked to that campaign's project.
+    /// FIX Issue 7: when a campaign is picked, auto-fill the project from that campaign.
     /// </summary>
     private void OnCampaignChanged(Guid? newCampaignId)
     {
@@ -187,9 +180,8 @@
         if (newCampaignId.HasValue)
         {
             var campaign = _campaigns.FirstOrDefault(c => c.Id == newCampaignId.Value);
-            if (campaign is not null && campaign.ProjectId != Guid.Empty)
+            if (campaign?.ProjectId is not null)
             {
-                // Auto-fill the project from the campaign
                 _projectId = campaign.ProjectId;
                 RefreshFilteredCampaigns();
             }
@@ -198,7 +190,8 @@
 
     private async Task<IEnumerable<ContactListDto>> SearchContacts(string search, CancellationToken ct)
     {
-        var res = await ContactsApi.GetContactsAsync(new PaginationParams { PageSize = 20, Search = search });
+        var res = await ContactsApi.GetContactsAsync(
+            new PaginationParams { PageSize = 20, Search = search });
         return res.Data?.Items ?? Enumerable.Empty<ContactListDto>();
     }
 

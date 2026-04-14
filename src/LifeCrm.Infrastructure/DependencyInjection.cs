@@ -13,11 +13,13 @@ namespace LifeCrm.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services, IConfiguration config)
     {
-        // Config abstraction — keeps IConfiguration out of Application layer
+        // ── Config bridge (Singleton — stateless, reads IConfiguration) ──────────
         services.AddSingleton<IAppSettings, AppSettingsService>();
 
+        // ── Database ──────────────────────────────────────────────────────────────
         services.AddScoped<AuditSaveInterceptor>();
         services.AddDbContext<AppDbContext>((sp, opts) =>
         {
@@ -25,6 +27,7 @@ public static class DependencyInjection
             opts.AddInterceptors(sp.GetRequiredService<AuditSaveInterceptor>());
         });
 
+        // ── Core services ─────────────────────────────────────────────────────────
         services.AddScoped<ICurrentUserService,    CurrentUserService>();
         services.AddScoped<IUnitOfWork,            UnitOfWork>();
         services.AddScoped<IOrganizationReader,    OrganizationReader>();
@@ -32,13 +35,18 @@ public static class DependencyInjection
         services.AddScoped<ICsvService,            CsvService>();
         services.AddScoped<IPdfService,            PdfService>();
 
-        // Email settings read from DB (Singleton so cache is shared across requests)
+        // ── Email ─────────────────────────────────────────────────────────────────
+        // EmailSettingsService is Singleton: holds in-memory SMTP config cache.
+        // It uses IServiceScopeFactory to access the Scoped AppDbContext safely.
         services.AddSingleton<IEmailSettingsService, EmailSettingsService>();
-        // EmailService is Scoped — it calls IEmailSettingsService.GetAsync per request
-        services.AddScoped<IEmailService,          EmailService>();
+        // EmailService is Scoped: calls IEmailSettingsService per request.
+        services.AddScoped<IEmailService, EmailService>();
 
-        services.AddSingleton<ISignalRSettings,    SignalRSettingsService>();
-        services.AddScoped<IUnsubscribeTokenService, UnsubscribeTokenService>();
+        // ── Real-time / Token ─────────────────────────────────────────────────────
+        services.AddSingleton<ISignalRSettings,          SignalRSettingsService>();
+        services.AddScoped<IUnsubscribeTokenService,     UnsubscribeTokenService>();
+
+        // ── Seeder ────────────────────────────────────────────────────────────────
         services.AddScoped<DatabaseSeeder>();
 
         return services;

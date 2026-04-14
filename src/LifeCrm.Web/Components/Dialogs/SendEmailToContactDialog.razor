@@ -11,35 +11,44 @@
     <DialogContent>
         @if (string.IsNullOrEmpty(ContactEmail))
         {
-            <MudAlert Severity="Severity.Warning">Kontakten har ingen e-postadress registrerad.</MudAlert>
-        }
-        else if (EmailOptOut)
-        {
             <MudAlert Severity="Severity.Warning">
-                Kontakten har avsagt sig e-post. Du kan ändå skicka ett direkt meddelande om det är nödvändigt.
+                Kontakten har ingen e-postadress registrerad.
             </MudAlert>
         }
-        <MudGrid Spacing="2" Class="mt-2">
-            <MudItem xs="12">
-                <MudText Typo="Typo.body2" Color="Color.Secondary">
-                    Till: <b>@ContactEmail</b>
-                </MudText>
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_subject" Label="Ämne *" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_body" Label="Meddelande *" Variant="Variant.Outlined" Lines="6"
-                              Placeholder="Skriv ditt meddelande här. Du kan använda HTML-taggar." />
-            </MudItem>
-        </MudGrid>
+        else
+        {
+            @if (EmailOptOut)
+            {
+                <MudAlert Severity="Severity.Warning" Class="mb-3">
+                    Kontakten har avsagt sig e-post (opt-out). Du skickar ändå ett direktmeddelande.
+                </MudAlert>
+            }
+            <MudGrid Spacing="2">
+                <MudItem xs="12">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Till: <b>@ContactName &lt;@ContactEmail&gt;</b>
+                    </MudText>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_subject" Label="Ämne *" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_body" Label="Meddelande *"
+                                  Variant="Variant.Outlined" Lines="6"
+                                  Placeholder="Skriv ditt meddelande här. HTML-taggar stöds." />
+                </MudItem>
+            </MudGrid>
+        }
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text">Avbryt</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Send"
-                   Disabled="@(_sending || string.IsNullOrEmpty(ContactEmail))">
-            @(_sending ? "Skickar…" : "Skicka")
-        </MudButton>
+        @if (!string.IsNullOrEmpty(ContactEmail))
+        {
+            <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                       OnClick="Send" Disabled="_sending">
+                @(_sending ? "Skickar…" : "Skicka")
+            </MudButton>
+        }
     </DialogActions>
 </MudDialog>
 
@@ -56,18 +65,22 @@
     {
         if (string.IsNullOrWhiteSpace(_subject)) { Snackbar.Add("Ämne krävs.", Severity.Warning); return; }
         if (string.IsNullOrWhiteSpace(_body))    { Snackbar.Add("Meddelande krävs.", Severity.Warning); return; }
-        if (string.IsNullOrEmpty(ContactEmail))  { Snackbar.Add("Ingen e-postadress.", Severity.Error); return; }
 
         _sending = true;
         try
         {
-            var res = await Api.SendDirectEmailAsync(ContactEmail, ContactName, _subject, _body);
-            if (res.Success)
+            var res = await Api.SendDirectEmailAsync(
+                ContactEmail!, ContactName, _subject, _body);
+
+            if (res.Success && !res.Data?.StartsWith("Send failed") == true)
             {
                 Snackbar.Add("E-post skickad.", Severity.Success);
                 MudDialog.Close(DialogResult.Ok(true));
             }
-            else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Fel vid sändning.", Severity.Error);
+            else
+            {
+                Snackbar.Add(res.Data ?? res.Errors.FirstOrDefault() ?? "Fel vid sändning.", Severity.Error);
+            }
         }
         finally { _sending = false; }
     }

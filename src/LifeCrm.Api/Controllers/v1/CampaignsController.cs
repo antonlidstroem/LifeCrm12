@@ -50,11 +50,13 @@ public class CampaignsController : ApiControllerBase
 
     [HttpGet("{id:guid}/newsletter/preview")]
     [Authorize(Policy = "FinanceOrAdmin")]
-    public async Task<IActionResult> PreviewNewsletter(Guid id, [FromQuery] string? tagFilter, CancellationToken ct)
+    public async Task<IActionResult> PreviewNewsletter(
+        Guid id, [FromQuery] string? tagFilter, CancellationToken ct)
         => OkResponse(await Mediator.Send(new PreviewNewsletterCommand(id, tagFilter), ct));
 
     [HttpPost("{id:guid}/newsletter/send")]
     [Authorize(Policy = "FinanceOrAdmin")]
-    public async Task<IActionResult> SendNewsletter(Guid id, [FromBody] CampaignSendNewsletterRequest request, CancellationToken ct)
+    public async Task<IActionResult> SendNewsletter(
+        Guid id, [FromBody] CampaignSendNewsletterRequest request, CancellationToken ct)
         => OkResponse(await Mediator.Send(new CampaignSendNewsletterCommand(id, request), ct));
 }

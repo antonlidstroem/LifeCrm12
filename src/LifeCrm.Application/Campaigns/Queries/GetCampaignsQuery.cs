@@ -8,8 +8,9 @@ namespace LifeCrm.Application.Campaigns.Queries;
 
 public class GetCampaignsQuery : IRequest<PagedResult<CampaignListDto>>
 {
-    public PaginationParams Params { get; }
-    public Guid? ProjectId { get; }
+    public PaginationParams Params    { get; }
+    public Guid?            ProjectId { get; }
+
     public GetCampaignsQuery(PaginationParams p, Guid? projectId = null)
     {
         Params    = p;
@@ -27,7 +28,6 @@ public sealed class GetCampaignsHandler : IRequestHandler<GetCampaignsQuery, Pag
         var p     = q.Params;
         var query = _uow.Campaigns.Query();
 
-        // Optional filter by project
         if (q.ProjectId.HasValue)
             query = query.Where(c => c.ProjectId == q.ProjectId.Value);
 
@@ -54,10 +54,12 @@ public sealed class GetCampaignsHandler : IRequestHandler<GetCampaignsQuery, Pag
                 ProjectName     = c.Project != null ? c.Project.Name : string.Empty,
                 TotalRaised     = c.Donations.Where(d => !d.IsDeleted).Sum(d => (decimal?)d.Amount) ?? 0,
                 ProgressPercent = c.BudgetGoal.HasValue && c.BudgetGoal > 0
-                    ? Math.Round((c.Donations.Where(d => !d.IsDeleted).Sum(d => (decimal?)d.Amount) ?? 0) / c.BudgetGoal.Value * 100, 1)
+                    ? Math.Round(
+                        (c.Donations.Where(d => !d.IsDeleted).Sum(d => (decimal?)d.Amount) ?? 0)
+                        / c.BudgetGoal.Value * 100, 1)
                     : null,
-                StartDate    = c.StartDate,
-                EndDate      = c.EndDate,
+                StartDate     = c.StartDate,
+                EndDate       = c.EndDate,
                 DonationCount = c.Donations.Count(d => !d.IsDeleted)
             })
             .ToListAsync(ct);

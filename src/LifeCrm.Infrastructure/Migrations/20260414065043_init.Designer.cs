@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LifeCrm.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260412193221_init")]
+    [Migration("20260414065043_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -204,6 +204,9 @@ namespace LifeCrm.Infrastructure.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly?>("StartDate")
                         .HasColumnType("date");
 
@@ -211,6 +214,8 @@ namespace LifeCrm.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
 
                     b.ToTable("Campaigns");
                 });
@@ -1012,6 +1017,16 @@ namespace LifeCrm.Infrastructure.Migrations
                     b.Navigation("Organization");
                 });
 
+            modelBuilder.Entity("LifeCrm.Core.Entities.Campaign", b =>
+                {
+                    b.HasOne("LifeCrm.Core.Entities.Project", "Project")
+                        .WithMany("Campaigns")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Project");
+                });
+
             modelBuilder.Entity("LifeCrm.Core.Entities.Contact", b =>
                 {
                     b.HasOne("LifeCrm.Core.Entities.Organization", null)
@@ -1176,6 +1191,8 @@ namespace LifeCrm.Infrastructure.Migrations
 
             modelBuilder.Entity("LifeCrm.Core.Entities.Project", b =>
                 {
+                    b.Navigation("Campaigns");
+
                     b.Navigation("Donations");
 
                     b.Navigation("Interactions");

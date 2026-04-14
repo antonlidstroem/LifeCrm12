@@ -11,7 +11,6 @@ using LifeCrm.Application.Projects.DTOs;
 using LifeCrm.Application.Reports.DTOs;
 using LifeCrm.Application.Users.DTOs;
 using LifeCrm.Core.Enums;
-using LifeCrm.Core.Interfaces;
 using Microsoft.JSInterop;
 
 namespace LifeCrm.Web.Services;
@@ -32,10 +31,13 @@ public class ApiClient : ApiClientBase
     private readonly ReportsApiClient      _reports;
     private readonly NewslettersApiClient  _newsletters;
 
-    public ApiClient(HttpClient http, ILocalStorageService storage, IJSRuntime js,
-        ContactsApiClient contacts, DonationsApiClient donations, CampaignsApiClient campaigns,
-        ProjectsApiClient projects, InteractionsApiClient interactions, UsersApiClient users,
-        DashboardApiClient dashboard, ReportsApiClient reports, NewslettersApiClient newsletters)
+    public ApiClient(
+        HttpClient http, ILocalStorageService storage, IJSRuntime js,
+        ContactsApiClient contacts, DonationsApiClient donations,
+        CampaignsApiClient campaigns, ProjectsApiClient projects,
+        InteractionsApiClient interactions, UsersApiClient users,
+        DashboardApiClient dashboard, ReportsApiClient reports,
+        NewslettersApiClient newsletters)
         : base(http, storage, js)
     {
         _contacts = contacts; _donations = donations; _campaigns = campaigns;
@@ -44,7 +46,8 @@ public class ApiClient : ApiClientBase
     }
 
     // ── Contacts ─────────────────────────────────────────────────────────────
-    public Task<ApiResponse<PagedResult<ContactListDto>>> GetContactsAsync(PaginationParams p) => _contacts.GetContactsAsync(p);
+    public Task<ApiResponse<PagedResult<ContactListDto>>> GetContactsAsync(PaginationParams p)
+        => _contacts.GetContactsAsync(p);
     public Task<ApiResponse<ContactDto>> GetContactAsync(Guid id) => _contacts.GetContactAsync(id);
     public Task<ApiResponse<Guid>>       CreateContactAsync(CreateContactRequest req) => _contacts.CreateContactAsync(req);
     public Task<ApiResponse>             UpdateContactAsync(Guid id, UpdateContactRequest req) => _contacts.UpdateContactAsync(id, req);
@@ -53,8 +56,9 @@ public class ApiClient : ApiClientBase
     public Task<ApiResponse<ImportContactsResult>> ImportContactsCsvAsync(Stream s, string name) => _contacts.ImportContactsCsvAsync(s, name);
 
     // ── Donations ─────────────────────────────────────────────────────────────
-    public Task<ApiResponse<PagedResult<DonationListDto>>> GetDonationsAsync(PaginationParams p, Guid? contactId = null,
-        DateOnly? fromDate = null, DateOnly? toDate = null, Guid? campaignId = null, Guid? projectId = null)
+    public Task<ApiResponse<PagedResult<DonationListDto>>> GetDonationsAsync(
+        PaginationParams p, Guid? contactId = null, DateOnly? fromDate = null,
+        DateOnly? toDate = null, Guid? campaignId = null, Guid? projectId = null)
         => _donations.GetDonationsAsync(p, contactId, fromDate, toDate, campaignId, projectId);
     public Task<ApiResponse<DonationDto>> GetDonationAsync(Guid id) => _donations.GetDonationAsync(id);
     public Task<ApiResponse<Guid>>        CreateDonationAsync(CreateDonationRequest req) => _donations.CreateDonationAsync(req);
@@ -73,8 +77,10 @@ public class ApiClient : ApiClientBase
     public Task<ApiResponse>              DeleteCampaignAsync(Guid id) => _campaigns.DeleteCampaignAsync(id);
 
     public Task<ApiResponse<NewsletterPreviewDto>> PreviewCampaignNewsletterAsync(Guid campaignId, string? tagFilter)
-        => GetAsync<NewsletterPreviewDto>($"api/v1/campaigns/{campaignId}/newsletter/preview{(tagFilter is not null ? $"?tagFilter={Uri.EscapeDataString(tagFilter)}" : "")}");
-    public Task<ApiResponse<NewsletterSendResultDto>> SendCampaignNewsletterAsync(Guid campaignId, CampaignSendNewsletterRequest req)
+        => GetAsync<NewsletterPreviewDto>($"api/v1/campaigns/{campaignId}/newsletter/preview" +
+           (tagFilter is not null ? $"?tagFilter={Uri.EscapeDataString(tagFilter)}" : ""));
+    public Task<ApiResponse<NewsletterSendResultDto>> SendCampaignNewsletterAsync(
+        Guid campaignId, CampaignSendNewsletterRequest req)
         => PostAsync<NewsletterSendResultDto>($"api/v1/campaigns/{campaignId}/newsletter/send", req);
 
     // ── Projects ─────────────────────────────────────────────────────────────
@@ -103,17 +109,20 @@ public class ApiClient : ApiClientBase
     public Task<ApiResponse<Guid>>   CreateNewsletterAsync(CreateNewsletterRequest req) => _newsletters.CreateNewsletterAsync(req);
     public Task<ApiResponse>         UpdateNewsletterAsync(Guid id, UpdateNewsletterRequest req) => _newsletters.UpdateNewsletterAsync(id, req);
     public Task<ApiResponse>         DeleteNewsletterAsync(Guid id) => _newsletters.DeleteNewsletterAsync(id);
-    public Task<ApiResponse<NewsletterPreviewDto>> PreviewNewsletterRecipientsAsync(string? tagFilter, string? contactTypeFilter)
+    public Task<ApiResponse<NewsletterPreviewDto>> PreviewNewsletterRecipientsAsync(
+        string? tagFilter, string? contactTypeFilter)
         => _newsletters.PreviewNewsletterRecipientsAsync(tagFilter, contactTypeFilter);
     public Task<ApiResponse<NewsletterSendResultDto>> SendNewsletterAsync(Guid id, SendNewsletterRequest req)
         => _newsletters.SendNewsletterAsync(id, req);
-    public Task<ApiResponse<AttachmentDto>> UploadNewsletterAttachmentAsync(Guid id, Stream stream, string fileName, string contentType)
+    public Task<ApiResponse<AttachmentDto>> UploadNewsletterAttachmentAsync(
+        Guid id, Stream stream, string fileName, string contentType)
         => _newsletters.UploadNewsletterAttachmentAsync(id, stream, fileName, contentType);
     public Task<ApiResponse> DeleteNewsletterAttachmentAsync(Guid id, Guid attachmentId)
         => _newsletters.DeleteNewsletterAttachmentAsync(id, attachmentId);
 
     // ── Reports ───────────────────────────────────────────────────────────────
-    public Task<ApiResponse<PagedResult<MissionReportListDto>>> GetReportsAsync(PaginationParams p, ReportStatus? status = null, Guid? campaignId = null, Guid? projectId = null)
+    public Task<ApiResponse<PagedResult<MissionReportListDto>>> GetReportsAsync(
+        PaginationParams p, ReportStatus? status = null, Guid? campaignId = null, Guid? projectId = null)
         => _reports.GetReportsAsync(p, status, campaignId, projectId);
     public Task<ApiResponse<MissionReportDetailDto>> GetReportAsync(Guid id) => _reports.GetReportAsync(id);
     public Task<ApiResponse<Guid>>   CreateReportAsync(CreateReportRequest req) => _reports.CreateReportAsync(req);
@@ -124,10 +133,12 @@ public class ApiClient : ApiClientBase
     public Task<ApiResponse>         ReturnReportAsync(Guid id, ReturnForRevisionRequest req) => _reports.ReturnReportAsync(id, req);
     public Task<ApiResponse<DecisionCountDto>> UpsertDecisionCountAsync(Guid reportId, UpsertDecisionCountRequest req)
         => _reports.UpsertDecisionCountAsync(reportId, req);
-    public Task<ApiResponse<IReadOnlyList<PeopleGroupSearchDto>>> SearchPeopleGroupsAsync(string q) => _reports.SearchPeopleGroupsAsync(q);
+    public Task<ApiResponse<IReadOnlyList<PeopleGroupSearchDto>>> SearchPeopleGroupsAsync(string q)
+        => _reports.SearchPeopleGroupsAsync(q);
     public Task<ApiResponse<PeopleGroupReachedDto>> AddPeopleGroupAsync(Guid reportId, AddPeopleGroupRequest req)
         => _reports.AddPeopleGroupAsync(reportId, req);
-    public Task<ApiResponse> RemovePeopleGroupAsync(Guid reportId, Guid entryId) => _reports.RemovePeopleGroupAsync(reportId, entryId);
+    public Task<ApiResponse> RemovePeopleGroupAsync(Guid reportId, Guid entryId)
+        => _reports.RemovePeopleGroupAsync(reportId, entryId);
     public Task<ApiResponse<PrayerPointDto>> AddReportPrayerPointAsync(Guid reportId, CreatePrayerPointRequest req)
         => _reports.AddReportPrayerPointAsync(reportId, req);
     public Task<ApiResponse<IReadOnlyList<AnsweredPrayerWidgetDto>>> GetAnsweredPrayersThisMonthAsync()
@@ -142,11 +153,13 @@ public class ApiClient : ApiClientBase
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
     public Task<ApiResponse<DashboardDto>> GetDashboardAsync() => _dashboard.GetDashboardAsync();
-    public Task<ApiResponse<DocumentDto>>  GenerateDonationSummaryAsync(GenerateDonationSummaryRequest req) => _dashboard.GenerateDonationSummaryAsync(req);
-    public Task<ApiResponse>               DownloadDocumentAsync(Guid id) => _dashboard.DownloadDocumentAsync(id);
+    public Task<ApiResponse<DocumentDto>>  GenerateDonationSummaryAsync(GenerateDonationSummaryRequest req)
+        => _dashboard.GenerateDonationSummaryAsync(req);
+    public Task<ApiResponse> DownloadDocumentAsync(Guid id) => _dashboard.DownloadDocumentAsync(id);
 
-    // ── Direct Email ──────────────────────────────────────────────────────────
-    /// <summary>Sends a direct email to any recipient (Finance/Admin only).</summary>
-    public Task<ApiResponse<string>> SendDirectEmailAsync(string toEmail, string toName, string subject, string htmlBody)
-        => PostAsync<string>("api/v1/directemail/send", new { toEmail, toName, subject, htmlBody });
+    // ── Direct email (Finance/Admin) ──────────────────────────────────────────
+    public Task<ApiResponse<string>> SendDirectEmailAsync(
+        string toEmail, string toName, string subject, string htmlBody)
+        => PostAsync<string>("api/v1/directemail/send",
+            new { toEmail, toName, subject, htmlBody });
 }

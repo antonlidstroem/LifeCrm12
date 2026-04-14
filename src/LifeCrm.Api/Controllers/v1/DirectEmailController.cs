@@ -22,7 +22,8 @@ public class DirectEmailController : ApiControllerBase
 
     [HttpPost("send")]
     [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> Send([FromBody] DirectEmailRequest request, CancellationToken ct)
+    public async Task<IActionResult> Send(
+        [FromBody] DirectEmailRequest request, CancellationToken ct)
     {
         try
         {
@@ -36,6 +37,7 @@ public class DirectEmailController : ApiControllerBase
         }
         catch (Exception ex)
         {
+            // Return 200 with error message so the UI can display it
             return OkResponse($"Send failed: {ex.Message}");
         }
     }
@@ -43,8 +45,8 @@ public class DirectEmailController : ApiControllerBase
 
 public record DirectEmailRequest
 {
-    [Required][EmailAddress][MaxLength(320)] public string ToEmail   { get; init; } = string.Empty;
-    [MaxLength(200)]                         public string ToName    { get; init; } = string.Empty;
-    [Required][MaxLength(500)]               public string Subject   { get; init; } = string.Empty;
-    [Required][MaxLength(100_000)]           public string HtmlBody  { get; init; } = string.Empty;
+    [Required][EmailAddress][MaxLength(320)] public string ToEmail  { get; init; } = string.Empty;
+    [MaxLength(200)]                         public string ToName   { get; init; } = string.Empty;
+    [Required][MaxLength(500)]               public string Subject  { get; init; } = string.Empty;
+    [Required][MaxLength(100_000)]           public string HtmlBody { get; init; } = string.Empty;
 }
