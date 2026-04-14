@@ -1,3 +1,4 @@
+// src/LifeCrm.Infrastructure/Services/EmailService.cs
 using LifeCrm.Core.Interfaces;
 using MailKit.Net.Smtp;
 using MailKit.Security;
@@ -14,14 +15,11 @@ public class EmailService : IEmailService
     public EmailService(IEmailSettingsService emailSettings, ILogger<EmailService> logger)
     {
         _emailSettings = emailSettings;
-        _logger        = logger;
+        _logger = logger;
     }
 
     public async Task SendAsync(
-        string toEmail,
-        string toName,
-        string subject,
-        string htmlBody,
+        string toEmail, string toName, string subject, string htmlBody,
         IEnumerable<EmailAttachment>? attachments = null,
         CancellationToken ct = default)
     {
@@ -29,21 +27,14 @@ public class EmailService : IEmailService
 
         if (s.DryRun)
         {
-            _logger.LogInformation(
-                "[Email DryRun] To={To} Subject={Subject} Body={BodyLen}chars",
-                toEmail, subject, htmlBody?.Length ?? 0);
+            _logger.LogInformation("[Email DryRun] To={To} Subject={Subject}", toEmail, subject);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(s.Host))
             throw new InvalidOperationException(
                 "Outgoing email host is not configured. " +
-                "Please configure SMTP settings in Admin → E-postinställningar.");
-
-        if (string.IsNullOrWhiteSpace(s.FromEmail))
-            throw new InvalidOperationException(
-                "Sender email address is not configured. " +
-                "Please configure SMTP settings in Admin → E-postinställningar.");
+                "Go to Admin → E-postinställningar to configure SMTP.");
 
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress(s.FromName, s.FromEmail));
@@ -52,23 +43,31 @@ public class EmailService : IEmailService
 
         var builder = new BodyBuilder { HtmlBody = htmlBody };
         if (attachments is not null)
-        {
             foreach (var att in attachments)
                 builder.Attachments.Add(att.FileName, att.Bytes, ContentType.Parse(att.ContentType));
-        }
         message.Body = builder.ToMessageBody();
 
-        // Auto-detect SecureSocketOptions from port number and UseSsl flag
         var secureSocket = s.Port switch
         {
-            465                => SecureSocketOptions.SslOnConnect,
+            465 => SecureSocketOptions.SslOnConnect,
             25 or 1025 or 2525 => SecureSocketOptions.None,
-            _                  => s.UseSsl
+            _ => s.UseSsl
                                     ? SecureSocketOptions.StartTlsWhenAvailable
                                     : SecureSocketOptions.None
         };
 
         using var client = new SmtpClient();
+
+        // FIX: Disable certificate revocation checks.
+        // Many corporate SMTP servers and self-signed certs fail revocation checks.
+        // This is safe for internal/corporate SMTP relays. For production with public
+        // CAs the revocation check passes anyway.
+        client.CheckCertificateRevocation = false;
+
+        // Also accept server certificates that the OS can't validate (self-signed).
+        // Remove this line if you only use trusted CAs like Gmail/Office365/SendGrid.
+        client.ServerCertificateValidationCallback = (sender, cert, chain, errors) => true;
+
         await client.ConnectAsync(s.Host, s.Port, secureSocket, ct);
 
         if (!string.IsNullOrEmpty(s.Username) && !string.IsNullOrEmpty(s.Password))

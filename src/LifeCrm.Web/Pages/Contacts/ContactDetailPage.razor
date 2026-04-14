@@ -1,3 +1,4 @@
+@* src/LifeCrm.Web/Pages/Contacts/ContactDetailPage.razor *@
 @page "/contacts/{Id:guid}"
 @using LifeCrm.Web.Components.Dialogs
 @inject ContactsApiClient ContactsApi
@@ -9,7 +10,8 @@
 @inject NavigationManager Nav
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
-    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/contacts"))" />
+    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="@(() => Nav.NavigateTo("/contacts"))" />
     <MudText Typo="Typo.h5">@(_contact?.Name ?? "Laddar…")</MudText>
     <MudSpacer />
     @if (AppState.CanWrite && _contact is not null)
@@ -17,7 +19,8 @@
         <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Edit"
                    OnClick="OpenEditDialog" Class="mr-2">Redigera</MudButton>
     }
-    @if (AppState.IsFinanceOrAdmin && _contact is not null && !string.IsNullOrEmpty(_contact.Email))
+    @if (AppState.IsFinanceOrAdmin && _contact is not null
+             && !string.IsNullOrEmpty(_contact.Email))
     {
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
                    StartIcon="@Icons.Material.Filled.Email"
@@ -25,30 +28,68 @@
     }
 </MudStack>
 
-@if (_loading) { <MudProgressLinear Color="Color.Primary" Indeterminate="true" /> }
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
 else if (_contact is not null)
 {
     <MudGrid>
-        <!-- ── Left panel ──────────────────────────────────────────────── -->
         <MudItem xs="12" md="4">
-            <MudCard Elevation="2">
+            <MudCard Elevation="2" Class="mb-3">
                 <MudCardContent>
                     <MudStack AlignItems="AlignItems.Center" Class="mb-4">
                         <MudAvatar Color="Color.Primary" Style="height:90px;width:90px;font-size:2rem;">
                             @_contact.Name[0]
                         </MudAvatar>
                         <MudText Typo="Typo.h5" Class="mt-3">@_contact.Name</MudText>
-                        <MudChip T="string" Color="@_contact.Type.ToMudColor()" Size="Size.Small" Variant="Variant.Text">
-                            @_contact.Type
-                        </MudChip>
+                        <MudChip T="string" Color="@_contact.Type.ToMudColor()"
+                                 Size="Size.Small" Variant="Variant.Text">@_contact.Type</MudChip>
                     </MudStack>
                     <MudDivider Class="my-3" />
+
+                    <!-- Contact details -->
                     <MudList T="string" Dense="true">
-                        <MudListItem Icon="@Icons.Material.Filled.Email">@(_contact.Email ?? "Ingen e-post")</MudListItem>
-                        <MudListItem Icon="@Icons.Material.Filled.Phone">@(_contact.Phone ?? "Inget nummer")</MudListItem>
-                        <MudListItem Icon="@Icons.Material.Filled.LocationOn">
-                            @(string.Join(", ", new[] { _contact.City, _contact.Country }.Where(s => !string.IsNullOrEmpty(s))))
-                        </MudListItem>
+                        @if (!string.IsNullOrEmpty(_contact.Email))
+                        {
+                            <MudListItem Icon="@Icons.Material.Filled.Email">@_contact.Email</MudListItem>
+                        }
+                        @if (!string.IsNullOrEmpty(_contact.Phone))
+                        {
+                            <MudListItem Icon="@Icons.Material.Filled.Phone">@_contact.Phone</MudListItem>
+                        }
+                        @if (!string.IsNullOrEmpty(_contact.AddressLine1) ||
+                                                     !string.IsNullOrEmpty(_contact.City) ||
+                                                     !string.IsNullOrEmpty(_contact.Country))
+                        {
+                            <MudListItem Icon="@Icons.Material.Filled.LocationOn">
+                                <MudStack Spacing="0">
+                                    @if (!string.IsNullOrEmpty(_contact.AddressLine1))
+                                    {
+                                        <MudText Typo="Typo.body2">@_contact.AddressLine1</MudText>
+                                    }
+                                    @if (!string.IsNullOrEmpty(_contact.AddressLine2))
+                                    {
+                                        <MudText Typo="Typo.body2">@_contact.AddressLine2</MudText>
+                                    }
+                                    <MudText Typo="Typo.body2">
+                                        @string.Join(", ", new[]
+                                        {
+                                            _contact.PostalCode,
+                                            _contact.City,
+                                            _contact.StateProvince,
+                                            _contact.Country
+                                        }.Where(s => !string.IsNullOrEmpty(s)))
+                                    </MudText>
+                                </MudStack>
+                            </MudListItem>
+                        }
+                        @if (!string.IsNullOrEmpty(_contact.PrimaryContactName))
+                        {
+                            <MudListItem Icon="@Icons.Material.Filled.Person">
+                                Kontaktperson: @_contact.PrimaryContactName
+                            </MudListItem>
+                        }
                         @if (!string.IsNullOrEmpty(_contact.Tags))
                         {
                             <MudListItem Icon="@Icons.Material.Filled.Label">@_contact.Tags</MudListItem>
@@ -60,6 +101,14 @@ else if (_contact is not null)
                             </MudListItem>
                         }
                     </MudList>
+
+                    @if (!string.IsNullOrEmpty(_contact.Notes))
+                    {
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Anteckningar</MudText>
+                        <MudText Typo="Typo.body2" Class="mt-1" Style="white-space:pre-wrap">@_contact.Notes</MudText>
+                    }
+
                     <MudDivider Class="my-3" />
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
                         <div>
@@ -70,7 +119,12 @@ else if (_contact is not null)
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Totalt</MudText>
                             <MudText Typo="Typo.h6">$@_contact.TotalDonated.ToString("N2")</MudText>
                         </div>
+                        <div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Interaktioner</MudText>
+                            <MudText Typo="Typo.h6">@_contact.InteractionCount</MudText>
+                        </div>
                     </MudStack>
+
                     @if (AppState.IsFinanceOrAdmin)
                     {
                         <MudDivider Class="my-3" />
@@ -85,11 +139,19 @@ else if (_contact is not null)
                             Generera årsbesked
                         </MudButton>
                     }
+
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Skapad @_contact.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd")
+                        @if (_contact.LastModifiedAt.HasValue)
+                        {
+                            <text> · Uppdaterad @_contact.LastModifiedAt.Value.ToLocalTime().ToString("yyyy-MM-dd")</text>
+                        }
+                    </MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
 
-        <!-- ── Right panel ─────────────────────────────────────────────── -->
         <MudItem xs="12" md="8">
             <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
 
@@ -97,8 +159,10 @@ else if (_contact is not null)
                 <MudTabPanel Text="Tidslinje" Icon="@Icons.Material.Filled.History">
                     @if (AppState.CanWrite)
                     {
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small"
-                                   Class="mb-4" OnClick="OpenLogInteractionDialog">Logga interaktion</MudButton>
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add"
+                                   Size="Size.Small" Class="mb-4" OnClick="OpenLogInteractionDialog">
+                            Logga interaktion
+                        </MudButton>
                     }
                     @if (!_interactions.Any())
                     {
@@ -113,22 +177,35 @@ else if (_contact is not null)
                                     <ItemContent>
                                         <MudStack Row="true" AlignItems="AlignItems.Start">
                                             <div style="flex:1">
-                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-1">
-                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Primary">@i.Type</MudChip>
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@i.OccurredAt.ToString("g")</MudText>
+                                                <MudStack Row="true" AlignItems="AlignItems.Center"
+                                                          Spacing="1" Class="mb-1">
+                                                    <MudChip T="string" Size="Size.Small"
+                                                             Variant="Variant.Text" Color="Color.Primary">
+                                                        @i.Type
+                                                    </MudChip>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                        @i.OccurredAt.ToLocalTime().ToString("g")
+                                                    </MudText>
                                                     @if (!string.IsNullOrEmpty(i.Subject))
                                                     {
                                                         <MudText Typo="Typo.caption"><b>@i.Subject</b></MudText>
                                                     }
                                                 </MudStack>
-                                                <MudText Typo="Typo.body2">@i.Body</MudText>
+                                                <MudText Typo="Typo.body2" Style="white-space:pre-wrap">
+                                                    @i.Body
+                                                </MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                                    @i.CreatedByName
+                                                </MudText>
                                             </div>
                                             @if (AppState.CanWrite)
                                             {
-                                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                               Size="Size.Small"
                                                                OnClick="@(() => OpenEditInteractionDialog(i))" />
-                                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                                               Color="Color.Error" OnClick="@(() => DeleteInteraction(i.Id))" />
+                                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                               Size="Size.Small" Color="Color.Error"
+                                                               OnClick="@(() => DeleteInteraction(i.Id))" />
                                             }
                                         </MudStack>
                                     </ItemContent>
@@ -138,8 +215,8 @@ else if (_contact is not null)
                     }
                 </MudTabPanel>
 
-                <!-- Donations tab -->
-                <MudTabPanel Text="Gåvor" Icon="@Icons.Material.Filled.AttachMoney">
+                <!-- Donations -->
+                <MudTabPanel Text="@($"Gåvor ({_donations.Count()})")" Icon="@Icons.Material.Filled.AttachMoney">
                     @if (!_donations.Any())
                     {
                         <EmptyState Title="Inga gåvor registrerade" Icon="@Icons.Material.Outlined.AttachMoney" />
@@ -148,33 +225,37 @@ else if (_contact is not null)
                     {
                         <MudTable T="DonationListDto" Items="_donations" Dense="true" Hover="true" Elevation="0">
                             <HeaderContent>
-                                <MudTh>Datum</MudTh><MudTh>Belopp</MudTh><MudTh>Status</MudTh><MudTh>Kvitto</MudTh>
+                                <MudTh>Datum</MudTh><MudTh>Belopp</MudTh><MudTh>Kampanj</MudTh>
+                                <MudTh>Status</MudTh><MudTh>Kvitto</MudTh>
                             </HeaderContent>
                             <RowTemplate>
                                 <MudTd>@context.Date.ToString("yyyy-MM-dd")</MudTd>
                                 <MudTd>$@context.Amount.ToString("N2")</MudTd>
+                                <MudTd>@(context.CampaignName ?? context.ProjectName ?? "—")</MudTd>
                                 <MudTd>
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@context.Status.ToMudColor()">
-                                        @context.Status
-                                    </MudChip>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                                             Color="@context.Status.ToMudColor()">@context.Status</MudChip>
                                 </MudTd>
                                 <MudTd>
                                     @if (context.ReceiptDocumentId.HasValue)
                                     {
                                         <MudTooltip Text="Ladda ner kvitto">
-                                            <MudIconButton Icon="@Icons.Material.Filled.Download" Size="Size.Small"
-                                                           Color="Color.Primary" OnClick="@(() => DownloadReceipt(context))" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.Download"
+                                                           Size="Size.Small" Color="Color.Primary"
+                                                           OnClick="@(() => DownloadReceipt(context))" />
                                         </MudTooltip>
                                     }
                                     else if (AppState.IsFinanceOrAdmin)
                                     {
                                         <MudTooltip Text="Skapa kvitto">
-                                            <MudIconButton Icon="@Icons.Material.Filled.Receipt" Size="Size.Small"
-                                                           Color="Color.Secondary" OnClick="@(() => OpenGenerateReceiptDialog(context))" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.Receipt"
+                                                           Size="Size.Small" Color="Color.Secondary"
+                                                           OnClick="@(() => OpenGenerateReceiptDialog(context))" />
                                         </MudTooltip>
                                     }
                                     else
                                     {
+
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
                                     }
                                 </MudTd>
@@ -190,8 +271,8 @@ else if (_contact is not null)
 @code {
     [Parameter] public Guid Id { get; set; }
     private ContactDto? _contact;
-    private IReadOnlyList<DonationListDto> _donations    = Array.Empty<DonationListDto>();
-    private IReadOnlyList<InteractionDto>  _interactions = Array.Empty<InteractionDto>();
+    private IReadOnlyList<DonationListDto> _donations = Array.Empty<DonationListDto>();
+    private IReadOnlyList<InteractionDto> _interactions = Array.Empty<InteractionDto>();
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
@@ -200,13 +281,13 @@ else if (_contact is not null)
     {
         _loading = true;
         var t1 = ContactsApi.GetContactAsync(Id);
-        var t2 = DonationsApi.GetDonationsAsync(new PaginationParams { PageSize = 100 }, contactId: Id);
+        var t2 = DonationsApi.GetDonationsAsync(new PaginationParams { PageSize = 200 }, contactId: Id);
         var t3 = InteractionsApi.GetInteractionsAsync(Id);
         await Task.WhenAll(t1, t2, t3);
-        _contact      = t1.Result.Data;
-        _donations    = t2.Result.Data?.Items ?? Array.Empty<DonationListDto>();
+        _contact = t1.Result.Data;
+        _donations = t2.Result.Data?.Items ?? Array.Empty<DonationListDto>();
         _interactions = t3.Result.Data ?? Array.Empty<InteractionDto>();
-        _loading      = false;
+        _loading = false;
     }
 
     private async Task OpenEditDialog()
@@ -222,9 +303,9 @@ else if (_contact is not null)
         var d = DialogService.Show<SendEmailToContactDialog>("Skicka e-post",
             new DialogParameters
             {
-                ["ContactName"]  = _contact?.Name ?? string.Empty,
+                ["ContactName"] = _contact?.Name ?? string.Empty,
                 ["ContactEmail"] = _contact?.Email,
-                ["EmailOptOut"]  = _contact?.EmailOptOut ?? false
+                ["EmailOptOut"] = _contact?.EmailOptOut ?? false
             },
             new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
         await d.Result;
@@ -257,11 +338,10 @@ else if (_contact is not null)
 
     private async Task DownloadReceipt(DonationListDto donation)
     {
-        if (donation.ReceiptDocumentId.HasValue)
-        {
-            var res = await DonationsApi.DownloadReceiptAsync(donation.Id, donation.ReceiptDocumentId.Value);
-            if (!res.Success) Snackbar.Add(res.Errors.FirstOrDefault() ?? "Nedladdning misslyckades.", Severity.Error);
-        }
+        if (!donation.ReceiptDocumentId.HasValue) return;
+        var res = await DonationsApi.DownloadReceiptAsync(donation.Id, donation.ReceiptDocumentId.Value);
+        if (!res.Success)
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Nedladdning misslyckades.", Severity.Error);
     }
 
     private async Task OpenLogInteractionDialog()
@@ -275,14 +355,22 @@ else if (_contact is not null)
     private async Task OpenEditInteractionDialog(InteractionDto interaction)
     {
         var d = DialogService.Show<LogInteractionDialog>("Redigera interaktion",
-            new DialogParameters { ["ContactId"] = (Guid?)Id, ["InteractionId"] = (Guid?)interaction.Id },
+            new DialogParameters
+            {
+                ["ContactId"] = (Guid?)Id,
+                ["InteractionId"] = (Guid?)interaction.Id
+            },
             new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
         if (!(await d.Result).Canceled) await LoadAsync();
     }
 
     private async Task DeleteInteraction(Guid interactionId)
     {
-        var p = new DialogParameters { ["Title"] = "Ta bort interaktion", ["Message"] = "Är du säker?" };
+        var p = new DialogParameters
+        {
+            ["Title"] = "Ta bort interaktion",
+            ["Message"] = "Är du säker på att du vill ta bort denna interaktion?"
+        };
         var confirm = DialogService.Show<ConfirmDialog>("", p);
         if ((await confirm.Result).Canceled) return;
         var res = await InteractionsApi.DeleteInteractionAsync(interactionId);

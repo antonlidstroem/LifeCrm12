@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LifeCrm.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260414065043_init")]
+    [Migration("20260414084153_init")]
     partial class init
     {
         /// <inheritdoc />

@@ -1,32 +1,32 @@
-﻿<!DOCTYPE html>
+﻿<!-- src/LifeCrm.Web/wwwroot/index.html -->
+<!DOCTYPE html>
 <html lang="sv">
-
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LifeCrm</title>
     <base href="/" />
-
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <!-- MudBlazor fonts -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
-
-    <link href="LifeCrm.Web.app.css" rel="stylesheet" />
 </head>
-
 <body>
     <div id="app">
-        <div style="display:flex; justify-content:center; align-items:center; height:100vh; font-family:Roboto;">
-            <p>Laddar LifeCrm...</p>
-        </div>
+        <svg class="loading-progress" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
     </div>
 
-    <div id="blazor-error-ui">
-        Ett fel har inträffat. <a href="" class="reload">Ladda om</a>
-    </div>
-
-    <script src="_framework/blazor.webassembly.js"></script>
+    <!-- FIX: JS interop must be loaded BEFORE blazor.webassembly.js -->
+    <script src="js/lifecrm-interop.js"></script>
 
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script>navigator.serviceWorker.register('service-worker.js');</script>
 </body>
-
 </html>

@@ -96,11 +96,17 @@ public class ApiClient : ApiClientBase
     public Task<ApiResponse>                 UpdateInteractionAsync(Guid id, UpdateInteractionRequest req) => _interactions.UpdateInteractionAsync(id, req);
     public Task<ApiResponse>                 DeleteInteractionAsync(Guid id) => _interactions.DeleteInteractionAsync(id);
 
+    // Replace the Users section in src/LifeCrm.Web/Services/ApiClient.cs
     // ── Users ─────────────────────────────────────────────────────────────────
     public Task<ApiResponse<IReadOnlyList<UserSummaryDto>>> GetUsersAsync() => _users.GetUsersAsync();
+    public Task<ApiResponse<Guid>> CreateUserAsync(CreateUserRequest req) => _users.CreateUserAsync(req);
+    public Task<ApiResponse> UpdateUserAsync(Guid id, UpdateUserRequest req) => _users.UpdateUserAsync(id, req);
+    public Task<ApiResponse> DeleteUserAsync(Guid id) => _users.DeleteUserAsync(id);
     public Task<ApiResponse> ChangeUserRoleAsync(Guid id, UserRole role) => _users.ChangeUserRoleAsync(id, role);
     public Task<ApiResponse> DeactivateUserAsync(Guid id) => _users.DeactivateUserAsync(id);
-    public Task<ApiResponse> ActivateUserAsync(Guid id)   => _users.ActivateUserAsync(id);
+    public Task<ApiResponse> ActivateUserAsync(Guid id) => _users.ActivateUserAsync(id);
+
+
 
     // ── Newsletters ───────────────────────────────────────────────────────────
     public Task<ApiResponse<PagedResult<NewsletterListDto>>> GetNewslettersAsync(PaginationParams p, NewsletterStatus? status = null)

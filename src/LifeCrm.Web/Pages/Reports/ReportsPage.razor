@@ -72,7 +72,7 @@
                                    OnClick="@(() => OpenReturnDialog(context))" />
                 </MudTooltip>
             }
-            @if (context.Status == ReportStatus.Draft && AppState.CanWrite)
+            @if ((context.Status != ReportStatus.Approved && AppState.CanWrite) || AppState.IsAdmin)
             {
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
                                OnClick="@(() => DeleteReport(context))" />
