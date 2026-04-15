@@ -16,13 +16,18 @@ public class Program
 
         // ── HttpClient ──────────────────────────────────────────────────────────
         var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
+
+        if (string.IsNullOrWhiteSpace(apiBaseUrl))
+        {
+            throw new Exception("ApiBaseUrl is not configured!");
+        }
+
         builder.Services.AddScoped(sp =>
         {
-            var nav = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
-            var baseAddress = !string.IsNullOrWhiteSpace(apiBaseUrl)
-                ? apiBaseUrl.TrimEnd('/') + "/"
-                : nav.BaseUri;
-            return new HttpClient { BaseAddress = new Uri(baseAddress) };
+            return new HttpClient
+            {
+                BaseAddress = new Uri(apiBaseUrl.TrimEnd('/') + "/")
+            };
         });
 
         // ── MudBlazor ───────────────────────────────────────────────────────────
