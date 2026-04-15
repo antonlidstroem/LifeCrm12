@@ -16,6 +16,7 @@ public class Program
 
         // ── HttpClient ──────────────────────────────────────────────────────────
         var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
+        Console.WriteLine("API BASE URL = " + apiBaseUrl);
 
         if (string.IsNullOrWhiteSpace(apiBaseUrl))
         {
@@ -42,6 +43,10 @@ public class Program
 
         // ── Local Storage ───────────────────────────────────────────────────────
         builder.Services.AddBlazoredLocalStorage();
+
+        
+
+        
 
         // ── Domain API clients ──────────────────────────────────────────────────
         builder.Services.AddScoped<AuthApiClient>();
