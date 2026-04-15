@@ -30,4 +30,10 @@
 		<Content Remove="wwwroot\service-worker.js" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<Content Include="wwwroot\appsettings*.json">
+			<CopyToPublishDirectory>Always</CopyToPublishDirectory>
+		</Content>
+	</ItemGroup>
+
 </Project>
