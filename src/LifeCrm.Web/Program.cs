@@ -17,6 +17,8 @@ public class Program
         // ── HttpClient ──────────────────────────────────────────────────────────
         var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
         Console.WriteLine("API BASE URL = " + apiBaseUrl);
+        Console.WriteLine($"DEBUG ApiBaseUrl: '{apiBaseUrl}'");
+        Console.WriteLine($"ENV: {builder.HostEnvironment.Environment}");
 
         if (string.IsNullOrWhiteSpace(apiBaseUrl))
         {
