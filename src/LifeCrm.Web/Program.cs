@@ -15,7 +15,9 @@ public class Program
         builder.RootComponents.Add<HeadOutlet>("head::after");
 
         // ── HttpClient ──────────────────────────────────────────────────────────
-        var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
+        var apiBaseUrl = builder.Configuration["ApiBaseUrl"]
+    ?? throw new Exception("ApiBaseUrl saknas i wwwroot appsettings");
+
         Console.WriteLine("API BASE URL = " + apiBaseUrl);
         Console.WriteLine($"DEBUG ApiBaseUrl: '{apiBaseUrl}'");
         Console.WriteLine($"ENV: {builder.HostEnvironment.Environment}");
