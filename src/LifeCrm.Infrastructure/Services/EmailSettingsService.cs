@@ -44,6 +44,14 @@ public class EmailSettingsService : IEmailSettingsService
                 return _cached;
         }
 
+        var fromDb = JsonSerializer.Deserialize<EmailSettingsDto>(row.Value, ...);
+        return fromDb with
+        {
+            Password = string.IsNullOrEmpty(fromDb.Password)
+                ? fromDb.Password
+                : _protector.Unprotect(fromDb.Password)
+        };
+
         try
         {
             using var scope = _scopeFactory.CreateScope();
@@ -81,6 +89,14 @@ public class EmailSettingsService : IEmailSettingsService
 
     public async Task SaveAsync(EmailSettingsDto settings, CancellationToken ct = default)
     {
+
+        var toStore = settings with
+        {
+            Password = string.IsNullOrEmpty(settings.Password)
+        ? settings.Password
+        : _protector.Protect(settings.Password)
+        };
+
         var json = JsonSerializer.Serialize(settings);
         try
         {
