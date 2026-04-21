@@ -1,66 +1,88 @@
-using System.IdentityModel.Tokens.Jwt;
 using Blazored.LocalStorage;
-using LifeCrm.Application.Common.DTOs;
-using LifeCrm.Core.Constants;
 
 namespace LifeCrm.Web.Services;
 
 public class AppState
 {
-    private LoginResponse? _login;
-    private const string StorageKey = "lifecrm_user";
-
-    public string? UserId           => _login?.UserId;
-    public string? UserFullName     => _login?.FullName;
-    public string? UserEmail        => _login?.Email;
-    public string? UserRole         => _login?.Role;
-    public string? OrganizationId   => _login?.OrganizationId;
-    public string? OrganizationName => _login?.OrganizationName;
-    public string? Token            => _login?.Token;
-    public bool    IsAuthenticated  => _login is not null && !IsTokenExpired(_login.Token);
-
-    public bool IsAdmin          => UserRole == Roles.Admin;
-    public bool IsFinanceOrAdmin => UserRole is Roles.Admin or Roles.Finance;
-    public bool CanWrite         => UserRole is Roles.Admin or Roles.Finance or Roles.Manager;
-
-    /// <summary>
-    /// Whether the SignalR real-time hub is enabled.
-    /// Loaded after login from the API. Defaults to true so the client
-    /// attempts to connect; if the server rejects, it gracefully skips.
-    /// </summary>
-    public bool SignalREnabled { get; set; } = true;
-
     public event Action? StateChanged;
 
-    public void SetUser(LoginResponse login) { _login = login; StateChanged?.Invoke(); }
-    public void ClearUser()                  { _login = null;  StateChanged?.Invoke(); }
+    public bool   IsAuthenticated  { get; private set; }
+    public Guid?  UserId           { get; private set; }
+    public string UserFullName     { get; private set; } = string.Empty;
+    public string UserEmail        { get; private set; } = string.Empty;
+    public string UserRole         { get; private set; } = string.Empty;
+    public Guid?  OrganizationId   { get; private set; }
+    public string OrganizationName { get; private set; } = string.Empty;
+    public string? Token           { get; private set; }
+    public bool   SignalREnabled   { get; set; } = true;
+
+    public bool IsAdmin          => UserRole == "Admin";
+    public bool IsFinanceOrAdmin => UserRole is "Finance" or "Admin";
+    public bool CanWrite         => UserRole is "Manager" or "Finance" or "Admin";
+
+    public void SetUser(Guid userId, string fullName, string email, string role,
+        Guid orgId, string orgName, string token)
+    {
+        IsAuthenticated  = true;
+        UserId           = userId;
+        UserFullName     = fullName;
+        UserEmail        = email;
+        UserRole         = role;
+        OrganizationId   = orgId;
+        OrganizationName = orgName;
+        Token            = token;
+        StateChanged?.Invoke();
+    }
+
+    public void ClearUser()
+    {
+        IsAuthenticated  = false;
+        UserId           = null;
+        UserFullName     = string.Empty;
+        UserEmail        = string.Empty;
+        UserRole         = string.Empty;
+        OrganizationId   = null;
+        OrganizationName = string.Empty;
+        Token            = null;
+        StateChanged?.Invoke();
+    }
 
     public async Task TryRestoreAsync(ILocalStorageService storage)
     {
-        if (_login is not null) return;
         try
         {
-            var stored = await storage.GetItemAsync<LoginResponse>(StorageKey);
-            if (stored is not null && !IsTokenExpired(stored.Token)) { _login = stored; StateChanged?.Invoke(); }
-            else if (stored is not null) await storage.RemoveItemAsync(StorageKey);
+            var token = await storage.GetItemAsync<string>("auth_token");
+            if (string.IsNullOrEmpty(token)) return;
+
+            var userId  = await storage.GetItemAsync<Guid>("user_id");
+            var name    = await storage.GetItemAsync<string>("user_name") ?? string.Empty;
+            var email   = await storage.GetItemAsync<string>("user_email") ?? string.Empty;
+            var role    = await storage.GetItemAsync<string>("user_role") ?? string.Empty;
+            var orgId   = await storage.GetItemAsync<Guid>("org_id");
+            var orgName = await storage.GetItemAsync<string>("org_name") ?? string.Empty;
+
+            if (userId != Guid.Empty && orgId != Guid.Empty)
+                SetUser(userId, name, email, role, orgId, orgName, token);
         }
-        catch { }
+        catch { /* storage unavailable */ }
     }
 
     public async Task PersistAsync(ILocalStorageService storage)
     {
-        if (_login is null) return;
-        try { await storage.SetItemAsync(StorageKey, _login); } catch { }
+        await storage.SetItemAsync("auth_token",  Token);
+        await storage.SetItemAsync("user_id",     UserId);
+        await storage.SetItemAsync("user_name",   UserFullName);
+        await storage.SetItemAsync("user_email",  UserEmail);
+        await storage.SetItemAsync("user_role",   UserRole);
+        await storage.SetItemAsync("org_id",      OrganizationId);
+        await storage.SetItemAsync("org_name",    OrganizationName);
     }
 
     public async Task ClearPersistedAsync(ILocalStorageService storage)
     {
-        try { await storage.RemoveItemAsync(StorageKey); } catch { }
-    }
-
-    private static bool IsTokenExpired(string token)
-    {
-        try { var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token); return jwt.ValidTo.ToUniversalTime() < DateTime.UtcNow.AddSeconds(30); }
-        catch { return true; }
+        await storage.RemoveItemsAsync(new[]
+        {
+            "auth_token","user_id","user_name","user_email","user_role","org_id","org_name"
+        });
     }
 }

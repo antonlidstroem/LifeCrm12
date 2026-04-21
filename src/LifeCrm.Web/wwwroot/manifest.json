@@ -1,1 +1,16 @@
-{ "name": "LifeCrm", "short_name": "LifeCrm", "start_url": "/", "display": "standalone", "theme_color": "#1E3A5F", "background_color": "#ffffff", "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"}] }
+{
+  "name": "LifeCrm",
+  "short_name": "LifeCrm",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1976D2",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

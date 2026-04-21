@@ -8,6 +8,7 @@ public class UnitOfWork : IUnitOfWork
     private readonly AppDbContext _db;
     private bool _disposed;
 
+    // ── Existing ──────────────────────────────────────────────────────────
     public IRepository<ApplicationUser>      Users                 { get; }
     public IRepository<Contact>              Contacts              { get; }
     public IRepository<Donation>             Donations             { get; }
@@ -22,6 +23,14 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<PeopleGroupReached>   PeopleGroupsReached   { get; }
     public IRepository<PrayerPoint>          PrayerPoints          { get; }
     public IRepository<PeopleGroupSeed>      PeopleGroupSeeds      { get; }
+
+    // ── Human Growth (new) ────────────────────────────────────────────────
+    public IRepository<Event>                Events                { get; }
+    public IRepository<EventAttendance>      EventAttendances      { get; }
+    public IRepository<Tag>                  Tags                  { get; }
+    public IRepository<ContactTag>           ContactTags           { get; }
+    public IRepository<ContactProfile>       ContactProfiles       { get; }
+    public IRepository<MentorRelationship>   MentorRelationships   { get; }
 
     public UnitOfWork(AppDbContext db)
     {
@@ -41,9 +50,18 @@ public class UnitOfWork : IUnitOfWork
         var ir                = new InteractionRepository(db);
         Interactions          = ir;
         InteractionRepo       = ir;
+
+        // Human Growth
+        Events                = new GenericRepository<Event>(db);
+        EventAttendances      = new GenericRepository<EventAttendance>(db);
+        Tags                  = new GenericRepository<Tag>(db);
+        ContactTags           = new GenericRepository<ContactTag>(db);
+        ContactProfiles       = new GenericRepository<ContactProfile>(db);
+        MentorRelationships   = new GenericRepository<MentorRelationship>(db);
     }
 
-    public Task<int> SaveChangesAsync(CancellationToken ct = default) => _db.SaveChangesAsync(ct);
+    public Task<int> SaveChangesAsync(CancellationToken ct = default)
+        => _db.SaveChangesAsync(ct);
 
     public void Dispose()
     {

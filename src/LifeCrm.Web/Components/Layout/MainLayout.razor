@@ -1,4 +1,5 @@
 @using LifeCrm.Web.Services
+@using LifeCrm.Web.Components.Layout
 @inherits LayoutComponentBase
 @inject AppState AppState
 @inject NavigationManager Nav
@@ -7,13 +8,27 @@
 @inject Blazored.LocalStorage.ILocalStorageService Storage
 @inject IConfiguration Configuration
 @inject AuthApiClient AuthApi
-@implements IDisposable
+@inject IBreakpointService BreakpointService
+@implements IAsyncDisposable
 
-<MudThemeProvider /><MudPopoverProvider /><MudDialogProvider /><MudSnackbarProvider />
+<MudThemeProvider Theme="AppTheme.Theme" />
+<MudPopoverProvider />
+<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small"
+                   CloseButton="true" DisableBackdropClick="false"
+                   Position="DialogPosition.Center" />
+<MudSnackbarProvider />
 
 @if (_initializing)
 {
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    <div style="display:flex;align-items:center;justify-content:center;
+                min-height:100vh;background:#0D2B32;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:20px;">
+            <BrandLogo IconOnly="true" />
+            <div style="width:32px;height:32px;border:3px solid rgba(255,255,255,.15);
+                        border-top-color:#28A0B8;border-radius:50%;
+                        animation:lcrm-spin .8s linear infinite;"></div>
+        </div>
+    </div>
 }
 else if (!AppState.IsAuthenticated)
 {
@@ -22,112 +37,256 @@ else if (!AppState.IsAuthenticated)
 else
 {
     <MudLayout>
-        <MudAppBar Elevation="1">
-            <MudText Typo="Typo.h6" Class="mr-4">LifeCrm</MudText>
+
+        <!-- ── AppBar ────────────────────────────────────────────────── -->
+        <MudAppBar Elevation="0" Class="lcrm-appbar" Fixed="true">
+
+            <!-- Hamburger: only on mobile -->
+            <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                           Class="d-flex d-md-none mr-1"
+                           Color="Color.Default"
+                           OnClick="ToggleMobileDrawer"
+                           aria-label="Open navigation" />
+
+            <!-- Logo mark: only on mobile (sidebar has the full logo on desktop) -->
+            <div class="d-flex d-md-none align-center" style="margin-right:auto;gap:8px;">
+                <BrandLogo IconOnly="true" />
+                <span style="font-size:15px;font-weight:700;color:#0F5B6B;
+                             letter-spacing:-0.02em;">LifeCrm</span>
+            </div>
+
             <MudSpacer />
-            @if (_unreadActivity > 0)
-            {
-                <MudBadge Content="@_unreadActivity" Color="Color.Error" Overlap="true" Class="mr-1">
-                    <MudIconButton Icon="@Icons.Material.Filled.Notifications"
-                                   Color="Color.Inherit" OnClick="ToggleActivityDrawer" />
-                </MudBadge>
-            }
-            else
-            {
-                <MudIconButton Icon="@Icons.Material.Outlined.Notifications"
-                               Color="Color.Inherit" OnClick="ToggleActivityDrawer" />
-            }
-            <MudButton Color="Color.Inherit" StartIcon="@Icons.Material.Filled.AccountCircle"
-                       Href="/account">@AppState.UserFullName</MudButton>
+
+            <!-- Notification bell with popover -->
+            <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                <ActivatorContent>
+                    <div style="position:relative;display:inline-flex;margin-right:4px;">
+                        <MudIconButton
+                            Icon="@(_unreadActivity > 0
+                                    ? Icons.Material.Filled.Notifications
+                                    : Icons.Material.Outlined.NotificationsNone)"
+                            Color="Color.Default"
+                            Size="Size.Medium"
+                            OnClick="@(() => _unreadActivity = 0)"
+                            aria-label="Notifications" />
+                        @if (_unreadActivity > 0)
+                        {
+                            <span style="position:absolute;top:6px;right:6px;width:8px;height:8px;
+                                         border-radius:50%;background:#EF4444;
+                                         border:2px solid white;pointer-events:none;"></span>
+                        }
+                    </div>
+                </ActivatorContent>
+                <ChildContent>
+                    <div style="width:300px;max-height:380px;overflow-y:auto;">
+                        <div style="padding:12px 16px 8px;border-bottom:1px solid #E1E4E8;
+                                    font-size:13px;font-weight:600;color:#161B22;">
+                            Activity
+                        </div>
+                        @if (_activityFeed.Count == 0)
+                        {
+                            <div style="padding:24px 16px;text-align:center;
+                                        color:#8B949E;font-size:13px;">
+                                No recent activity
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var item in _activityFeed.Take(10))
+                            {
+                                <div style="padding:10px 16px;border-bottom:1px solid #F7F8FA;
+                                            display:flex;gap:10px;align-items:flex-start;">
+                                    <div style="width:6px;height:6px;border-radius:50%;
+                                                background:#0F5B6B;margin-top:5px;flex-shrink:0;"></div>
+                                    <div>
+                                        <div style="font-size:13px;color:#161B22;">@item.Message</div>
+                                        <div style="font-size:11px;color:#8B949E;margin-top:2px;">
+                                            @item.Time.ToString("HH:mm")
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </ChildContent>
+            </MudMenu>
+
+            <!-- User avatar dropdown -->
+            <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                <ActivatorContent>
+                    <div class="lcrm-user-menu-trigger" role="button" aria-label="User menu">
+                        <div class="lcrm-user-avatar">
+                            @(AppState.UserFullName.Length > 0
+                                ? AppState.UserFullName[0].ToString().ToUpper()
+                                : "U")
+                        </div>
+                        <span class="lcrm-user-name d-none d-md-block">
+                            @AppState.UserFullName
+                        </span>
+                        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                                 Size="Size.Small"
+                                 Style="color:#8B949E;font-size:16px;"
+                                 Class="d-none d-md-flex" />
+                    </div>
+                </ActivatorContent>
+                <ChildContent>
+                    <div style="min-width:200px;">
+                        <div style="padding:10px 16px 8px;border-bottom:1px solid #F0F2F5;">
+                            <div style="font-size:13px;font-weight:600;color:#161B22;">
+                                @AppState.UserFullName
+                            </div>
+                            <div style="font-size:11.5px;color:#8B949E;margin-top:2px;">
+                                @AppState.UserEmail
+                            </div>
+                            <div style="margin-top:4px;">
+                                <span style="font-size:10.5px;font-weight:600;
+                                             letter-spacing:0.06em;text-transform:uppercase;
+                                             color:#0F5B6B;background:#E0F4F7;
+                                             padding:2px 6px;border-radius:4px;">
+                                    @AppState.UserRole
+                                </span>
+                            </div>
+                        </div>
+                        <MudMenuItem Href="/account" Icon="@Icons.Material.Outlined.ManageAccounts">
+                            My Account
+                        </MudMenuItem>
+                        <MudDivider />
+                        <MudMenuItem OnClick="Logout">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Outlined.Logout"
+                                         Size="Size.Small" Style="color:#B91C1C;" />
+                                <span style="color:#B91C1C;font-size:13.5px;">Sign out</span>
+                            </MudStack>
+                        </MudMenuItem>
+                    </div>
+                </ChildContent>
+            </MudMenu>
+
         </MudAppBar>
 
-        <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Elevation="2">
-            <MudDrawerHeader>
-                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">@AppState.OrganizationName</MudText>
-            </MudDrawerHeader>
-            <MudNavMenu>
-                <MudNavLink Href="/"              Match="NavLinkMatch.All"    Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
-                <MudNavLink Href="/contacts"      Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.People">Kontakter</MudNavLink>
-                <MudNavLink Href="/donations"     Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AttachMoney">Gåvor</MudNavLink>
-                <MudNavLink Href="/projects"      Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.FolderOpen">Projekt</MudNavLink>
-                <MudNavLink Href="/campaigns"     Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Campaign">Kampanjer</MudNavLink>
-                <MudNavLink Href="/reports"       Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Article">Field Reports</MudNavLink>
-                <MudNavLink Href="/prayer-points" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.VolunteerActivism">Prayer Points</MudNavLink>
-                <MudNavLink Href="/newsletters"   Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.MarkEmailRead">Nyhetsbrev</MudNavLink>
+        <!-- ── Sidebar drawer ────────────────────────────────────────────── -->
+        <MudDrawer @bind-Open="_drawerOpen"
+                   Variant="@_drawerVariant"
+                   Elevation="0"
+                   Class="lcrm-sidebar"
+                   ClipMode="DrawerClipMode.Always">
 
+            <!-- Logo zone — brand anchor -->
+            <MudDrawerHeader Class="pa-0">
+                <div class="lcrm-sidebar-header">
+                    <BrandLogo IconOnly="false" />
+                </div>
+            </MudDrawerHeader>
+
+            <!-- Org badge -->
+            <div style="padding:8px 18px 10px;">
+                <p class="lcrm-sidebar-org" title="@AppState.OrganizationName">
+                    @AppState.OrganizationName
+                </p>
+            </div>
+
+            <MudNavMenu>
+
+                <!-- CRM -->
+                <div class="lcrm-nav-section">CRM</div>
+                <MudNavLink Href="/" Match="NavLinkMatch.All"
+                            Icon="@Icons.Material.Outlined.Dashboard"
+                            OnClick="CloseOnMobile">Dashboard</MudNavLink>
+                <MudNavLink Href="/contacts" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Outlined.People"
+                            OnClick="CloseOnMobile">Contacts</MudNavLink>
+                <MudNavLink Href="/events" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Outlined.Event"
+                            OnClick="CloseOnMobile">Events</MudNavLink>
+                <MudNavLink Href="/donations" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Outlined.AttachMoney"
+                            OnClick="CloseOnMobile">Donations</MudNavLink>
+                <MudNavLink Href="/newsletters" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Outlined.MarkEmailRead"
+                            OnClick="CloseOnMobile">Newsletters</MudNavLink>
+
+                <!-- Mission -->
+                <div class="lcrm-nav-section" style="margin-top:8px;">Mission</div>
+                <MudNavLink Href="/projects" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Outlined.FolderOpen"
+                            OnClick="CloseOnMobile">Projects</MudNavLink>
+                <MudNavLink Href="/campaigns" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Outlined.Campaign"
+                            OnClick="CloseOnMobile">Campaigns</MudNavLink>
+                <MudNavLink Href="/reports" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Outlined.Article"
+                            OnClick="CloseOnMobile">Field Reports</MudNavLink>
+                <MudNavLink Href="/prayer-points" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Outlined.VolunteerActivism"
+                            OnClick="CloseOnMobile">Prayer Points</MudNavLink>
+
+                <!-- Admin -->
                 @if (AppState.IsAdmin)
                 {
-                    <MudDivider Class="my-2" />
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="px-4 pb-1">Admin</MudText>
-                    <MudNavLink Href="/admin/users"   Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ManageAccounts">Användare</MudNavLink>
-                    <MudNavLink Href="/admin/email"   Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AlternateEmail">E-postinställningar</MudNavLink>
-                    <MudNavLink Href="/admin/signalr" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SettingsInputAntenna">SignalR</MudNavLink>
+                    <div class="lcrm-nav-section lcrm-nav-admin"
+                         style="margin-top:8px;">Administration</div>
+                    <div class="lcrm-nav-admin">
+                        <MudNavLink Href="/admin/users" Match="NavLinkMatch.Prefix"
+                                    Icon="@Icons.Material.Outlined.ManageAccounts"
+                                    OnClick="CloseOnMobile">Users</MudNavLink>
+                        <MudNavLink Href="/admin/email" Match="NavLinkMatch.Prefix"
+                                    Icon="@Icons.Material.Outlined.AlternateEmail"
+                                    OnClick="CloseOnMobile">Email Settings</MudNavLink>
+                        <MudNavLink Href="/admin/gdpr" Match="NavLinkMatch.Prefix"
+                                    Icon="@Icons.Material.Outlined.PrivacyTip"
+                                    OnClick="CloseOnMobile">GDPR &amp; Retention</MudNavLink>
+                        <MudNavLink Href="/admin/enrichment" Match="NavLinkMatch.Prefix"
+                                    Icon="@Icons.Material.Outlined.Label"
+                                    OnClick="CloseOnMobile">Enrichment</MudNavLink>
+                        <MudNavLink Href="/admin/signalr" Match="NavLinkMatch.Prefix"
+                                    Icon="@Icons.Material.Outlined.SettingsInputAntenna"
+                                    OnClick="CloseOnMobile">SignalR</MudNavLink>
+                    </div>
                 }
 
-                <MudDivider Class="my-2" />
-                <MudNavLink Href="/account" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AccountCircle">Mitt konto</MudNavLink>
-                <MudNavLink Icon="@Icons.Material.Filled.Logout" OnClick="Logout">Logga ut</MudNavLink>
             </MudNavMenu>
+
+            <!-- Sidebar footer -->
+            <div style="margin-top:auto;padding:12px 18px 20px;
+                        border-top:1px solid rgba(255,255,255,.07);">
+                <span style="font-size:11px;color:rgba(255,255,255,.22);
+                             letter-spacing:0.04em;">
+                    LifeCrm &bull; v1.0
+                </span>
+            </div>
+
         </MudDrawer>
 
-        <!-- Activity feed drawer (right side) -->
-        <MudDrawer @bind-Open="_activityOpen" Anchor="Anchor.End"
-                   Variant="DrawerVariant.Temporary" Width="320px" Elevation="2">
-            <MudDrawerHeader>
-                <MudText Typo="Typo.h6">Aktivitetsfeed</MudText>
-                <MudSpacer />
-                <MudIconButton Icon="@Icons.Material.Filled.Close"
-                               Size="Size.Small" OnClick="ToggleActivityDrawer" />
-            </MudDrawerHeader>
-            @if (_activityFeed.Count == 0)
-            {
-                <EmptyState Title="Ingen aktivitet ännu"
-                            Description="Händelser visas här i realtid."
-                            Icon="@Icons.Material.Outlined.NotificationsNone" />
-            }
-            else
-            {
-                <MudList T="string" Dense="true">
-                    @foreach (var item in _activityFeed)
-                    {
-                        <MudListItem>
-                            <MudStack Spacing="0">
-                                <MudText Typo="Typo.body2">@item.Message</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @item.Time.ToString("HH:mm")
-                                </MudText>
-                            </MudStack>
-                        </MudListItem>
-                        <MudDivider />
-                    }
-                </MudList>
-            }
-        </MudDrawer>
-
+        <!-- ── Main content ───────────────────────────────────────────────── -->
         <MudMainContent>
-            <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 pb-8">
+            <div class="lcrm-page-content">
                 @Body
-            </MudContainer>
+            </div>
         </MudMainContent>
+
     </MudLayout>
 }
 
 @code {
-    private bool _activityOpen;
-    private int  _unreadActivity;
-    private bool _initializing = true;
+    private bool          _initializing   = true;
+    private bool          _drawerOpen     = true;
+    private DrawerVariant _drawerVariant  = DrawerVariant.Persistent;
+    private bool          _isMobile       = false;
+    private int           _unreadActivity = 0;
     private readonly List<FeedItem> _activityFeed = new();
+    private IDisposable?  _breakpointSubscription;
 
     protected override async Task OnInitializedAsync()
     {
         AppState.StateChanged += OnStateChanged;
         SignalR.OnActivity    += OnActivityReceived;
+
         await AppState.TryRestoreAsync(Storage);
 
         if (AppState.IsAuthenticated && AppState.Token is not null)
         {
-            var settingsRes     = await SignalRApi.GetAsync();
-            AppState.SignalREnabled = settingsRes.Success ? settingsRes.Data : true;
+            var sr = await SignalRApi.GetAsync();
+            AppState.SignalREnabled = sr.Success ? sr.Data : true;
 
             if (AppState.SignalREnabled)
             {
@@ -136,35 +295,66 @@ else
                     ? apiBaseUrl.TrimEnd('/')
                     : Nav.BaseUri.TrimEnd('/');
                 _ = Task.Run(() => SignalR.ConnectAsync(
-                    hubBase, AppState.Token, AppState.OrganizationId!, AppState.SignalREnabled));
+                    hubBase, AppState.Token,
+                    AppState.OrganizationId!.ToString()!,
+                    AppState.SignalREnabled));
             }
         }
+
         _initializing = false;
+
+        // Responsive drawer: subscribe to breakpoint changes
+        _breakpointSubscription = await BreakpointService.Subscribe(
+            bp => { ApplyBreakpoint(bp); },
+            new ResizeOptions { ReportRate = 100, NotifyOnBreakpointOnly = true });
+
+        var current = await BreakpointService.GetCurrentBreakpointAsync();
+        ApplyBreakpoint(current);
+    }
+
+    private void ApplyBreakpoint(Breakpoint bp)
+    {
+        _isMobile = bp is Breakpoint.Xs or Breakpoint.Sm;
+        if (_isMobile)
+        {
+            _drawerVariant = DrawerVariant.Temporary;
+            _drawerOpen    = false;
+        }
+        else
+        {
+            _drawerVariant = DrawerVariant.Persistent;
+            _drawerOpen    = true;
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleMobileDrawer()
+    {
+        if (_isMobile) _drawerOpen = !_drawerOpen;
+    }
+
+    private void CloseOnMobile()
+    {
+        if (_isMobile) _drawerOpen = false;
     }
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);
 
     private async Task OnActivityReceived(ActivityEvent evt)
     {
-        var message = evt.EventType switch
+        var msg = evt.EventType switch
         {
-            "ContactCreated"    => "Ny kontakt skapades",
-            "DonationCreated"   => "Ny gåva registrerades",
-            "InteractionLogged" => "Interaktion loggades",
-            "ReportSubmitted"   => "Rapport inskickad för granskning",
-            "ReportApproved"    => "Rapport godkänd",
+            "ContactCreated"    => "New contact added",
+            "DonationCreated"   => "New donation recorded",
+            "InteractionLogged" => "Interaction logged",
+            "ReportSubmitted"   => "Field report submitted",
+            "ReportApproved"    => "Field report approved",
             _                   => evt.EventType
         };
-        _activityFeed.Insert(0, new FeedItem(message, DateTime.Now));
+        _activityFeed.Insert(0, new FeedItem(msg, DateTime.Now));
         if (_activityFeed.Count > 50) _activityFeed.RemoveAt(50);
-        if (!_activityOpen) _unreadActivity++;
+        _unreadActivity++;
         await InvokeAsync(StateHasChanged);
-    }
-
-    private void ToggleActivityDrawer()
-    {
-        _activityOpen = !_activityOpen;
-        _unreadActivity = 0;
     }
 
     private async Task Logout()
@@ -176,10 +366,12 @@ else
         Nav.NavigateTo("/");
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         AppState.StateChanged -= OnStateChanged;
         SignalR.OnActivity    -= OnActivityReceived;
+        _breakpointSubscription?.Dispose();
+        await ValueTask.CompletedTask;
     }
 
     private record FeedItem(string Message, DateTime Time);

@@ -1,0 +1,59 @@
+@* src/LifeCrm.Web/Components/Shared/PageHeader.razor
+   Drop this at the top of every page for consistent spacing, typography, and
+   mobile-aware primary action rendering (button on desktop, FAB on mobile).
+*@
+
+<div class="lcrm-page-header">
+    <MudStack Row="true" AlignItems="AlignItems.Center">
+        @if (ShowBack)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                           Class="lcrm-back-btn mr-1"
+                           Size="Size.Small"
+                           OnClick="OnBack" />
+        }
+        <div style="min-width:0;flex:1;">
+            <MudText Class="lcrm-page-header__title">@Title</MudText>
+            @if (!string.IsNullOrEmpty(Subtitle))
+            {
+                <MudText Class="lcrm-page-header__subtitle">@Subtitle</MudText>
+            }
+        </div>
+        @if (ActionContent is not null)
+        {
+            <!-- Desktop: render the action inline -->
+            <div class="lcrm-btn-hide-on-mobile">
+                @ActionContent
+            </div>
+        }
+    </MudStack>
+</div>
+
+@* Mobile FAB — rendered at body level, floats above content *@
+@if (ActionContent is not null && FabIcon is not null)
+{
+    <MudFab Color="Color.Primary"
+            StartIcon="@FabIcon"
+            Size="Size.Large"
+            Class="lcrm-fab lcrm-fab-hide-on-desktop"
+            OnClick="OnFabClick"
+            aria-label="@Title" />
+}
+
+@code {
+    [Parameter, EditorRequired] public string Title       { get; set; } = string.Empty;
+    [Parameter]                 public string Subtitle    { get; set; } = string.Empty;
+    [Parameter]                 public bool   ShowBack    { get; set; } = false;
+    [Parameter]                 public EventCallback OnBack { get; set; }
+
+    /// <summary>Action content rendered in the header row on desktop.</summary>
+    [Parameter] public RenderFragment? ActionContent { get; set; }
+
+    /// <summary>
+    /// Icon for the mobile FAB. Set to the same intent as ActionContent.
+    /// If null, no FAB is rendered on mobile.
+    /// </summary>
+    [Parameter] public string? FabIcon { get; set; }
+
+    [Parameter] public EventCallback OnFabClick { get; set; }
+}

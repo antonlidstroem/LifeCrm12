@@ -1,70 +1,99 @@
-# LifeCrm — Refactored Solution
+# LifeCrm
 
-## What changed in this refactor
-- **One file per type** across all projects (MediatR Command+Handler pairs are the documented exception)
-- All enums moved to `LifeCrm.Core/Enums/` — one file each
-- All entity configurations split to individual files in `Infrastructure/Persistence/Configuration/`
-- `MudColorExtensions.cs` split into four files (one per enum type)
-- `CommonDtos.cs` split into individual DTO files
-- `WebProgram.cs` deleted (was a duplicate `Program` class)
-- All bugs from the previous analysis fixed (enum file, missing `projectId`/`campaignId` params, `_reports` field, `ReportStatusChip`, chip binding, raw string CSS braces, `ApiClient` façade missing, etc.)
+ASP.NET Core 8 + Blazor WASM CRM for churches, NGOs, and community organisations.
 
-## New feature: SignalR on/off toggle
+## Architecture
 
-Super-admins can toggle the SignalR real-time hub on or off to reduce CPU when real-time updates are not needed. The application is fully functional in both states.
-
-### How it works
-1. Setting is persisted in the `AppSettings` database table (`Key = "SignalR:Enabled"`)
-2. `SignalRSettingsService` caches the value for 30 seconds (zero DB hits per hub message when stable)
-3. When disabled: `ActivityNotifier` returns immediately without sending, `ActivityHub.OnConnected` aborts the connection
-4. Web client reads the setting after login and skips the SignalR connection if disabled
-
-### Admin UI
-Navigate to **Admin → SignalR** (`/admin/signalr`). Toggle the switch and press Save.
-
-### API
 ```
-GET  /api/v1/signalrsettings       → returns { "data": true/false }
-PATCH /api/v1/signalrsettings      → body: true or false
+LifeCrm.sln
+└── src/
+    ├── LifeCrm.Core          — Entities, enums, interfaces (no dependencies)
+    ├── LifeCrm.Application   — MediatR commands/queries, DTOs, validators
+    ├── LifeCrm.Infrastructure — EF Core, services, background workers
+    ├── LifeCrm.Api           — ASP.NET Core Web API (hosts Blazor WASM)
+    └── LifeCrm.Web           — Blazor WebAssembly frontend
 ```
-Both require `AdminOnly` policy.
+
+## Layers
+
+| Layer | Contents |
+|---|---|
+| **Core** | Contact, Event, Tag, ContactProfile, MentorRelationship, Donation, Campaign, Project, Interaction, Newsletter, MissionReport, PrayerPoint, ConsentRecord, PropertyAuditLog |
+| **Application** | CQRS handlers (MediatR), DTOs, FluentValidation, GDPR commands, Event commands, Enrichment commands |
+| **Infrastructure** | AppDbContext, EF Core configs, 3 migrations, 3 background services, all domain services |
+| **API** | Auth, Contacts, Events, Enrichment, GDPR, Donations, Newsletters, DirectEmail, Unsubscribe controllers |
+| **Web** | Login, Dashboard, Contacts, Events, Enrichment (admin), GDPR admin, MudBlazor UI |
 
 ## Getting started
 
 ### Prerequisites
 - .NET 8 SDK
-- SQL Server LocalDB (or change the connection string)
+- SQL Server (or LocalDB)
 
-### First run
+### 1. Configure
+
+Edit `src/LifeCrm.Api/appsettings.json`:
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=.;Database=LifeCrmDb;Trusted_Connection=True;TrustServerCertificate=True;"
+  },
+  "Jwt": {
+    "SecretKey": "your-strong-secret-min-32-characters-here"
+  }
+}
+```
+
+### 2. Run
+
 ```bash
 cd src/LifeCrm.Api
 dotnet run
 ```
-The seeder runs automatically and creates:
-- Organization: Demo Organisation
-- Admin user: `admin@lifecrm.dev` / `Admin123!@#`
-- SignalR setting: enabled (default)
 
-### Apply migrations manually (if needed)
-```bash
-cd src/LifeCrm.Infrastructure
-dotnet ef database update --startup-project ../LifeCrm.Api
-```
+The API auto-applies all migrations on startup and seeds a default admin account.
 
-### Run validation scripts
-```bash
-cd /path/to/solution
-python3 validate/validate_one_class_per_file.py
-python3 validate/validate_file_tree.py
-python3 validate/validate_signalr_feature.py
-```
+### 3. Login
 
-## Project structure
-```
-src/
-├── LifeCrm.Core/          — Entities, Enums (1 file each), Interfaces (1 file each)
-├── LifeCrm.Application/   — MediatR handlers, DTOs, validators
-├── LifeCrm.Infrastructure/— EF Core, repositories, services
-├── LifeCrm.Api/           — ASP.NET Core controllers, SignalR hub
-└── LifeCrm.Web/           — Blazor WASM, pages, components
-```
+- URL: `https://localhost:7001`
+- Email: `admin@lifecrm.dev`
+- Password: `Admin123!@#`
+
+**Change this immediately after first login.**
+
+## Database migrations (run order)
+
+| Order | File | Contents |
+|---|---|---|
+| 1 | `20260416071240_Init` | All original tables (Contacts, Donations, Campaigns, Projects, etc.) |
+| 2 | `20260418000000_AddGdprLayer` | ConsentRecords, PropertyAuditLogs, AuditOutbox, DsrExportJobs, DataProtectionKeys, Contact GDPR columns |
+| 3 | `20260420000000_AddHumanGrowthLayer` | Events, EventAttendances, Tags, ContactTags, ContactProfiles, MentorRelationships |
+
+## Post-deploy checklist
+
+- [ ] Set `Jwt:SecretKey` to a strong secret (min 32 chars) in user secrets / environment
+- [ ] Configure SMTP via Admin → E-postinställningar
+- [ ] Change default admin password
+- [ ] Set `Email:DryRun` to `false` when email is configured
+- [ ] Re-save all contacts to generate correct HMAC-SHA256 EmailHash values (migration uses SQL SHA2_256 as bootstrap approximation)
+- [ ] Review retention settings at Admin → GDPR & Retention
+
+## Key design decisions
+
+### Simplicity-first contact model
+Only **FirstName + Email** are required. Everything else is optional. A contact can be created from a Sunday check-in in under 5 seconds.
+
+### GDPR layer
+- Email, Phone, Address, Notes encrypted at rest (ASP.NET Core Data Protection API)
+- EmailHash (HMAC-SHA256) for indexed lookup without decrypting
+- ConsentRecord table (append-only) tracks every grant and withdrawal
+- PropertyAuditInterceptor + AuditOutbox → PropertyAuditLog (zero hot-path latency)
+- AnonymizeContact wipes all PII + deletes Profile/Tags/MentorRelationships
+- DSR export includes EventAttendance history
+
+### Human Growth layer
+- EventAttendance is the primary engagement data point
+- EngagementSegment (New/Growing/Core/AtRisk/Lapsed) computed at query time, never stored
+- ContactProfile is in a **separate table** — impossible to accidentally expose in Contact queries
+- [AdminOnly] attribute marks enrichment entities for code-review enforcement
+- MentorRelationship is directional and admin-only — contacts are never shown this data

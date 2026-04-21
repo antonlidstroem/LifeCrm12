@@ -1,0 +1,285 @@
+@* src/LifeCrm.Web/Components/Gdpr/GdprContactPanel.razor *@
+@using LifeCrm.Application.Gdpr.DTOs
+@using LifeCrm.Core.Enums
+@implements IDisposable
+@inject GdprApiClient GdprApi
+@inject AppState AppState
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+@if (!AppState.IsFinanceOrAdmin) { return; }
+
+<MudCard Elevation="2" Class="mt-3">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.PrivacyTip" Color="Color.Info" Size="Size.Small" />
+                <MudText Typo="Typo.subtitle1">GDPR &amp; Privacy</MudText>
+            </MudStack>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (_loading)
+        {
+            <LoadingSkeleton Rows="4" />
+        }
+        else if (_status is not null)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">Consent</MudText>
+
+            @foreach (ConsentType consentType in Enum.GetValues<ConsentType>())
+            {
+                var current = _status.Current.FirstOrDefault(c => c.ConsentType == consentType);
+                var granted  = current?.IsGranted ?? false;
+                var since    = current is not null
+                    ? current.Since.ToLocalTime().ToString("yyyy-MM-dd")
+                    : "not recorded";
+
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-1" Spacing="2">
+                    <MudIcon Icon="@(granted ? Icons.Material.Filled.CheckCircle : Icons.Material.Outlined.Cancel)"
+                             Color="@(granted ? Color.Success : Color.Default)"
+                             Size="Size.Small" />
+                    <MudText Typo="Typo.body2" Style="flex:1">@ConsentLabel(consentType)</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@since</MudText>
+                    <MudTooltip Text="@(granted ? "Withdraw" : "Grant")">
+                        <MudIconButton
+                            Icon="@(granted ? Icons.Material.Filled.RemoveCircleOutline : Icons.Material.Filled.AddCircleOutline)"
+                            Size="Size.Small"
+                            Color="@(granted ? Color.Warning : Color.Success)"
+                            OnClick="@(() => ToggleConsent(consentType, !granted))"
+                            Disabled="_saving" />
+                    </MudTooltip>
+                </MudStack>
+            }
+
+            <MudDivider Class="my-3" />
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">Data Subject Rights</MudText>
+
+            <MudStack Spacing="2">
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.FileDownload"
+                           OnClick="RequestExport" Disabled="_exporting">
+                    @(_exporting ? "Preparing export…" : "Export all data (DSR Art. 15)")
+                </MudButton>
+
+                @if (_exportJob is not null)
+                {
+                    <MudAlert Severity="@ExportSeverity(_exportJob.Status)" Dense="true">
+                        Export: <b>@_exportJob.Status</b>
+                        @if (_exportJob.Status == "Completed")
+                        {
+                            <MudButton Size="Size.Small" Variant="Variant.Text"
+                                       Color="Color.Primary" OnClick="DownloadExport"
+                                       Class="ml-2">Download JSON</MudButton>
+                        }
+                        @if (_exportJob.ExpiresAt.HasValue)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Expires @_exportJob.ExpiresAt.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                            </MudText>
+                        }
+                    </MudAlert>
+                }
+
+                @if (AppState.IsAdmin)
+                {
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" FullWidth="true"
+                               Color="Color.Warning"
+                               StartIcon="@Icons.Material.Filled.PersonOff"
+                               OnClick="ConfirmAnonymize" Disabled="_anonymizing">
+                        @(_anonymizing ? "Anonymizing…" : "Anonymize (GDPR erasure Art. 17)")
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" FullWidth="true"
+                               Color="Color.Error"
+                               StartIcon="@Icons.Material.Filled.DeleteForever"
+                               OnClick="ConfirmHardDelete">
+                        Hard delete (no donations only)
+                    </MudButton>
+                }
+            </MudStack>
+
+            <MudDivider Class="my-3" />
+            <MudExpansionPanels Elevation="0">
+                <MudExpansionPanel Text="Consent history" Dense="true">
+                    @if (!_status.History.Any())
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">No consent records yet.</MudText>
+                    }
+                    else
+                    {
+                        @foreach (var entry in _status.History)
+                        {
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-1">
+                                <MudIcon
+                                    Icon="@(entry.IsGranted ? Icons.Material.Filled.Check : Icons.Material.Filled.Close)"
+                                    Color="@(entry.IsGranted ? Color.Success : Color.Error)"
+                                    Size="Size.Small" />
+                                <MudText Typo="Typo.caption" Style="flex:1">
+                                    @ConsentLabel(entry.ConsentType) —
+                                    @(entry.IsGranted ? "granted" : "withdrawn") via @entry.Source
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @entry.RecordedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                                </MudText>
+                            </MudStack>
+                        }
+                    }
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired] public Guid ContactId    { get; set; }
+    [Parameter] public EventCallback       OnAnonymized  { get; set; }
+
+    private ConsentStatusDto? _status;
+    private DsrExportJobDto?  _exportJob;
+    private bool _loading    = true;
+    private bool _saving     = false;
+    private bool _exporting  = false;
+    private bool _anonymizing = false;
+    private System.Threading.Timer? _pollTimer;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var res  = await GdprApi.GetConsentAsync(ContactId);
+        _status  = res.Data;
+        _loading = false;
+    }
+
+    private async Task ToggleConsent(ConsentType consentType, bool grant)
+    {
+        _saving = true;
+        var req = new UpdateConsentRequest
+        {
+            ConsentType   = consentType,
+            IsGranted     = grant,
+            PolicyVersion = "2024-01",
+            Source        = "admin-manual"
+        };
+        var res = await GdprApi.UpdateConsentAsync(ContactId, req);
+        if (res.Success)
+        {
+            Snackbar.Add(
+                $"{ConsentLabel(consentType)} {(grant ? "granted" : "withdrawn")}.",
+                grant ? Severity.Success : Severity.Info);
+            await LoadAsync();
+        }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+        _saving = false;
+    }
+
+    private async Task RequestExport()
+    {
+        _exporting = true;
+        var res = await GdprApi.RequestExportAsync(ContactId);
+        if (res.Success && res.Data is not null)
+        {
+            _exportJob = res.Data;
+            Snackbar.Add("Export queued — polling for completion.", Severity.Info);
+            StartPolling();
+        }
+        else
+        {
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Export failed.", Severity.Error);
+            _exporting = false;
+        }
+    }
+
+    private void StartPolling()
+    {
+        _pollTimer?.Dispose();
+        _pollTimer = new System.Threading.Timer(async _ =>
+        {
+            if (_exportJob is null) return;
+            var statusRes = await GdprApi.GetExportJobStatusAsync(_exportJob.JobId);
+            if (statusRes.Data is not null)
+            {
+                _exportJob = statusRes.Data;
+                if (_exportJob.Status is "Completed" or "Failed")
+                {
+                    _exporting = false;
+                    _pollTimer?.Dispose();
+                }
+                await InvokeAsync(StateHasChanged);
+            }
+        }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+    }
+
+    private async Task DownloadExport()
+    {
+        if (_exportJob is null) return;
+        var res = await GdprApi.DownloadExportAsync(_exportJob.JobId, ContactId);
+        if (!res.Success)
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Download failed.", Severity.Error);
+    }
+
+    private async Task ConfirmAnonymize()
+    {
+        var p = new DialogParameters
+        {
+            ["Title"]        = "Anonymize contact",
+            ["Message"]      = "Permanently erases all PII. Documents will be deleted. Cannot be undone.",
+            ["ConfirmText"]  = "Anonymize",
+            ["ConfirmColor"] = Color.Warning
+        };
+        if ((await DialogService.Show<ConfirmDialog>("", p).Result).Canceled) return;
+
+        _anonymizing = true;
+        var res      = await GdprApi.AnonymizeAsync(ContactId);
+        _anonymizing = false;
+
+        if (res.Success)
+        {
+            Snackbar.Add($"Anonymized. {res.Data?.FieldsAnonymized.Count} fields cleared.", Severity.Success);
+            await OnAnonymized.InvokeAsync();
+        }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Failed.", Severity.Error);
+    }
+
+    private async Task ConfirmHardDelete()
+    {
+        var p = new DialogParameters
+        {
+            ["Title"]        = "Permanently delete contact",
+            ["Message"]      = "Deletes the contact and all associated data. Only allowed if no confirmed donations exist. Cannot be undone.",
+            ["ConfirmText"]  = "Delete permanently",
+            ["ConfirmColor"] = Color.Error
+        };
+        if ((await DialogService.Show<ConfirmDialog>("", p).Result).Canceled) return;
+
+        var res = await GdprApi.HardDeleteAsync(ContactId);
+        if (res.Success)
+        {
+            Snackbar.Add("Contact permanently deleted.", Severity.Success);
+            await OnAnonymized.InvokeAsync();
+        }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Failed.", Severity.Error);
+    }
+
+    private static Severity ExportSeverity(string status) => status switch
+    {
+        "Completed" => Severity.Success,
+        "Failed"    => Severity.Error,
+        "Running"   => Severity.Info,
+        _           => Severity.Normal
+    };
+
+    private static string ConsentLabel(ConsentType ct) => ct switch
+    {
+        ConsentType.MarketingEmail     => "Marketing email",
+        ConsentType.TransactionalEmail => "Transactional email",
+        ConsentType.DataStorage        => "Data storage",
+        ConsentType.ThirdPartySharing  => "Third-party sharing",
+        ConsentType.Profiling          => "Profiling / segmentation",
+        _                              => ct.ToString()
+    };
+
+    public void Dispose() => _pollTimer?.Dispose();
+}

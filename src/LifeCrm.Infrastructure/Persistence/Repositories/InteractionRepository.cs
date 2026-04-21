@@ -9,14 +9,12 @@ public class InteractionRepository : GenericRepository<Interaction>, IInteractio
     public InteractionRepository(AppDbContext db) : base(db) { }
 
     public async Task<IReadOnlyList<Interaction>> GetByContactAsync(Guid contactId, CancellationToken ct = default)
-        => await _set.Include(i => i.Contact).Include(i => i.Project)
-                     .Where(i => i.ContactId == contactId)
+        => await _set.Where(i => i.ContactId == contactId)
                      .OrderByDescending(i => i.OccurredAt)
                      .ToListAsync(ct);
 
     public async Task<IReadOnlyList<Interaction>> GetByProjectAsync(Guid projectId, CancellationToken ct = default)
-        => await _set.Include(i => i.Contact).Include(i => i.Project)
-                     .Where(i => i.ProjectId == projectId)
+        => await _set.Where(i => i.ProjectId == projectId)
                      .OrderByDescending(i => i.OccurredAt)
                      .ToListAsync(ct);
 }

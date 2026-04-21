@@ -1,0 +1,6 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LifeCrm">
+  <rect width="32" height="32" rx="8" fill="white" fill-opacity="0.12"/>
+  <path d="M7 16C7 11.029 11.029 7 16 7C20.971 7 25 11.029 25 16C25 20.971 20.971 25 16 25" stroke="white" stroke-width="1.75" stroke-linecap="round"/>
+  <path d="M16 25C14.343 25 13 23.657 13 22C13 20.343 14.343 19 16 19C17.657 19 19 20.343 19 22" stroke="white" stroke-width="1.75" stroke-linecap="round"/>
+  <circle cx="16" cy="12.5" r="2.5" fill="white"/>
+</svg>

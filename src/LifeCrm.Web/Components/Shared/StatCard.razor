@@ -1,0 +1,44 @@
+@* src/LifeCrm.Web/Components/Shared/StatCard.razor
+   KPI metric card used on the Dashboard.
+   Supports: value, label, icon, icon colour, optional href navigation,
+   and an optional delta string ("↑ 12% this month").
+*@
+
+@if (!string.IsNullOrEmpty(Href))
+{
+    <a href="@Href" style="text-decoration:none;display:block;">
+        @CardBody
+    </a>
+}
+else
+{
+    @CardBody
+}
+
+@code {
+    [Parameter, EditorRequired] public string Value     { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Label     { get; set; } = string.Empty;
+    [Parameter]                 public string Icon      { get; set; } = Icons.Material.Outlined.Analytics;
+    [Parameter]                 public string IconBg    { get; set; } = "#E0F4F7";
+    [Parameter]                 public string IconColor { get; set; } = "#0F5B6B";
+    [Parameter]                 public string? Delta    { get; set; }
+    [Parameter]                 public bool   DeltaUp  { get; set; } = true;
+    [Parameter]                 public string? Href     { get; set; }
+
+    private RenderFragment CardBody =>
+        @<div class="lcrm-stat-card">
+            <div class="lcrm-stat-card__icon"
+                 style="background:@IconBg;">
+                <MudIcon Icon="@Icon"
+                         Style="@($"color:{IconColor};font-size:20px;")" />
+            </div>
+            <div class="lcrm-stat-card__value">@Value</div>
+            <div class="lcrm-stat-card__label">@Label</div>
+            @if (!string.IsNullOrEmpty(Delta))
+            {
+                <div class="lcrm-stat-card__delta @(DeltaUp ? "lcrm-stat-card__delta--up" : "lcrm-stat-card__delta--down")">
+                    @Delta
+                </div>
+            }
+        </div>;
+}

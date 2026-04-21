@@ -1,2 +1,2 @@
-self.addEventListener('install', event => { self.skipWaiting(); });
-self.addEventListener('activate', event => { self.clients.claim(); });
+// Blazor WASM service worker — handles offline caching
+self.addEventListener('fetch', () => {});

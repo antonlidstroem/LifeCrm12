@@ -9,29 +9,33 @@ public class CsvService : ICsvService
 {
     public async Task<byte[]> ExportAsync<T>(IEnumerable<T> rows)
     {
-        await using var ms     = new MemoryStream();
-        await using var writer = new StreamWriter(ms);
-        using var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture));
-        await csv.WriteRecordsAsync(rows);
-        await writer.FlushAsync();
+        using var ms  = new MemoryStream();
+        using var sw  = new StreamWriter(ms);
+        using var csv = new CsvWriter(sw, new CsvConfiguration(CultureInfo.InvariantCulture));
+        csv.WriteRecords(rows);
+        await sw.FlushAsync();
         return ms.ToArray();
     }
 
     public async Task<(List<T> Rows, List<CsvParseError> Errors)> ImportAsync<T>(byte[] csvBytes)
     {
+        using var ms  = new MemoryStream(csvBytes);
+        using var sr  = new StreamReader(ms);
+        using var csv = new CsvReader(sr, new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            HeaderValidated = null,
+            MissingFieldFound = null
+        });
+
         var rows   = new List<T>();
         var errors = new List<CsvParseError>();
-        await using var ms = new MemoryStream(csvBytes);
-        using var reader   = new StreamReader(ms);
-        using var csv      = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture) { HeaderValidated = null, MissingFieldFound = null });
-        if (!await csv.ReadAsync()) return (rows, errors);
-        csv.ReadHeader();
-        int line = 1;
-        while (await csv.ReadAsync())
+        var row    = 0;
+
+        await foreach (var record in csv.GetRecordsAsync<T>())
         {
-            line++;
-            try { var record = csv.GetRecord<T>(); if (record is not null) rows.Add(record); }
-            catch (Exception ex) { errors.Add(new CsvParseError(line, ex.Message, csv.Parser.RawRecord.TrimEnd())); }
+            row++;
+            try { rows.Add(record); }
+            catch (Exception ex) { errors.Add(new CsvParseError(row, ex.Message, csv.Context.Parser.RawRecord)); }
         }
         return (rows, errors);
     }

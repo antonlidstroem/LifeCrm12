@@ -7,7 +7,8 @@ public sealed class CreateContactValidator : AbstractValidator<CreateContactRequ
 {
     public CreateContactValidator()
     {
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.FirstName).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.LastName).MaximumLength(100).When(x => x.LastName != null);
         RuleFor(x => x.Email).EmailAddress().MaximumLength(320).When(x => !string.IsNullOrWhiteSpace(x.Email));
         RuleFor(x => x.Phone).MaximumLength(50).When(x => !string.IsNullOrWhiteSpace(x.Phone));
         RuleFor(x => x.Tags).MaximumLength(500).When(x => !string.IsNullOrWhiteSpace(x.Tags));
@@ -17,5 +18,9 @@ public sealed class CreateContactValidator : AbstractValidator<CreateContactRequ
 
 public sealed class UpdateContactValidator : AbstractValidator<UpdateContactRequest>
 {
-    public UpdateContactValidator() { RuleFor(x => x.Id).NotEmpty(); Include(new CreateContactValidator()); }
+    public UpdateContactValidator()
+    {
+        RuleFor(x => x.Id).NotEmpty();
+        Include(new CreateContactValidator());
+    }
 }

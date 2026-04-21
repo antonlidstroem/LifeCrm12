@@ -1,9 +1,9 @@
-﻿// src/LifeCrm.Infrastructure/Services/ConsentService.cs
+using LifeCrm.Application.Common.Exceptions;
 using LifeCrm.Core.Entities;
 using LifeCrm.Core.Enums;
-using LifeCrm.Core.Exceptions;
 using LifeCrm.Core.Interfaces;
 using LifeCrm.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace LifeCrm.Infrastructure.Services;
 
@@ -21,16 +21,30 @@ public class ConsentService : IConsentService
     public async Task<bool> HasConsentAsync(
         Guid contactId, ConsentType consentType, CancellationToken ct = default)
     {
-        // Most recent record for this contact+type determines current state
-        var latest = await _db.ConsentRecords
-            .Where(r => r.ContactId == consentType.GetHashCode() // below: correct query
-                     && r.ContactId == contactId
-                     && r.ConsentType == consentType)
+        var granted = await _db.ConsentRecords
+            .IgnoreQueryFilters()
+            .Where(r => r.ContactId == contactId && r.ConsentType == consentType)
             .OrderByDescending(r => r.CreatedAt)
             .Select(r => (bool?)r.IsGranted)
             .FirstOrDefaultAsync(ct);
 
-        return latest == true;
+        return granted == true;
+    }
+
+    public async Task<IReadOnlyDictionary<ConsentType, bool>> GetCurrentConsentsAsync(
+        Guid contactId, CancellationToken ct = default)
+    {
+        var history = await _db.ConsentRecords
+            .IgnoreQueryFilters()
+            .Where(r => r.ContactId == contactId)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync(ct);
+
+        return history
+            .GroupBy(r => r.ConsentType)
+            .ToDictionary(
+                g => g.Key,
+                g => g.First().IsGranted);
     }
 
     public async Task RequireConsentAsync(
@@ -45,18 +59,22 @@ public class ConsentService : IConsentService
         string source, Guid? recordedByUserId = null,
         string? ipAddress = null, CancellationToken ct = default)
     {
+        var orgId = _currentUser.OrganizationId ?? Guid.Empty;
+
         _db.ConsentRecords.Add(new ConsentRecord
         {
-            Id = Guid.NewGuid(),
-            ContactId = contactId,
-            ConsentType = consentType,
-            IsGranted = true,
-            PolicyVersion = policyVersion,
-            Source = source,
+            Id               = Guid.NewGuid(),
+            ContactId        = contactId,
+            OrganizationId   = orgId,
+            ConsentType      = consentType,
+            IsGranted        = true,
+            PolicyVersion    = policyVersion,
+            Source           = source,
             RecordedByUserId = recordedByUserId ?? _currentUser.UserId,
-            IpAddress = ipAddress,
-            CreatedAt = DateTimeOffset.UtcNow
+            IpAddress        = ipAddress,
+            CreatedAt        = DateTimeOffset.UtcNow
         });
+
         await _db.SaveChangesAsync(ct);
     }
 
@@ -64,24 +82,31 @@ public class ConsentService : IConsentService
         Guid contactId, ConsentType consentType,
         string source, Guid? recordedByUserId = null, CancellationToken ct = default)
     {
+        var orgId = _currentUser.OrganizationId ?? Guid.Empty;
+
         _db.ConsentRecords.Add(new ConsentRecord
         {
-            Id = Guid.NewGuid(),
-            ContactId = contactId,
-            ConsentType = consentType,
-            IsGranted = false,
-            PolicyVersion = "N/A",
-            Source = source,
+            Id               = Guid.NewGuid(),
+            ContactId        = contactId,
+            OrganizationId   = orgId,
+            ConsentType      = consentType,
+            IsGranted        = false,
+            PolicyVersion    = "N/A",
+            Source           = source,
             RecordedByUserId = recordedByUserId ?? _currentUser.UserId,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt        = DateTimeOffset.UtcNow
         });
+
         await _db.SaveChangesAsync(ct);
     }
 
     public async Task<IReadOnlyList<ConsentRecord>> GetHistoryAsync(
         Guid contactId, CancellationToken ct = default)
-        => await _db.ConsentRecords
+    {
+        return await _db.ConsentRecords
+            .IgnoreQueryFilters()
             .Where(r => r.ContactId == contactId)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync(ct);
+    }
 }

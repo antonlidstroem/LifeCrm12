@@ -1,5 +1,7 @@
 using LifeCrm.Application.Common.Behaviours;
 using LifeCrm.Core.Interfaces;
+using LifeCrm.Infrastructure.BackgroundServices;
+using LifeCrm.Infrastructure.Encryption;
 using LifeCrm.Infrastructure.Persistence;
 using LifeCrm.Infrastructure.Persistence.Interceptors;
 using LifeCrm.Infrastructure.Persistence.Repositories;
@@ -16,18 +18,24 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services, IConfiguration config)
     {
-        // ── Config bridge (Singleton — stateless, reads IConfiguration) ──────────
+        // ── Encryption ────────────────────────────────────────────────────
+        services.AddFieldEncryption(config);
+
+        // ── Config bridge ─────────────────────────────────────────────────
         services.AddSingleton<IAppSettings, AppSettingsService>();
 
-        // ── Database ──────────────────────────────────────────────────────────────
+        // ── Database ──────────────────────────────────────────────────────
         services.AddScoped<AuditSaveInterceptor>();
+        services.AddScoped<PropertyAuditInterceptor>();
+
         services.AddDbContext<AppDbContext>((sp, opts) =>
         {
             opts.UseSqlServer(config.GetConnectionString("DefaultConnection"));
             opts.AddInterceptors(sp.GetRequiredService<AuditSaveInterceptor>());
+            opts.AddInterceptors(sp.GetRequiredService<PropertyAuditInterceptor>());
         });
 
-        // ── Core services ─────────────────────────────────────────────────────────
+        // ── Core services ─────────────────────────────────────────────────
         services.AddScoped<ICurrentUserService,    CurrentUserService>();
         services.AddScoped<IUnitOfWork,            UnitOfWork>();
         services.AddScoped<IOrganizationReader,    OrganizationReader>();
@@ -35,18 +43,27 @@ public static class DependencyInjection
         services.AddScoped<ICsvService,            CsvService>();
         services.AddScoped<IPdfService,            PdfService>();
 
-        // ── Email ─────────────────────────────────────────────────────────────────
-        // EmailSettingsService is Singleton: holds in-memory SMTP config cache.
-        // It uses IServiceScopeFactory to access the Scoped AppDbContext safely.
-        services.AddSingleton<IEmailSettingsService, EmailSettingsService>();
-        // EmailService is Scoped: calls IEmailSettingsService per request.
-        services.AddScoped<IEmailService, EmailService>();
+        // ── GDPR services ─────────────────────────────────────────────────
+        services.AddScoped<IConsentService,        ConsentService>();
+        services.AddSingleton<IEmailHashService,   EmailHashService>();
 
-        // ── Real-time / Token ─────────────────────────────────────────────────────
+        // ── Human Growth services (new) ───────────────────────────────────
+        services.AddScoped<IEngagementService,     EngagementService>();
+
+        // ── Email ─────────────────────────────────────────────────────────
+        services.AddSingleton<IEmailSettingsService, EmailSettingsService>();
+        services.AddScoped<IEmailService,            EmailService>();
+
+        // ── Real-time / Token ─────────────────────────────────────────────
         services.AddSingleton<ISignalRSettings,          SignalRSettingsService>();
         services.AddScoped<IUnsubscribeTokenService,     UnsubscribeTokenService>();
 
-        // ── Seeder ────────────────────────────────────────────────────────────────
+        // ── Background services ───────────────────────────────────────────
+        services.AddHostedService<AuditOutboxProcessor>();
+        services.AddHostedService<DsrExportProcessor>();
+        services.AddHostedService<RetentionCleanupJob>();
+
+        // ── Seeder ────────────────────────────────────────────────────────
         services.AddScoped<DatabaseSeeder>();
 
         return services;

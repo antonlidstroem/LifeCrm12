@@ -1,0 +1,9 @@
+<svg width="160" height="40" viewBox="0 0 160 40" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LifeCrm">
+  <!-- Icon mark -->
+  <rect x="0" y="4" width="32" height="32" rx="8" fill="white" fill-opacity="0.12"/>
+  <path d="M8 20C8 15.582 11.582 12 16 12C20.418 12 24 15.582 24 20C24 24.418 20.418 28 16 28" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <path d="M16 28C14.343 28 13 26.657 13 25C13 23.343 14.343 22 16 22C17.657 22 19 23.343 19 25" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="16" cy="17" r="2.5" fill="white"/>
+  <!-- Wordmark -->
+  <text x="42" y="26" font-family="Inter,-apple-system,sans-serif" font-size="17" font-weight="600" fill="white" letter-spacing="-0.3">LifeCrm</text>
+</svg>

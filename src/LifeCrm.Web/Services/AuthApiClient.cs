@@ -1,6 +1,6 @@
-using System.Net.Http.Json;
 using Blazored.LocalStorage;
 using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Api.Controllers.v1;
 using Microsoft.JSInterop;
 
 namespace LifeCrm.Web.Services;
@@ -9,12 +9,13 @@ public class AuthApiClient : ApiClientBase
 {
     public AuthApiClient(HttpClient h, ILocalStorageService s, IJSRuntime js) : base(h, s, js) { }
 
-    public async Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest request)
+    public async Task<ApiResponse<LoginResponse>> LoginAsync(string email, string password)
+        => await PostAsync<LoginResponse>("api/v1/auth/login", new LoginRequest { Email = email, Password = password });
+
+    public async Task ClearTokenAsync()
     {
-        var resp = await _http.PostAsJsonAsync("api/v1/auth/login", request, JsonOpts);
-        return await resp.Content.ReadFromJsonAsync<ApiResponse<LoginResponse>>(JsonOpts) ?? ApiResponse<LoginResponse>.Fail("Connection error.");
+        _http.DefaultRequestHeaders.Authorization = null;
     }
 
-    public async Task<ApiResponse> ChangePasswordAsync(ChangePasswordRequest request)
-        => await PostVoidAsync("api/v1/auth/change-password", request);
+    private record LoginRequest { public string Email { get; init; } = ""; public string Password { get; init; } = ""; }
 }

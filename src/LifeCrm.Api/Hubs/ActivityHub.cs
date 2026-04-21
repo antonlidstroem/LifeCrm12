@@ -1,54 +1,16 @@
-using System.Security.Claims;
-using LifeCrm.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 
 namespace LifeCrm.Api.Hubs;
 
 [Authorize]
 public class ActivityHub : Hub
 {
-    private readonly ISignalRSettings _settings;
-    public ActivityHub(ISignalRSettings settings) { _settings = settings; }
+    public async Task JoinOrganizationGroup(string organizationId)
+        => await Groups.AddToGroupAsync(Context.ConnectionId, $"org-{organizationId}");
 
-    public async Task JoinOrganization(string orgId)
-    {
-        var jwtOrgId = Context.User?.FindFirstValue("org_id");
-        if (string.IsNullOrEmpty(jwtOrgId) || jwtOrgId != orgId)
-            throw new HubException("Unauthorized: org_id mismatch.");
-        await Groups.AddToGroupAsync(Context.ConnectionId, orgId);
-    }
-
-    public override async Task OnConnectedAsync()
-    {
-        // If SignalR is disabled, abort the connection cleanly
-        if (!await _settings.GetEnabledAsync())
-        {
-            Context.Abort();
-            return;
-        }
-        var orgId = Context.User?.FindFirstValue("org_id");
-        if (!string.IsNullOrEmpty(orgId))
-            await Groups.AddToGroupAsync(Context.ConnectionId, orgId);
-        await base.OnConnectedAsync();
-    }
+    public async Task LeaveOrganizationGroup(string organizationId)
+        => await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"org-{organizationId}");
 }
 
-public sealed class ActivityNotifier : IActivityNotifier
-{
-    private readonly IHubContext<ActivityHub> _hubContext;
-    private readonly ISignalRSettings _settings;
-    private readonly ILogger<ActivityNotifier> _logger;
-
-    public ActivityNotifier(IHubContext<ActivityHub> hubContext, ISignalRSettings settings, ILogger<ActivityNotifier> logger)
-    { _hubContext = hubContext; _settings = settings; _logger = logger; }
-
-    public async Task NotifyAsync(string orgId, string eventType, object payload, CancellationToken ct = default)
-    {
-        // Honour the runtime on/off toggle — zero cost when disabled
-        if (!await _settings.GetEnabledAsync(ct)) return;
-        try { await _hubContext.Clients.Group(orgId).SendAsync("activity", new { eventType, payload }, ct); }
-        catch (Exception ex) { _logger.LogError(ex, "SignalR notification failed for org {OrgId} event {EventType}.", orgId, eventType); }
-    }
-}
+public record ActivityEvent(string EventType, object Payload);

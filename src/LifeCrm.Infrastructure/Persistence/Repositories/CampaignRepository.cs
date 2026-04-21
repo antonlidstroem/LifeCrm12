@@ -1,5 +1,4 @@
 using LifeCrm.Core.Entities;
-using LifeCrm.Core.Enums;
 using LifeCrm.Core.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +9,7 @@ public class CampaignRepository : GenericRepository<Campaign>, ICampaignReposito
     public CampaignRepository(AppDbContext db) : base(db) { }
 
     public async Task<IReadOnlyList<Campaign>> GetActiveAsync(CancellationToken ct = default)
-        => await _set.Where(c => c.Status == CampaignStatus.Active)
+        => await _set.Where(c => c.Status == Core.Enums.CampaignStatus.Active)
                      .OrderBy(c => c.Name)
                      .ToListAsync(ct);
 }

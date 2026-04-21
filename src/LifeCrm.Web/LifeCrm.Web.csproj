@@ -21,15 +21,7 @@
     <PackageReference Include="System.Net.Http.Json" Version="8.0.1" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
   </ItemGroup>
-
-	<ItemGroup>
-		<ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
-	</ItemGroup>
-
-	<ItemGroup Condition="'$(Configuration)' == 'Release'">
-		<Content Remove="wwwroot\service-worker.js" />
-	</ItemGroup>
-
-
-
+  <ItemGroup>
+    <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
+  </ItemGroup>
 </Project>

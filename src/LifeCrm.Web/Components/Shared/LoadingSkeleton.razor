@@ -1,10 +1,19 @@
-<MudStack Spacing="1" Class="@Class">
-    @for (int i = 0; i < Rows; i++) {
-        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@($"{RowHeight}px")" Width="100%" Animation="Animation.Wave" />
+@* src/LifeCrm.Web/Components/Shared/LoadingSkeleton.razor *@
+
+@for (var i = 0; i < Rows; i++)
+{
+    <div style="@($"height:{Height}px;border-radius:6px;background:linear-gradient(90deg,#F0F2F5 25%,#E8EAED 50%,#F0F2F5 75%);background-size:400% 100%;animation:lcrm-shimmer 1.4s ease infinite;margin-bottom:{Gap}px;{(i == Rows - 1 ? "width:70%" : "width:100%")}")">
+    </div>
+}
+<style>
+    @@keyframes lcrm-shimmer {
+        0%   { background-position: 100% 0; }
+        100% { background-position: -100% 0; }
     }
-</MudStack>
+</style>
+
 @code {
-    [Parameter] public int Rows { get; set; } = 5;
-    [Parameter] public int RowHeight { get; set; } = 44;
-    [Parameter] public string Class { get; set; } = string.Empty;
+    [Parameter] public int Rows   { get; set; } = 4;
+    [Parameter] public int Height { get; set; } = 18;
+    [Parameter] public int Gap    { get; set; } = 10;
 }

@@ -1,1 +1,775 @@
-body { font-family: 'Segoe UI', sans-serif; margin: 0; }
+/* ============================================================================
+   LifeCrm — Global Design System
+   Design philosophy: Inter font, teal brand, flat-ish enterprise aesthetic,
+   8-px grid, soft shadows, proper mobile-first responsive behaviour.
+   ============================================================================ */
+
+/* ── 1. DESIGN TOKENS ──────────────────────────────────────────────────────── */
+:root {
+    /* Brand */
+    --lcrm-brand-600:     #0F5B6B;
+    --lcrm-brand-500:     #1A7A8E;
+    --lcrm-brand-400:     #28A0B8;
+    --lcrm-brand-100:     #E0F4F7;
+    --lcrm-brand-50:      #F0FAFB;
+
+    /* Neutrals */
+    --lcrm-neutral-950:   #0D1117;
+    --lcrm-neutral-900:   #161B22;
+    --lcrm-neutral-800:   #21262D;
+    --lcrm-neutral-700:   #30363D;
+    --lcrm-neutral-400:   #8B949E;
+    --lcrm-neutral-300:   #C6CDD4;
+    --lcrm-neutral-200:   #E1E4E8;
+    --lcrm-neutral-100:   #F0F2F5;
+    --lcrm-neutral-50:    #F7F8FA;
+
+    /* Semantic */
+    --lcrm-success:       #2E7D52;
+    --lcrm-warning:       #B45309;
+    --lcrm-danger:        #B91C1C;
+    --lcrm-info:          #1D5FAD;
+
+    /* Sidebar */
+    --lcrm-sidebar-bg:    #0D2B32;
+    --lcrm-sidebar-text:  rgba(255,255,255,0.72);
+    --lcrm-sidebar-text-muted: rgba(255,255,255,0.40);
+    --lcrm-sidebar-hover: rgba(255,255,255,0.07);
+    --lcrm-sidebar-active-bg: rgba(255,255,255,0.10);
+    --lcrm-sidebar-active-border: #28A0B8;
+    --lcrm-sidebar-width: 248px;
+
+    /* Spacing */
+    --lcrm-radius-sm:  6px;
+    --lcrm-radius-md:  10px;
+    --lcrm-radius-lg:  14px;
+    --lcrm-radius-xl:  20px;
+
+    /* Shadows — softer than MudBlazor defaults */
+    --lcrm-shadow-sm:  0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.04);
+    --lcrm-shadow-md:  0 2px 8px rgba(0,0,0,.08), 0 1px 3px rgba(0,0,0,.05);
+    --lcrm-shadow-lg:  0 8px 24px rgba(0,0,0,.10), 0 2px 8px rgba(0,0,0,.06);
+
+    /* Typography */
+    --lcrm-font:       'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --lcrm-font-mono:  'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+/* ── 2. GLOBAL RESET & FONT ────────────────────────────────────────────────── */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html {
+    font-family: var(--lcrm-font);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+body {
+    font-family: var(--lcrm-font);
+    background: var(--lcrm-neutral-50);
+    color: var(--lcrm-neutral-900);
+    margin: 0;
+    min-height: 100vh;
+}
+
+/* Force Inter on ALL MudBlazor text */
+.mud-typography,
+.mud-input,
+.mud-button,
+.mud-chip,
+.mud-table-cell,
+.mud-nav-link,
+.mud-list-item,
+.mud-select-input,
+.mud-popover,
+.mud-dialog *,
+.mud-snackbar * {
+    font-family: var(--lcrm-font) !important;
+}
+
+/* ── 3. LOADING SCREEN ─────────────────────────────────────────────────────── */
+.lcrm-boot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: var(--lcrm-sidebar-bg);
+}
+
+.lcrm-boot__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.lcrm-boot__logo {
+    animation: lcrm-fadein 0.4s ease-out;
+}
+
+.lcrm-boot__spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid rgba(255,255,255,.15);
+    border-top-color: var(--lcrm-brand-400);
+    border-radius: 50%;
+    animation: lcrm-spin 0.8s linear infinite;
+}
+
+.lcrm-boot__label {
+    color: rgba(255,255,255,0.45);
+    font-family: var(--lcrm-font);
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    margin: 0;
+}
+
+@keyframes lcrm-spin   { to { transform: rotate(360deg); } }
+@keyframes lcrm-fadein { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+/* ── 4. SIDEBAR OVERRIDES ──────────────────────────────────────────────────── */
+.mud-drawer.lcrm-sidebar {
+    background: var(--lcrm-sidebar-bg) !important;
+    border-right: none !important;
+    box-shadow: 2px 0 16px rgba(0,0,0,0.18) !important;
+}
+
+.mud-drawer.lcrm-sidebar .mud-drawer-content {
+    background: transparent;
+    overflow-x: hidden;
+}
+
+/* Sidebar header (logo area) */
+.lcrm-sidebar-header {
+    padding: 20px 16px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.lcrm-sidebar-org {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--lcrm-sidebar-text-muted);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Nav section labels */
+.lcrm-nav-section {
+    padding: 16px 16px 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lcrm-sidebar-text-muted);
+}
+
+/* Nav items */
+.mud-drawer.lcrm-sidebar .mud-nav-link {
+    color: var(--lcrm-sidebar-text) !important;
+    border-radius: 8px !important;
+    margin: 1px 8px !important;
+    padding: 0 10px !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    font-size: 13.5px !important;
+    font-weight: 450 !important;
+    letter-spacing: 0.01em;
+    transition: background 0.12s ease, color 0.12s ease !important;
+    position: relative;
+}
+
+.mud-drawer.lcrm-sidebar .mud-nav-link:hover {
+    background: var(--lcrm-sidebar-hover) !important;
+    color: rgba(255,255,255,0.95) !important;
+}
+
+.mud-drawer.lcrm-sidebar .mud-nav-link.active,
+.mud-drawer.lcrm-sidebar .mud-nav-link[aria-current="page"] {
+    background: var(--lcrm-sidebar-active-bg) !important;
+    color: white !important;
+    font-weight: 550 !important;
+}
+
+/* Active indicator bar */
+.mud-drawer.lcrm-sidebar .mud-nav-link.active::before,
+.mud-drawer.lcrm-sidebar .mud-nav-link[aria-current="page"]::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    background: var(--lcrm-sidebar-active-border);
+    border-radius: 0 2px 2px 0;
+}
+
+/* Nav icons */
+.mud-drawer.lcrm-sidebar .mud-nav-link .mud-icon-root {
+    color: var(--lcrm-sidebar-text-muted) !important;
+    font-size: 18px !important;
+    transition: color 0.12s ease !important;
+}
+
+.mud-drawer.lcrm-sidebar .mud-nav-link:hover .mud-icon-root,
+.mud-drawer.lcrm-sidebar .mud-nav-link.active .mud-icon-root,
+.mud-drawer.lcrm-sidebar .mud-nav-link[aria-current="page"] .mud-icon-root {
+    color: white !important;
+}
+
+/* Admin section nav items — amber accent on icon */
+.lcrm-nav-admin .mud-nav-link .mud-icon-root {
+    color: rgba(251,191,36,0.6) !important;
+}
+
+.lcrm-nav-admin .mud-nav-link:hover .mud-icon-root,
+.lcrm-nav-admin .mud-nav-link.active .mud-icon-root {
+    color: rgb(251,191,36) !important;
+}
+
+/* Sidebar divider */
+.mud-drawer.lcrm-sidebar .mud-divider {
+    border-color: rgba(255,255,255,0.07) !important;
+    margin: 6px 16px !important;
+}
+
+/* ── 5. APPBAR OVERRIDES ───────────────────────────────────────────────────── */
+.mud-appbar.lcrm-appbar {
+    background: white !important;
+    border-bottom: 1px solid var(--lcrm-neutral-200) !important;
+    box-shadow: none !important;
+    color: var(--lcrm-neutral-900) !important;
+}
+
+.mud-appbar.lcrm-appbar .mud-icon-button {
+    color: var(--lcrm-neutral-700) !important;
+}
+
+.mud-appbar.lcrm-appbar .mud-icon-button:hover {
+    background: var(--lcrm-neutral-100) !important;
+}
+
+/* ── 6. CARD OVERRIDES ─────────────────────────────────────────────────────── */
+.mud-card,
+.mud-paper {
+    border-radius: var(--lcrm-radius-lg) !important;
+}
+
+.mud-card {
+    border: 1px solid var(--lcrm-neutral-200) !important;
+    box-shadow: var(--lcrm-shadow-sm) !important;
+    transition: box-shadow 0.18s ease !important;
+}
+
+.mud-card:hover {
+    box-shadow: var(--lcrm-shadow-md) !important;
+}
+
+.mud-card-header {
+    border-bottom: 1px solid var(--lcrm-neutral-100) !important;
+    padding: 16px 20px !important;
+}
+
+.mud-card-content {
+    padding: 20px !important;
+}
+
+/* ── 7. TABLE OVERRIDES ────────────────────────────────────────────────────── */
+.mud-table {
+    border: 1px solid var(--lcrm-neutral-200) !important;
+    border-radius: var(--lcrm-radius-lg) !important;
+    overflow: hidden !important;
+    box-shadow: var(--lcrm-shadow-sm) !important;
+}
+
+.mud-table thead tr th {
+    background: var(--lcrm-neutral-50) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    color: var(--lcrm-neutral-400) !important;
+    padding: 10px 16px !important;
+    border-bottom: 1px solid var(--lcrm-neutral-200) !important;
+}
+
+.mud-table tbody tr td {
+    padding: 13px 16px !important;
+    border-bottom: 1px solid var(--lcrm-neutral-100) !important;
+    font-size: 13.5px !important;
+}
+
+.mud-table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+.mud-table tbody tr:hover td {
+    background: var(--lcrm-brand-50) !important;
+}
+
+.mud-table-row {
+    cursor: pointer;
+}
+
+/* ── 8. BUTTON OVERRIDES ───────────────────────────────────────────────────── */
+.mud-button-root {
+    font-family: var(--lcrm-font) !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.01em !important;
+    border-radius: var(--lcrm-radius-md) !important;
+    transition: all 0.15s ease !important;
+}
+
+.mud-button-filled-primary {
+    background: var(--lcrm-brand-600) !important;
+    box-shadow: 0 1px 2px rgba(15,91,107,0.3) !important;
+}
+
+.mud-button-filled-primary:hover {
+    background: var(--lcrm-brand-500) !important;
+    box-shadow: 0 3px 8px rgba(15,91,107,0.35) !important;
+    transform: translateY(-1px) !important;
+}
+
+.mud-button-outlined {
+    border-color: var(--lcrm-neutral-300) !important;
+    color: var(--lcrm-neutral-700) !important;
+}
+
+.mud-button-outlined:hover {
+    background: var(--lcrm-neutral-100) !important;
+    border-color: var(--lcrm-neutral-400) !important;
+}
+
+/* ── 9. INPUT OVERRIDES ────────────────────────────────────────────────────── */
+.mud-input-outlined .mud-input-outlined-border {
+    border-radius: var(--lcrm-radius-md) !important;
+    border-color: var(--lcrm-neutral-300) !important;
+}
+
+.mud-input-outlined:hover .mud-input-outlined-border {
+    border-color: var(--lcrm-neutral-400) !important;
+}
+
+.mud-input-outlined.mud-focused .mud-input-outlined-border {
+    border-color: var(--lcrm-brand-500) !important;
+    border-width: 1.5px !important;
+}
+
+/* ── 10. CHIP OVERRIDES ────────────────────────────────────────────────────── */
+.mud-chip {
+    border-radius: 6px !important;
+    font-size: 11.5px !important;
+    font-weight: 500 !important;
+    height: 22px !important;
+    letter-spacing: 0.01em !important;
+}
+
+/* ── 11. DIALOG OVERRIDES ──────────────────────────────────────────────────── */
+.mud-dialog {
+    border-radius: var(--lcrm-radius-xl) !important;
+    box-shadow: var(--lcrm-shadow-lg) !important;
+}
+
+.mud-dialog-title {
+    font-weight: 600 !important;
+    font-size: 16px !important;
+    padding: 20px 24px 16px !important;
+    border-bottom: 1px solid var(--lcrm-neutral-100) !important;
+}
+
+.mud-dialog-content {
+    padding: 20px 24px !important;
+}
+
+.mud-dialog-actions {
+    padding: 12px 24px 20px !important;
+    border-top: 1px solid var(--lcrm-neutral-100) !important;
+}
+
+/* Mobile: full-screen dialogs */
+@media (max-width: 600px) {
+    .mud-dialog-container {
+        align-items: flex-end !important;
+    }
+    .mud-dialog {
+        border-bottom-left-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+        border-radius: var(--lcrm-radius-xl) var(--lcrm-radius-xl) 0 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: 92vh !important;
+    }
+}
+
+/* ── 12. SNACKBAR OVERRIDES ────────────────────────────────────────────────── */
+.mud-snackbar {
+    border-radius: var(--lcrm-radius-md) !important;
+    font-size: 13.5px !important;
+    font-weight: 450 !important;
+    box-shadow: var(--lcrm-shadow-lg) !important;
+}
+
+/* ── 13. STAT CARD COMPONENT ───────────────────────────────────────────────── */
+.lcrm-stat-card {
+    border-radius: var(--lcrm-radius-lg) !important;
+    border: 1px solid var(--lcrm-neutral-200) !important;
+    background: white !important;
+    padding: 20px 24px !important;
+    box-shadow: var(--lcrm-shadow-sm) !important;
+    transition: box-shadow 0.18s ease, transform 0.18s ease !important;
+    cursor: default;
+}
+
+.lcrm-stat-card:hover {
+    box-shadow: var(--lcrm-shadow-md) !important;
+    transform: translateY(-1px);
+}
+
+.lcrm-stat-card__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--lcrm-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.lcrm-stat-card__value {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--lcrm-neutral-900);
+    letter-spacing: -0.02em;
+}
+
+.lcrm-stat-card__label {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--lcrm-neutral-400);
+    margin-top: 4px;
+}
+
+.lcrm-stat-card__delta {
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 8px;
+}
+
+.lcrm-stat-card__delta--up   { color: var(--lcrm-success); }
+.lcrm-stat-card__delta--down { color: var(--lcrm-danger); }
+
+/* ── 14. PAGE HEADER COMPONENT ─────────────────────────────────────────────── */
+.lcrm-page-header {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--lcrm-neutral-200);
+}
+
+.lcrm-page-header__title {
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+    color: var(--lcrm-neutral-950) !important;
+}
+
+.lcrm-page-header__subtitle {
+    font-size: 13px !important;
+    color: var(--lcrm-neutral-400) !important;
+    margin-top: 2px !important;
+}
+
+/* ── 15. EVENT CARD (timeline view) ────────────────────────────────────────── */
+.lcrm-event-card {
+    border-radius: var(--lcrm-radius-lg);
+    border: 1px solid var(--lcrm-neutral-200);
+    background: white;
+    padding: 16px 20px;
+    box-shadow: var(--lcrm-shadow-sm);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+    cursor: pointer;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    text-decoration: none;
+    color: inherit;
+}
+
+.lcrm-event-card:hover {
+    box-shadow: var(--lcrm-shadow-md);
+    transform: translateY(-1px);
+    border-color: var(--lcrm-brand-400);
+}
+
+.lcrm-event-card__date {
+    min-width: 52px;
+    text-align: center;
+    padding: 8px;
+    background: var(--lcrm-brand-50);
+    border-radius: var(--lcrm-radius-md);
+    border: 1px solid var(--lcrm-brand-100);
+    flex-shrink: 0;
+}
+
+.lcrm-event-card__date-day {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--lcrm-brand-600);
+}
+
+.lcrm-event-card__date-month {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--lcrm-brand-500);
+    margin-top: 2px;
+}
+
+.lcrm-event-card__body {
+    flex: 1;
+    min-width: 0;
+}
+
+.lcrm-event-card__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--lcrm-neutral-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lcrm-event-card__meta {
+    font-size: 12px;
+    color: var(--lcrm-neutral-400);
+    margin-top: 3px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.lcrm-event-card__badge {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.lcrm-event-card--past {
+    opacity: 0.65;
+}
+
+/* ── 16. AVATAR INITIAL ─────────────────────────────────────────────────────── */
+.lcrm-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+}
+
+/* ── 17. SEGMENT BADGE ──────────────────────────────────────────────────────── */
+.lcrm-segment { border-radius: 4px; padding: 2px 7px; font-size: 11px; font-weight: 600; }
+.lcrm-segment--new      { background: #DBEAFE; color: #1E40AF; }
+.lcrm-segment--growing  { background: #D1FAE5; color: #065F46; }
+.lcrm-segment--core     { background: #A7F3D0; color: #064E3B; }
+.lcrm-segment--atrisk   { background: #FEF3C7; color: #92400E; }
+.lcrm-segment--lapsed   { background: #FEE2E2; color: #991B1B; }
+
+/* ── 18. MAIN CONTENT AREA ──────────────────────────────────────────────────── */
+.mud-main-content {
+    background: var(--lcrm-neutral-50) !important;
+}
+
+.lcrm-page-content {
+    padding: 28px 28px 48px;
+}
+
+@media (max-width: 960px) {
+    .lcrm-page-content {
+        padding: 16px 16px 80px; /* bottom pad for mobile FAB */
+    }
+}
+
+/* ── 19. MOBILE FAB ─────────────────────────────────────────────────────────── */
+.lcrm-fab {
+    position: fixed !important;
+    bottom: 24px !important;
+    right: 20px !important;
+    z-index: 200 !important;
+    box-shadow: 0 4px 16px rgba(15,91,107,0.4) !important;
+}
+
+.lcrm-fab-hide-on-desktop {
+    display: none;
+}
+
+@media (max-width: 960px) {
+    .lcrm-fab-hide-on-desktop {
+        display: flex !important;
+    }
+    .lcrm-btn-hide-on-mobile {
+        display: none !important;
+    }
+}
+
+/* ── 20. RESPONSIVE TABLE COLUMNS ───────────────────────────────────────────── */
+@media (max-width: 600px) {
+    .lcrm-col-hide-xs { display: none !important; }
+}
+@media (max-width: 960px) {
+    .lcrm-col-hide-sm { display: none !important; }
+}
+
+/* ── 21. LOGIN PAGE ─────────────────────────────────────────────────────────── */
+.lcrm-login-page {
+    min-height: 100vh;
+    display: flex;
+    background: var(--lcrm-sidebar-bg);
+}
+
+.lcrm-login-sidebar {
+    width: 440px;
+    flex-shrink: 0;
+    background: linear-gradient(160deg, #0D2B32 0%, #0F5B6B 100%);
+    padding: 48px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.lcrm-login-main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--lcrm-neutral-50);
+    padding: 40px 24px;
+}
+
+.lcrm-login-card {
+    width: 100%;
+    max-width: 400px;
+    background: white;
+    border-radius: var(--lcrm-radius-xl);
+    border: 1px solid var(--lcrm-neutral-200);
+    box-shadow: var(--lcrm-shadow-lg);
+    padding: 36px 36px 32px;
+}
+
+@media (max-width: 768px) {
+    .lcrm-login-sidebar { display: none; }
+    .lcrm-login-main { background: var(--lcrm-sidebar-bg); }
+    .lcrm-login-card {
+        background: rgba(255,255,255,0.04);
+        border-color: rgba(255,255,255,0.1);
+        box-shadow: none;
+    }
+    .lcrm-login-card .mud-typography { color: white !important; }
+    .lcrm-login-card .mud-input-outlined .mud-input-outlined-border {
+        border-color: rgba(255,255,255,0.2) !important;
+    }
+    .lcrm-login-card .mud-input-label { color: rgba(255,255,255,0.6) !important; }
+    .lcrm-login-card input { color: white !important; }
+}
+
+/* ── 22. USER MENU ──────────────────────────────────────────────────────────── */
+.lcrm-user-menu-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px 4px 4px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.lcrm-user-menu-trigger:hover {
+    background: var(--lcrm-neutral-100);
+    border-color: var(--lcrm-neutral-200);
+}
+
+.lcrm-user-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--lcrm-brand-600);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.lcrm-user-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--lcrm-neutral-700);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── 23. BREADCRUMB / NAV ───────────────────────────────────────────────────── */
+.lcrm-back-btn {
+    color: var(--lcrm-neutral-400) !important;
+    transition: color 0.12s ease !important;
+}
+.lcrm-back-btn:hover { color: var(--lcrm-brand-600) !important; }
+
+/* ── 24. MISC UTILITIES ─────────────────────────────────────────────────────── */
+.lcrm-text-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.lcrm-section-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--lcrm-neutral-400);
+    margin-bottom: 8px;
+}
+
+.lcrm-divider {
+    height: 1px;
+    background: var(--lcrm-neutral-200);
+    margin: 16px 0;
+}
+
+/* Smooth page transitions */
+.mud-main-content > * {
+    animation: lcrm-page-in 0.18s ease-out;
+}
+
+@keyframes lcrm-page-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* Scrollbar styling (Webkit) */
+::-webkit-scrollbar               { width: 6px; height: 6px; }
+::-webkit-scrollbar-track         { background: transparent; }
+::-webkit-scrollbar-thumb         { background: var(--lcrm-neutral-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover   { background: var(--lcrm-neutral-400); }

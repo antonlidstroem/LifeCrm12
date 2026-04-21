@@ -14,28 +14,16 @@ public class Program
         builder.RootComponents.Add<App>("#app");
         builder.RootComponents.Add<HeadOutlet>("head::after");
 
-        // ── HttpClient ──────────────────────────────────────────────────────────
         var apiBaseUrl = builder.Configuration["ApiBaseUrl"]
-    ?? throw new Exception("ApiBaseUrl saknas i wwwroot appsettings");
+            ?? throw new Exception("ApiBaseUrl is missing from wwwroot/appsettings.json");
 
-        Console.WriteLine("API BASE URL = " + apiBaseUrl);
-        Console.WriteLine($"DEBUG ApiBaseUrl: '{apiBaseUrl}'");
-        Console.WriteLine($"ENV: {builder.HostEnvironment.Environment}");
-
-        if (string.IsNullOrWhiteSpace(apiBaseUrl))
+        builder.Services.AddScoped(_ => new HttpClient
         {
-            throw new Exception("ApiBaseUrl is not configured!");
-        }
-
-        builder.Services.AddScoped(sp =>
-        {
-            return new HttpClient
-            {
-                BaseAddress = new Uri(apiBaseUrl.TrimEnd('/') + "/")
-            };
+            BaseAddress = new Uri(apiBaseUrl.TrimEnd('/') + "/")
         });
 
-        // ── MudBlazor ───────────────────────────────────────────────────────────
+        // MudBlazor — includes IBreakpointService used by MainLayout for
+        // the responsive drawer (Persistent on desktop / Temporary on mobile)
         builder.Services.AddMudServices(cfg =>
         {
             cfg.SnackbarConfiguration.PositionClass        = MudBlazor.Defaults.Classes.Position.BottomRight;
@@ -45,14 +33,9 @@ public class Program
             cfg.SnackbarConfiguration.VisibleStateDuration = 4000;
         });
 
-        // ── Local Storage ───────────────────────────────────────────────────────
         builder.Services.AddBlazoredLocalStorage();
 
-        
-
-        
-
-        // ── Domain API clients ──────────────────────────────────────────────────
+        // ── Domain API clients ──────────────────────────────────────────────
         builder.Services.AddScoped<AuthApiClient>();
         builder.Services.AddScoped<ContactsApiClient>();
         builder.Services.AddScoped<DonationsApiClient>();
@@ -66,10 +49,17 @@ public class Program
         builder.Services.AddScoped<SignalRSettingsApiClient>();
         builder.Services.AddScoped<EmailSettingsApiClient>();
 
-        // ── Façade — must be registered AFTER domain clients ────────────────────
+        // ── GDPR client ─────────────────────────────────────────────────────
+        builder.Services.AddScoped<GdprApiClient>();
+
+        // ── Human Growth clients ────────────────────────────────────────────
+        builder.Services.AddScoped<EventsApiClient>();
+        builder.Services.AddScoped<EnrichmentApiClient>();
+
+        // ── Façade ──────────────────────────────────────────────────────────
         builder.Services.AddScoped<ApiClient>();
 
-        // ── App-level services ──────────────────────────────────────────────────
+        // ── App-level services ──────────────────────────────────────────────
         builder.Services.AddSingleton<AppState>();
         builder.Services.AddScoped<SignalRService>();
 

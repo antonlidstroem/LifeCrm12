@@ -1,33 +1,28 @@
-﻿// src/LifeCrm.Core/Entities/MentorRelationship.cs
-//
-// Directional: one Mentor → many Mentees (but stored as individual pairs).
-// Admin creates and manages these. Contacts are never aware of this data
-// unless the organization explicitly tells them.
-using LifeCrm.Core.Entities;
+using LifeCrm.Core.Attributes;
+using LifeCrm.Core.Enums;
 
+namespace LifeCrm.Core.Entities;
+
+/// <summary>
+/// Admin-managed directional mentoring relationship between two contacts.
+/// Contacts are NEVER shown this data — purely for staff coordination.
+/// </summary>
+[AdminOnly("Mentoring relationships are admin-only — contacts are not informed via the system.")]
 public class MentorRelationship : TenantEntity
 {
-    public Guid MentorContactId { get; set; }
-    public Guid MenteeContactId { get; set; }
+    public Guid   MentorContactId  { get; set; }
+    public Guid   MenteeContactId  { get; set; }
 
-    public MentorshipType Type { get; set; } = MentorshipType.General;
+    public MentorshipType Type     { get; set; } = MentorshipType.General;
 
-    public DateOnly? StartDate { get; set; }
-    public DateOnly? EndDate { get; set; }   // null = ongoing
+    public DateOnly? StartDate     { get; set; }
+    public DateOnly? EndDate       { get; set; }   // null = ongoing
 
-    public string? Notes { get; set; }   // Admin-only context
-    public bool IsActive { get; set; } = true;
+    public string?   Notes         { get; set; }
+    public bool      IsActive      { get; set; } = true;
 
-    public Guid CreatedByUserId { get; set; }
+    public Guid      CreatedByUserId { get; set; }
 
-    public Contact? Mentor { get; set; }
-    public Contact? Mentee { get; set; }
-}
-
-public enum MentorshipType
-{
-    General = 1,
-    Discipleship = 2,
-    Leadership = 3,
-    Vocational = 4
+    public Contact?  Mentor        { get; set; }
+    public Contact?  Mentee        { get; set; }
 }

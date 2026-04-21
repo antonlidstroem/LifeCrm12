@@ -1,62 +1,155 @@
-@page "/login"
-@inject AuthApiClient Api
+@* src/LifeCrm.Web/Pages/Auth/LoginPage.razor *@
+@inject AuthApiClient AuthApi
 @inject AppState AppState
-@inject NavigationManager Nav
-@inject SignalRService SignalR
-@inject SignalRSettingsApiClient SettingsApi
-@inject Blazored.LocalStorage.ILocalStorageService Storage
-@inject IConfiguration Configuration
+@inject ILocalStorageService Storage
+@inject ISnackbar Snackbar
 
-<MudGrid Justify="Justify.Center" Class="mt-8">
-    <MudItem xs="12" sm="6" md="4">
-        <MudCard Elevation="4">
-            <MudCardContent Class="pa-6">
-                <MudStack AlignItems="AlignItems.Center" Class="mb-5">
-                    <MudIcon Icon="@Icons.Material.Filled.Favorite" Color="Color.Primary" Style="font-size:3rem;" />
-                    <MudText Typo="Typo.h4">LifeCrm</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Logga in för att fortsätta</MudText>
-                </MudStack>
-                @if (!string.IsNullOrEmpty(_error)) { <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@_error</MudAlert> }
-                <MudTextField @bind-Value="_email" Label="E-post" InputType="InputType.Email" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email" Class="mb-3" Disabled="_loading" />
-                <MudTextField @bind-Value="_password" Label="Lösenord" InputType="@(_showPw ? InputType.Text : InputType.Password)" Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@(_showPw ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)" OnAdornmentClick="@(() => _showPw = !_showPw)" Class="mb-5" Disabled="_loading" OnKeyDown="OnKeyDown" />
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large" OnClick="LoginAsync" Disabled="_loading">
-                    @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /><span>Loggar in…</span> } else { <span>Logga in</span> }
-                </MudButton>
-            </MudCardContent>
-        </MudCard>
-    </MudItem>
-</MudGrid>
+<div class="lcrm-login-page">
+
+    <!-- Left: brand panel (hidden on mobile) -->
+    <div class="lcrm-login-sidebar">
+        <div>
+            <!-- Logo -->
+            <div style="margin-bottom:48px;">
+                <BrandLogo IconOnly="false" />
+            </div>
+
+            <!-- Value proposition -->
+            <h1 style="font-size:26px;font-weight:700;color:white;
+                       line-height:1.25;letter-spacing:-0.03em;margin:0 0 16px;">
+                CRM built for<br />churches &amp; NGOs
+            </h1>
+            <p style="font-size:14px;color:rgba(255,255,255,0.6);
+                      line-height:1.6;margin:0 0 40px;max-width:300px;">
+                Track engagement, manage relationships, and grow your mission —
+                with privacy at the core.
+            </p>
+
+            <!-- Feature pills -->
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                @foreach (var feat in _features)
+                {
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:28px;height:28px;border-radius:7px;
+                                    background:rgba(255,255,255,0.1);
+                                    display:flex;align-items:center;justify-content:center;
+                                    flex-shrink:0;">
+                            <MudIcon Icon="@feat.Icon" Style="font-size:15px;color:rgba(255,255,255,0.8);" />
+                        </div>
+                        <span style="font-size:13px;color:rgba(255,255,255,0.65);">@feat.Label</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="font-size:11.5px;color:rgba(255,255,255,0.25);">
+            Privacy-first · GDPR compliant
+        </div>
+    </div>
+
+    <!-- Right: login form -->
+    <div class="lcrm-login-main">
+        <div class="lcrm-login-card">
+
+            <!-- Mobile logo (only shown when sidebar is hidden) -->
+            <div class="d-flex d-md-none justify-center mb-5">
+                <BrandLogo IconOnly="false" />
+            </div>
+
+            <div style="margin-bottom:28px;">
+                <h2 style="font-size:20px;font-weight:700;
+                           color:#161B22;letter-spacing:-0.02em;margin:0 0 4px;">
+                    Welcome back
+                </h2>
+                <p style="font-size:13px;color:#8B949E;margin:0;">
+                    Sign in to your organisation
+                </p>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:14px;">
+                <MudTextField @bind-Value="_email"
+                              Label="Email address"
+                              Variant="Variant.Outlined"
+                              InputType="InputType.Email"
+                              Margin="Margin.Dense"
+                              autocomplete="email"
+                              Disabled="_loading" />
+
+                <MudTextField @bind-Value="_password"
+                              Label="Password"
+                              Variant="Variant.Outlined"
+                              InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                              Margin="Margin.Dense"
+                              autocomplete="current-password"
+                              Disabled="_loading"
+                              OnKeyDown="OnKeyDown"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_showPassword
+                                              ? Icons.Material.Filled.VisibilityOff
+                                              : Icons.Material.Filled.Visibility)"
+                              OnAdornmentClick="@(() => _showPassword = !_showPassword)" />
+            </div>
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Size="Size.Large"
+                       OnClick="Login"
+                       Disabled="_loading"
+                       Style="margin-top:24px;height:46px;font-size:14px;font-weight:600;">
+                @if (_loading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                         Color="Color.Inherit" Class="mr-2" />
+                    <span>Signing in…</span>
+                }
+                else
+                {
+                    <span>Sign in</span>
+                }
+            </MudButton>
+
+        </div>
+    </div>
+
+</div>
 
 @code {
-    private string _email = string.Empty, _password = string.Empty;
-    private bool _loading, _showPw;
-    private string? _error;
+    private string _email        = string.Empty;
+    private string _password     = string.Empty;
+    private bool   _loading      = false;
+    private bool   _showPassword = false;
 
-    private async Task OnKeyDown(KeyboardEventArgs e) { if (e.Key == "Enter") await LoginAsync(); }
-
-    private async Task LoginAsync()
+    private readonly (string Icon, string Label)[] _features = new[]
     {
-        _loading = true; _error = null;
-        var result = await Api.LoginAsync(new LoginRequest { Email = _email, Password = _password });
-        if (result.Success && result.Data is not null)
-        {
-            await Api.SaveTokenAsync(result.Data.Token);
-            AppState.SetUser(result.Data);
-            await AppState.PersistAsync(Storage);
+        (Icons.Material.Outlined.People,            "Contact & engagement tracking"),
+        (Icons.Material.Outlined.Event,             "Event check-ins in seconds"),
+        (Icons.Material.Outlined.AttachMoney,       "Donation management"),
+        (Icons.Material.Outlined.PrivacyTip,        "GDPR-compliant by design"),
+    };
 
-            // Check SignalR setting before connecting
-            var settingsRes = await SettingsApi.GetAsync();
-            AppState.SignalREnabled = settingsRes.Success ? settingsRes.Data : true;
-
-            if (AppState.SignalREnabled)
-            {
-                var apiBaseUrl = Configuration["ApiBaseUrl"];
-                var hubBaseUrl = !string.IsNullOrWhiteSpace(apiBaseUrl) ? apiBaseUrl.TrimEnd('/') : Nav.BaseUri.TrimEnd('/');
-                _ = Task.Run(() => SignalR.ConnectAsync(hubBaseUrl, result.Data.Token, result.Data.OrganizationId, AppState.SignalREnabled));
-            }
-            Nav.NavigateTo("/");
-        }
-        else { _error = result.Errors.FirstOrDefault() ?? "Inloggning misslyckades."; }
+    private async Task Login()
+    {
+        if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password)) return;
+        _loading = true;
+        var res = await AuthApi.LoginAsync(_email, _password);
         _loading = false;
+
+        if (res.Success && res.Data is not null)
+        {
+            var d = res.Data;
+            AppState.SetUser(d.UserId, d.FullName, d.Email, d.Role, d.OrgId, d.OrgName, d.Token);
+            await AppState.PersistAsync(Storage);
+        }
+        else
+        {
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Invalid credentials.", Severity.Error);
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Login();
     }
 }

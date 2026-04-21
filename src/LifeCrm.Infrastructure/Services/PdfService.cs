@@ -3,7 +3,6 @@ using LifeCrm.Core.Interfaces;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
-using QuestDocument = QuestPDF.Fluent.Document;
 
 namespace LifeCrm.Infrastructure.Services;
 
@@ -11,54 +10,96 @@ public class PdfService : IPdfService
 {
     static PdfService() { QuestPDF.Settings.License = LicenseType.Community; }
 
-    public Task<byte[]> GenerateDonationReceiptAsync(Donation donation, Organization org, string receiptNumber)
+    public async Task<byte[]> GenerateDonationReceiptAsync(
+        Donation donation, Organization org, string receiptNumber)
     {
-        var doc = QuestDocument.Create(container =>
+        var doc = Document.Create(container =>
         {
             container.Page(page =>
             {
-                page.Size(PageSizes.A4); page.Margin(40);
-                page.Content().Column(col =>
+                page.Size(PageSizes.A4);
+                page.Margin(40);
+                page.DefaultTextStyle(x => x.FontSize(11));
+
+                page.Header().Row(row =>
                 {
-                    col.Item().Text(org.Name).Bold().FontSize(20);
-                    col.Item().Text($"Donation Receipt — {receiptNumber}").FontSize(14);
-                    col.Item().PaddingVertical(10).LineHorizontal(1);
-                    col.Item().Text($"Amount:  {donation.Amount:C}");
-                    col.Item().Text($"Date:    {donation.Date:yyyy-MM-dd}");
-                    col.Item().Text($"Status:  {donation.Status}");
-                    if (!string.IsNullOrEmpty(donation.PaymentMethod)) col.Item().Text($"Method:  {donation.PaymentMethod}");
-                    if (!string.IsNullOrEmpty(donation.ReferenceNumber)) col.Item().Text($"Ref:     {donation.ReferenceNumber}");
+                    row.RelativeItem().Text(org.Name).Bold().FontSize(18);
+                    row.ConstantItem(150).AlignRight().Text($"Receipt #{receiptNumber}").FontSize(10);
+                });
+
+                page.Content().PaddingTop(20).Column(col =>
+                {
+                    col.Item().Text($"Date: {donation.Date:yyyy-MM-dd}");
+                    col.Item().Text($"Amount: {donation.Amount:C}");
+                    col.Item().Text($"Status: {donation.Status}");
+                    if (!string.IsNullOrEmpty(donation.ReferenceNumber))
+                        col.Item().Text($"Reference: {donation.ReferenceNumber}");
+                    col.Item().PaddingTop(20).Text("Thank you for your generous contribution.");
+                });
+
+                page.Footer().AlignCenter().Text(x =>
+                {
+                    x.Span("Page "); x.CurrentPageNumber(); x.Span(" of "); x.TotalPages();
                 });
             });
         });
-        return Task.FromResult(doc.GeneratePdf());
+
+        return await Task.FromResult(doc.GeneratePdf());
     }
 
-    public Task<byte[]> GenerateDonationSummaryAsync(Contact contact, IEnumerable<Donation> donations, Organization org, DateOnly from, DateOnly to)
+    public async Task<byte[]> GenerateDonationSummaryAsync(
+        Contact contact, IEnumerable<Donation> donations, Organization org,
+        DateOnly from, DateOnly to)
     {
-        var list  = donations.ToList();
-        var total = list.Sum(d => d.Amount);
-        var doc = QuestDocument.Create(container =>
+        var donList = donations.ToList();
+        var total   = donList.Sum(d => d.Amount);
+
+        var doc = Document.Create(container =>
         {
             container.Page(page =>
             {
-                page.Size(PageSizes.A4); page.Margin(40);
-                page.Content().Column(col =>
+                page.Size(PageSizes.A4);
+                page.Margin(40);
+                page.DefaultTextStyle(x => x.FontSize(11));
+
+                page.Header().Row(row =>
                 {
-                    col.Item().Text(org.Name).Bold().FontSize(20);
-                    col.Item().Text($"Donation Summary for {contact.Name}").FontSize(14);
+                    row.RelativeItem().Text(org.Name).Bold().FontSize(18);
+                    row.ConstantItem(180).AlignRight().Text("Donation Summary").FontSize(12).Bold();
+                });
+
+                page.Content().PaddingTop(20).Column(col =>
+                {
+                    col.Item().Text($"Donor: {contact.FullName}");
                     col.Item().Text($"Period: {from:yyyy-MM-dd} – {to:yyyy-MM-dd}");
-                    col.Item().PaddingVertical(10).LineHorizontal(1);
-                    col.Item().Table(table =>
+                    col.Item().PaddingTop(16).Table(table =>
                     {
-                        table.ColumnsDefinition(c => { c.RelativeColumn(2); c.RelativeColumn(1); c.RelativeColumn(1); });
-                        table.Header(h => { h.Cell().Text("Date").Bold(); h.Cell().Text("Amount").Bold(); h.Cell().Text("Status").Bold(); });
-                        foreach (var d in list) { table.Cell().Text(d.Date.ToString("yyyy-MM-dd")); table.Cell().Text(d.Amount.ToString("C")); table.Cell().Text(d.Status.ToString()); }
+                        table.ColumnsDefinition(c => {
+                            c.ConstantColumn(100); c.RelativeColumn(); c.ConstantColumn(100);
+                        });
+                        table.Header(h =>
+                        {
+                            h.Cell().Text("Date").Bold();
+                            h.Cell().Text("Description").Bold();
+                            h.Cell().AlignRight().Text("Amount").Bold();
+                        });
+                        foreach (var d in donList)
+                        {
+                            table.Cell().Text(d.Date.ToString("yyyy-MM-dd"));
+                            table.Cell().Text(d.Campaign?.Name ?? d.Project?.Name ?? "General");
+                            table.Cell().AlignRight().Text($"{d.Amount:C}");
+                        }
                     });
-                    col.Item().PaddingTop(10).Text($"Total: {total:C}").Bold();
+                    col.Item().PaddingTop(10).AlignRight().Text($"Total: {total:C}").Bold().FontSize(13);
+                });
+
+                page.Footer().AlignCenter().Text(x =>
+                {
+                    x.Span("Page "); x.CurrentPageNumber(); x.Span(" of "); x.TotalPages();
                 });
             });
         });
-        return Task.FromResult(doc.GeneratePdf());
+
+        return await Task.FromResult(doc.GeneratePdf());
     }
 }

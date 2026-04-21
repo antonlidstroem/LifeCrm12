@@ -1,0 +1,54 @@
+@inject EnrichmentApiClient EnrichmentApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Label" Class="mr-2 mb-n1" />New Tag
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_name" Label="Tag name *" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_category" Label="Category"
+                              Variant="Variant.Outlined"
+                              HelperText="e.g. segment, interest, ministry" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_color" Label="Colour (hex)"
+                              Variant="Variant.Outlined" Placeholder="#4CAF50" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => MudDialog.Cancel())" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   OnClick="Submit" Disabled="_saving">
+            @(_saving ? "Creating…" : "Create")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    private string _name = string.Empty, _category = string.Empty, _color = string.Empty;
+    private bool _saving;
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_name)) { Snackbar.Add("Name is required.", Severity.Warning); return; }
+        _saving = true;
+        var res = await EnrichmentApi.CreateTagAsync(new CreateTagRequest
+        {
+            Name     = _name.Trim(),
+            Category = _category.NullIfEmpty(),
+            Color    = _color.NullIfEmpty()
+        });
+        _saving = false;
+        if (res.Success) { Snackbar.Add("Tag created.", Severity.Success); MudDialog.Close(DialogResult.Ok(res.Data)); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+}

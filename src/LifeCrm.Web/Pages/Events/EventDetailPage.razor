@@ -1,0 +1,170 @@
+@page "/events/{Id:guid}"
+@inject EventsApiClient EventsApi
+@inject AppState AppState
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="@(() => Nav.NavigateTo("/events"))" />
+    <div>
+        <MudText Typo="Typo.h5">@(_event?.Title ?? "Loading…")</MudText>
+        @if (_event is not null)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                @_event.StartsAt.ToLocalTime().ToString("dddd, MMMM d yyyy · HH:mm")
+                @if (_event.Location is not null) { <text> · @_event.Location</text> }
+            </MudText>
+        }
+    </div>
+    <MudSpacer />
+    @if (AppState.CanWrite && _event is not null)
+    {
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Edit"
+                   OnClick="OpenEditDialog" Class="mr-2">Edit</MudButton>
+    }
+</MudStack>
+
+@if (_loading) { <MudProgressLinear Color="Color.Primary" Indeterminate="true" /> }
+else if (_event is not null)
+{
+    <MudGrid>
+        <!-- Left: event info + check-in -->
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="2" Class="mb-3">
+                <MudCardContent>
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-3">
+                        <div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Type</MudText>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                                     Color="Color.Primary">@_event.Type</MudChip>
+                        </div>
+                        <div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Attendees</MudText>
+                            <MudText Typo="Typo.h5">@_event.AttendeeCount</MudText>
+                        </div>
+                    </MudStack>
+                    @if (!string.IsNullOrEmpty(_event.Description))
+                    {
+                        <MudText Typo="Typo.body2" Style="white-space:pre-wrap">@_event.Description</MudText>
+                    }
+                </MudCardContent>
+            </MudCard>
+
+            @if (AppState.CanWrite)
+            {
+                <!-- Inline check-in panel -->
+                <CheckInPanel EventId="Id" OnCheckIn="OnCheckIn" />
+            }
+        </MudItem>
+
+        <!-- Right: attendance list -->
+        <MudItem xs="12" md="8">
+            <MudCard Elevation="2">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.People"
+                                     Size="Size.Small" Class="mr-1 mb-n1" />
+                            Attendance (@_event.AttendeeCount)
+                        </MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent Class="pa-0">
+                    @if (!_event.Attendances.Any())
+                    {
+                        <EmptyState Title="No attendees yet"
+                                    Icon="@Icons.Material.Outlined.HowToReg"
+                                    Description="Use the check-in panel to record attendance." />
+                    }
+                    else
+                    {
+                        <MudTable T="AttendanceDto" Items="_event.Attendances"
+                                  Dense="true" Hover="true" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Role</MudTh>
+                                <MudTh>Checked in</MudTh>
+                                <MudTh Style="width:60px"></MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd>
+                                    <MudLink Href="@($"/contacts/{context.ContactId}")">
+                                        @context.ContactName
+                                    </MudLink>
+                                    @if (!string.IsNullOrEmpty(context.ContactEmail))
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            @context.ContactEmail
+                                        </MudText>
+                                    }
+                                </MudTd>
+                                <MudTd>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                                             Color="@(context.Role == AttendanceRole.Attendee ? Color.Default : Color.Success)">
+                                        @context.Role
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd>@context.CheckedInAt.ToLocalTime().ToString("HH:mm")</MudTd>
+                                <MudTd>
+                                    @if (AppState.CanWrite)
+                                    {
+                                        <MudTooltip Text="Remove">
+                                            <MudIconButton Icon="@Icons.Material.Filled.PersonRemove"
+                                                           Size="Size.Small" Color="Color.Error"
+                                                           OnClick="@(() => RemoveAttendance(context))" />
+                                        </MudTooltip>
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private EventDto? _event;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var res = await EventsApi.GetEventAsync(Id);
+        _event  = res.Data;
+        _loading = false;
+    }
+
+    private async Task OnCheckIn(CheckInResult result)
+    {
+        Snackbar.Add(result.Message, result.IsNewContact ? Severity.Info : Severity.Success);
+        await LoadAsync();
+    }
+
+    private async Task OpenEditDialog()
+    {
+        var d = DialogService.Show<EventFormDialog>("Edit Event",
+            new DialogParameters { ["EventId"] = Id },
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await d.Result).Canceled) await LoadAsync();
+    }
+
+    private async Task RemoveAttendance(AttendanceDto att)
+    {
+        var p = new DialogParameters
+        {
+            ["Title"]   = "Remove attendance",
+            ["Message"] = $"Remove {att.ContactName} from this event?"
+        };
+        if ((await DialogService.Show<ConfirmDialog>("", p).Result).Canceled) return;
+        var res = await EventsApi.RemoveAttendanceAsync(Id, att.Id);
+        if (res.Success) { Snackbar.Add("Removed.", Severity.Success); await LoadAsync(); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+}

@@ -1,0 +1,277 @@
+@* src/LifeCrm.Web/Components/Shared/ProfilePanel.razor
+   Admin-only enrichment panel: profile, tags, mentoring.
+   Rendered only when AppState.IsAdmin — double-gated by API authorization. *@
+@inject EnrichmentApiClient EnrichmentApi
+@inject ISnackbar Snackbar
+
+@if (!AppState.IsAdmin) { return; }
+
+<MudCard Elevation="2" Class="mt-3">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.ManageAccounts"
+                         Color="Color.Secondary" Size="Size.Small" />
+                <MudText Typo="Typo.subtitle1">Admin: Enrichment</MudText>
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                         Variant="Variant.Text">Admin only</MudChip>
+            </MudStack>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (_loading) { <LoadingSkeleton Rows="5" /> }
+        else
+        {
+            <MudTabs Elevation="0" PanelClass="pt-3">
+
+                <!-- Tags tab -->
+                <MudTabPanel Text="Tags">
+                    @if (_allTags.Any())
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                            Assigned tags
+                        </MudText>
+                        <div Class="mb-3">
+                            @foreach (var ct in _contactTags)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                         Style="@($"border-color:{ct.TagColor ?? "#888"}")"
+                                         OnClose="@(() => RemoveTag(ct.TagId))">
+                                    @ct.TagName
+                                </MudChip>
+                            }
+                            @if (!_contactTags.Any())
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">No tags assigned.</MudText>
+                            }
+                        </div>
+                        <MudSelect T="Guid?" Value="null" ValueChanged="AssignTag"
+                                   Label="Add tag" Variant="Variant.Outlined" Dense="true">
+                            <MudSelectItem T="Guid?" Value="@((Guid?)null)" Disabled="true">
+                                Select a tag to add…
+                            </MudSelectItem>
+                            @foreach (var tag in _allTags.Where(t => _contactTags.All(ct => ct.TagId != t.Id)))
+                            {
+                                <MudSelectItem T="Guid?" Value="@((Guid?)tag.Id)">@tag.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            No tags defined. Create tags in Admin → Enrichment.
+                        </MudText>
+                    }
+                </MudTabPanel>
+
+                <!-- Profile tab -->
+                <MudTabPanel Text="Profile">
+                    @if (!_profileConsented && _profile is null)
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
+                            A profile requires explicit consent from the contact before creation.
+                        </MudAlert>
+                    }
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_gifts" Label="Gifts and talents"
+                                          Variant="Variant.Outlined" Lines="2"
+                                          Placeholder="e.g. Music, teaching, hospitality…" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_interests" Label="Interests"
+                                          Variant="Variant.Outlined" Lines="2" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_involvement" Label="Open to involvement"
+                                          Variant="Variant.Outlined" Lines="2"
+                                          Placeholder="e.g. leading worship, volunteering with youth…" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_spiritual" Label="Spiritual journey notes"
+                                          Variant="Variant.Outlined" Lines="3"
+                                          HelperText="Not used for automated scoring. Admin-visible only." />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_privateNotes" Label="Staff private notes"
+                                          Variant="Variant.Outlined" Lines="2" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudCheckBox @bind-Value="_profileConsented"
+                                         Label="Contact has explicitly consented to profile data processing"
+                                         Color="Color.Primary" />
+                        </MudItem>
+                        @if (_profileConsented)
+                        {
+                            <MudItem xs="12">
+                                <MudTextField @bind-Value="_consentSource"
+                                              Label="Consent source"
+                                              Variant="Variant.Outlined" Dense="true"
+                                              Placeholder="verbal-admin | written-form" />
+                            </MudItem>
+                        }
+                    </MudGrid>
+                    <MudStack Row="true" Spacing="2" Class="mt-3">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Save"
+                                   OnClick="SaveProfile" Disabled="@(_savingProfile || !_profileConsented)">
+                            @(_savingProfile ? "Saving…" : "Save Profile")
+                        </MudButton>
+                        @if (_profile is not null)
+                        {
+                            <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                                       StartIcon="@Icons.Material.Filled.Delete"
+                                       OnClick="DeleteProfile">
+                                Delete Profile
+                            </MudButton>
+                        }
+                    </MudStack>
+                </MudTabPanel>
+
+                <!-- Mentoring tab -->
+                <MudTabPanel Text="Mentoring">
+                    @if (!_mentoring.Any())
+                    {
+                        <EmptyState Title="No mentoring relationships"
+                                    Icon="@Icons.Material.Outlined.People"
+                                    Description="Use the form below to create a relationship." />
+                    }
+                    else
+                    {
+                        @foreach (var r in _mentoring)
+                        {
+                            <MudPaper Elevation="0" Class="pa-2 mb-2"
+                                      Style="border:1px solid var(--mud-palette-divider);border-radius:6px">
+                                <MudStack Row="true" AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@(r.MentorContactId == ContactId
+                                        ? Icons.Material.Filled.ArrowForward
+                                        : Icons.Material.Filled.ArrowBack)"
+                                             Size="Size.Small" Color="Color.Primary" />
+                                    <div style="flex:1">
+                                        <MudText Typo="Typo.body2">
+                                            @(r.MentorContactId == ContactId ? $"Mentoring {r.MenteeName}" : $"Mentored by {r.MentorName}")
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            @r.Type
+                                            @if (r.StartDate.HasValue) { <text> · Started @r.StartDate.Value.ToString("yyyy-MM-dd")</text> }
+                                            @if (!r.IsActive) { <text> · Ended</text> }
+                                        </MudText>
+                                    </div>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Size="Size.Small" Color="Color.Error"
+                                                   OnClick="@(() => DeleteMentoring(r.Id))" />
+                                </MudStack>
+                            </MudPaper>
+                        }
+                    }
+                </MudTabPanel>
+            </MudTabs>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired] public Guid ContactId { get; set; }
+    [CascadingParameter] AppState AppState { get; set; } = default!;
+
+    private bool _loading = true, _savingProfile;
+    private ContactProfileDto? _profile;
+    private IReadOnlyList<TagDto>        _allTags     = Array.Empty<TagDto>();
+    private IReadOnlyList<ContactTagDto> _contactTags = Array.Empty<ContactTagDto>();
+    private IReadOnlyList<MentorRelationshipDto> _mentoring = Array.Empty<MentorRelationshipDto>();
+
+    private string _gifts = string.Empty, _interests = string.Empty, _involvement = string.Empty;
+    private string _spiritual = string.Empty, _privateNotes = string.Empty, _consentSource = string.Empty;
+    private bool   _profileConsented = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        var t1 = EnrichmentApi.GetTagsAsync();
+        var t2 = EnrichmentApi.GetContactTagsAsync(ContactId);
+        var t3 = EnrichmentApi.GetProfileAsync(ContactId);
+        var t4 = EnrichmentApi.GetMentoringAsync(ContactId);
+        await Task.WhenAll(t1, t2, t3, t4);
+        _allTags     = t1.Result.Data ?? Array.Empty<TagDto>();
+        _contactTags = t2.Result.Data ?? Array.Empty<ContactTagDto>();
+        _mentoring   = t4.Result.Data ?? Array.Empty<MentorRelationshipDto>();
+
+        _profile = t3.Result.Data;
+        if (_profile is not null)
+        {
+            _gifts            = _profile.GiftsAndTalents ?? string.Empty;
+            _interests        = _profile.Interests ?? string.Empty;
+            _involvement      = _profile.InvolvementOpenTo ?? string.Empty;
+            _spiritual        = _profile.SpiritualNotes ?? string.Empty;
+            _privateNotes     = _profile.StaffPrivateNotes ?? string.Empty;
+            _profileConsented = _profile.DataEnrichmentConsented;
+            _consentSource    = _profile.ConsentSource ?? string.Empty;
+        }
+        _loading = false;
+    }
+
+    private async Task AssignTag(Guid? tagId)
+    {
+        if (!tagId.HasValue) return;
+        var res = await EnrichmentApi.AssignTagAsync(ContactId, tagId.Value);
+        if (res.Success)
+        {
+            var freshTags = await EnrichmentApi.GetContactTagsAsync(ContactId);
+            _contactTags = freshTags.Data ?? _contactTags;
+        }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+
+    private async Task RemoveTag(Guid tagId)
+    {
+        var res = await EnrichmentApi.RemoveTagAsync(ContactId, tagId);
+        if (res.Success)
+        {
+            var freshTags = await EnrichmentApi.GetContactTagsAsync(ContactId);
+            _contactTags = freshTags.Data ?? _contactTags;
+        }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+
+    private async Task SaveProfile()
+    {
+        _savingProfile = true;
+        var res = await EnrichmentApi.UpsertProfileAsync(ContactId, new UpsertContactProfileRequest
+        {
+            GiftsAndTalents         = _gifts.NullIfEmpty(),
+            Interests               = _interests.NullIfEmpty(),
+            InvolvementOpenTo       = _involvement.NullIfEmpty(),
+            SpiritualNotes          = _spiritual.NullIfEmpty(),
+            StaffPrivateNotes       = _privateNotes.NullIfEmpty(),
+            DataEnrichmentConsented = _profileConsented,
+            ConsentSource           = _consentSource.NullIfEmpty()
+        });
+        _savingProfile = false;
+        if (res.Success) { _profile = res.Data; Snackbar.Add("Profile saved.", Severity.Success); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+
+    private async Task DeleteProfile()
+    {
+        var res = await EnrichmentApi.DeleteProfileAsync(ContactId);
+        if (res.Success)
+        {
+            _profile = null; _gifts = _interests = _involvement = _spiritual = _privateNotes = string.Empty;
+            _profileConsented = false;
+            Snackbar.Add("Profile deleted.", Severity.Success);
+        }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+
+    private async Task DeleteMentoring(Guid id)
+    {
+        var res = await EnrichmentApi.DeleteMentoringAsync(id);
+        if (res.Success)
+        {
+            var fresh = await EnrichmentApi.GetMentoringAsync(ContactId);
+            _mentoring = fresh.Data ?? _mentoring;
+            Snackbar.Add("Relationship removed.", Severity.Success);
+        }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+}

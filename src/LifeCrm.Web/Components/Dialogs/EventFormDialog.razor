@@ -1,0 +1,139 @@
+@inject EventsApiClient EventsApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Event" Class="mr-2 mb-n1" />
+            @(_isEdit ? "Edit Event" : "New Event")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_title" Label="Title *"
+                              Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="EventType" @bind-Value="_type" Label="Type"
+                           Variant="Variant.Outlined">
+                    <MudSelectItem Value="EventType.General">General</MudSelectItem>
+                    <MudSelectItem Value="EventType.Training">Training</MudSelectItem>
+                    <MudSelectItem Value="EventType.Outreach">Outreach</MudSelectItem>
+                    <MudSelectItem Value="EventType.SmallGroup">Small Group</MudSelectItem>
+                    <MudSelectItem Value="EventType.OneOnOne">1-on-1</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_location" Label="Location"
+                              Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDateTimePicker @bind-DateTime="_startsAt" Label="Start *"
+                                   Variant="Variant.Outlined" Editable="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDateTimePicker @bind-DateTime="_endsAt" Label="End (optional)"
+                                   Variant="Variant.Outlined" Editable="true" Clearable="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_description" Label="Description"
+                              Variant="Variant.Outlined" Lines="3" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudCheckBox @bind-Value="_isPublished" Label="Published" Color="Color.Primary" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   OnClick="Submit" Disabled="_saving">
+            @(_saving ? "Saving…" : (_isEdit ? "Save" : "Create"))
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid? EventId { get; set; }
+
+    private bool      _isEdit, _saving;
+    private string    _title = string.Empty, _description = string.Empty, _location = string.Empty;
+    private EventType _type  = EventType.General;
+    private DateTime? _startsAt = DateTime.Today.AddHours(10);
+    private DateTime? _endsAt;
+    private bool      _isPublished = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isEdit = EventId.HasValue;
+        if (!_isEdit) return;
+
+        var res = await EventsApi.GetEventAsync(EventId!.Value);
+        if (res.Data is null) return;
+        var e = res.Data;
+        _title       = e.Title;
+        _description = e.Description ?? string.Empty;
+        _location    = e.Location ?? string.Empty;
+        _type        = e.Type;
+        _startsAt    = e.StartsAt.LocalDateTime;
+        _endsAt      = e.EndsAt?.LocalDateTime;
+        _isPublished = e.IsPublished;
+    }
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_title))
+        {
+            Snackbar.Add("Title is required.", Severity.Warning);
+            return;
+        }
+        if (_startsAt is null)
+        {
+            Snackbar.Add("Start date is required.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            if (_isEdit)
+            {
+                var req = new UpdateEventRequest
+                {
+                    Id          = EventId!.Value,
+                    Title       = _title,
+                    Description = _description.NullIfEmpty(),
+                    Location    = _location.NullIfEmpty(),
+                    Type        = _type,
+                    StartsAt    = new DateTimeOffset(_startsAt.Value, TimeSpan.Zero),
+                    EndsAt      = _endsAt.HasValue ? new DateTimeOffset(_endsAt.Value, TimeSpan.Zero) : null,
+                    IsPublished = _isPublished
+                };
+                var res = await EventsApi.UpdateEventAsync(EventId!.Value, req);
+                if (res.Success) { Snackbar.Add("Updated.", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
+                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+            }
+            else
+            {
+                var req = new CreateEventRequest
+                {
+                    Title       = _title,
+                    Description = _description.NullIfEmpty(),
+                    Location    = _location.NullIfEmpty(),
+                    Type        = _type,
+                    StartsAt    = new DateTimeOffset(_startsAt.Value, TimeSpan.Zero),
+                    EndsAt      = _endsAt.HasValue ? new DateTimeOffset(_endsAt.Value, TimeSpan.Zero) : null,
+                    IsPublished = _isPublished
+                };
+                var res = await EventsApi.CreateEventAsync(req);
+                if (res.Success) { Snackbar.Add("Created.", Severity.Success); MudDialog.Close(DialogResult.Ok(res.Data)); }
+                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+            }
+        }
+        finally { _saving = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -1,32 +1,40 @@
-﻿<!-- src/LifeCrm.Web/wwwroot/index.html -->
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0F5B6B" />
     <title>LifeCrm</title>
     <base href="/" />
-    <link rel="stylesheet" href="css/app.css" />
-    <link rel="manifest" href="manifest.json" />
-    <link rel="icon" type="image/png" href="favicon.png" />
-    <!-- MudBlazor fonts -->
-    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+    <link href="css/app.css" rel="stylesheet" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
 </head>
 <body>
     <div id="app">
-        <svg class="loading-progress" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+        <div class="lcrm-boot">
+            <div class="lcrm-boot__inner">
+                <div class="lcrm-boot__logo">
+                    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="52" height="52" rx="14" fill="#0F5B6B"/>
+                        <path d="M15 26C15 19.925 19.925 15 26 15C32.075 15 37 19.925 37 26C37 32.075 32.075 37 26 37" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M26 37C23.515 37 21.5 34.985 21.5 32.5C21.5 30.015 23.515 28 26 28C28.485 28 30.5 30.015 30.5 32.5" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                        <circle cx="26" cy="21.5" r="3.5" fill="white"/>
+                    </svg>
+                </div>
+                <div class="lcrm-boot__spinner"></div>
+                <p class="lcrm-boot__label">Loading&hellip;</p>
+            </div>
+        </div>
     </div>
-
-    <!-- FIX: JS interop must be loaded BEFORE blazor.webassembly.js -->
-    <script src="js/lifecrm-interop.js"></script>
-
-    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
-    <script>navigator.serviceWorker.register('service-worker.js');</script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="js/lifecrm-interop.js"></script>
+    <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('service-worker.js');</script>
 </body>
 </html>

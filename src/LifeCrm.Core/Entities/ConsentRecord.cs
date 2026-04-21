@@ -1,5 +1,3 @@
-﻿// src/LifeCrm.Core/Entities/ConsentRecord.cs
-using System.Net.Mime;
 using LifeCrm.Core.Enums;
 
 namespace LifeCrm.Core.Entities;
@@ -7,31 +5,37 @@ namespace LifeCrm.Core.Entities;
 /// <summary>
 /// Immutable audit trail of consent decisions.
 /// One row per grant or withdrawal event — never updated, only appended.
+/// Do not inherit TenantEntity: OrganizationId is denormalized here so consent
+/// records survive org restructuring.
 /// </summary>
 public class ConsentRecord : BaseEntity
 {
-    // Who gave / withdrew consent
-    public Guid ContactId { get; set; }
-    public Contact? Contact { get; set; }
+    public Guid   ContactId          { get; set; }
+    public Contact? Contact          { get; set; }
 
-    // What type of processing they consented to (or withdrew)
-    public ConsentType ConsentType { get; set; }
+    public Guid   OrganizationId     { get; set; }
 
-    // Granted = true, Withdrawn = false
-    public bool IsGranted { get; set; }
+    /// <summary>What type of processing the data subject is consenting to (or withdrawing).</summary>
+    public ConsentType ConsentType   { get; set; }
 
-    // Which version of the Privacy Policy / Terms was shown
-    public string PolicyVersion { get; set; } = string.Empty;
+    /// <summary>true = granted, false = withdrawn.</summary>
+    public bool   IsGranted          { get; set; }
 
-    // Free-text: "web-form", "csv-import", "email-link", "admin-manual"
-    public string Source { get; set; } = string.Empty;
+    /// <summary>Which version of the Privacy Policy / Terms was presented at time of decision.</summary>
+    public string PolicyVersion      { get; set; } = string.Empty;
 
-    // The user who recorded this (null = system/automated)
-    public Guid? RecordedByUserId { get; set; }
+    /// <summary>
+    /// Free-text source descriptor.
+    /// Examples: "web-form", "csv-import", "email-link", "admin-manual", "unsubscribe-link".
+    /// </summary>
+    public string Source             { get; set; } = string.Empty;
 
-    // IP address of the data subject at time of consent (nullable for admin-entered)
-    public string? IpAddress { get; set; }
+    /// <summary>The staff user who recorded this entry. Null = automated / self-service.</summary>
+    public Guid?  RecordedByUserId   { get; set; }
 
-    // UTC timestamp — CreatedAt from BaseEntity serves as the consent timestamp
-    // LastModifiedAt / IsDeleted intentionally NOT used — records are immutable
+    /// <summary>IP address of the data subject at time of consent. Null for admin-entered records.</summary>
+    public string? IpAddress         { get; set; }
+
+    // CreatedAt (inherited from BaseEntity) = the canonical consent timestamp.
+    // LastModifiedAt / IsDeleted are inherited but MUST NOT be used — records are immutable.
 }

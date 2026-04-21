@@ -10,7 +10,11 @@ public class GenericRepository<T> : IRepository<T> where T : BaseEntity
     protected readonly AppDbContext _db;
     protected readonly DbSet<T> _set;
 
-    public GenericRepository(AppDbContext db) { _db = db; _set = db.Set<T>(); }
+    public GenericRepository(AppDbContext db)
+    {
+        _db  = db;
+        _set = db.Set<T>();
+    }
 
     public IQueryable<T> Query() => _set.AsQueryable();
 
@@ -20,13 +24,20 @@ public class GenericRepository<T> : IRepository<T> where T : BaseEntity
     public async Task AddAsync(T entity, CancellationToken ct = default)
         => await _set.AddAsync(entity, ct);
 
-    public void Update(T entity) => _db.Entry(entity).State = EntityState.Modified;
+    public void Update(T entity) => _set.Update(entity);
 
     public void Delete(T entity)
     {
-        entity.IsDeleted = true;
-        entity.DeletedAt = DateTimeOffset.UtcNow;
-        _db.Entry(entity).State = EntityState.Modified;
+        if (entity is TenantEntity te)
+        {
+            te.IsDeleted = true;
+            te.DeletedAt = DateTimeOffset.UtcNow;
+            _set.Update(entity);
+        }
+        else
+        {
+            _set.Remove(entity);
+        }
     }
 
     public async Task<int> CountAsync(Expression<Func<T, bool>> predicate, CancellationToken ct = default)

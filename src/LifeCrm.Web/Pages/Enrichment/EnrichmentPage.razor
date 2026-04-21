@@ -1,0 +1,158 @@
+@page "/admin/enrichment"
+@inject EnrichmentApiClient EnrichmentApi
+@inject AppState AppState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+@if (!AppState.IsAdmin)
+{
+    <MudAlert Severity="Severity.Error">You do not have permission to view this page.</MudAlert>
+    return;
+}
+
+<MudText Typo="Typo.h4" Class="mb-2">Enrichment</MudText>
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+    Admin-only: manage tags taxonomy, contact profiles, and mentoring relationships.
+    This data is never visible to non-admin users.
+</MudText>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+
+    <!-- Tags tab -->
+    <MudTabPanel Text="Tags" Icon="@Icons.Material.Filled.Label">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudText Typo="Typo.subtitle1">Tag Taxonomy</MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateTagDialog">
+                New Tag
+            </MudButton>
+        </MudStack>
+
+        @if (_loadingTags) { <LoadingSkeleton Rows="4" /> }
+        else if (!_tags.Any())
+        {
+            <EmptyState Title="No tags defined" Icon="@Icons.Material.Outlined.Label"
+                        Description="Create tags for segmentation and categorisation." />
+        }
+        else
+        {
+            <MudChipSet T="string" Class="mb-4">
+                @foreach (var tag in _tags)
+                {
+                    <MudChip T="string" Variant="Variant.Outlined"
+                             Style="@($"border-color:{tag.Color ?? "#888"};color:{tag.Color ?? "#888"}")"
+                             OnClose="@(() => DeleteTag(tag))">
+                        @tag.Name
+                        @if (tag.ContactCount > 0)
+                        {
+                            <MudText Typo="Typo.caption" Class="ml-1">(@tag.ContactCount)</MudText>
+                        }
+                    </MudChip>
+                }
+            </MudChipSet>
+
+            <MudTable T="TagDto" Items="_tags" Dense="true" Hover="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Name</MudTh><MudTh>Category</MudTh>
+                    <MudTh>Contacts</MudTh><MudTh Style="width:60px"></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            @if (context.Color is not null)
+                            {
+                                <div style="@($"width:12px;height:12px;border-radius:50%;background:{context.Color}")" />
+                            }
+                            <MudText>@context.Name</MudText>
+                        </MudStack>
+                    </MudTd>
+                    <MudTd>@(context.Category ?? "—")</MudTd>
+                    <MudTd>@context.ContactCount</MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Size="Size.Small" Color="Color.Error"
+                                       OnClick="@(() => DeleteTag(context))" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudTabPanel>
+
+    <!-- Mentoring tab -->
+    <MudTabPanel Text="Mentoring" Icon="@Icons.Material.Filled.People">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudText Typo="Typo.subtitle1">Mentoring Relationships</MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="OpenCreateMentoringDialog">
+                New Relationship
+            </MudButton>
+        </MudStack>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+            View and manage mentoring via the individual contact's Profile tab.
+        </MudText>
+    </MudTabPanel>
+
+    <!-- Privacy notice tab -->
+    <MudTabPanel Text="Privacy Notice" Icon="@Icons.Material.Filled.PrivacyTip">
+        <MudAlert Severity="Severity.Info" Class="mb-3">
+            All enrichment data is admin-only and never exposed to non-admin users or contacts.
+        </MudAlert>
+        <MudList T="string" Dense="true">
+            <MudListItem Icon="@Icons.Material.Filled.Check">
+                <b>Tags</b> — visible to Manager+ for assignment; taxonomy managed by Admin only.
+            </MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Check">
+                <b>Contact Profiles</b> — visible to Admin only. Requires explicit consent before creation.
+            </MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Check">
+                <b>Mentoring</b> — visible to Admin only. Contacts are not informed via the system.
+            </MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Check">
+                <b>GDPR erasure</b> — anonymising a contact deletes their profile, tags, and mentoring relationships.
+            </MudListItem>
+        </MudList>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private IReadOnlyList<TagDto> _tags = Array.Empty<TagDto>();
+    private bool _loadingTags = true;
+
+    protected override async Task OnInitializedAsync() => await LoadTagsAsync();
+
+    private async Task LoadTagsAsync()
+    {
+        _loadingTags = true;
+        var res = await EnrichmentApi.GetTagsAsync();
+        _tags = res.Data ?? Array.Empty<TagDto>();
+        _loadingTags = false;
+    }
+
+    private async Task OpenCreateTagDialog()
+    {
+        var d = DialogService.Show<CreateTagDialog>("New Tag",
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true });
+        if (!(await d.Result).Canceled) await LoadTagsAsync();
+    }
+
+    private async Task DeleteTag(TagDto tag)
+    {
+        var p = new DialogParameters
+        {
+            ["Title"]   = "Delete tag",
+            ["Message"] = $"Delete tag '{tag.Name}'? It will be removed from all {tag.ContactCount} contact(s).",
+            ["ConfirmText"] = "Delete",
+            ["ConfirmColor"] = Color.Error
+        };
+        if ((await DialogService.Show<ConfirmDialog>("", p).Result).Canceled) return;
+        var res = await EnrichmentApi.DeleteTagAsync(tag.Id);
+        if (res.Success) { Snackbar.Add("Tag deleted.", Severity.Success); await LoadTagsAsync(); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+
+    private void OpenCreateMentoringDialog()
+        => Snackbar.Add("Create mentoring relationships from the contact's Profile tab.", Severity.Info);
+}

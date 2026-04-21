@@ -8,19 +8,23 @@ namespace LifeCrm.Api.Controllers.v1;
 [ApiController]
 [Authorize]
 [Route("api/v1/[controller]")]
-[Produces("application/json")]
 public abstract class ApiControllerBase : ControllerBase
 {
-    private ISender? _mediator;
-    protected ISender Mediator => _mediator ??= HttpContext.RequestServices.GetRequiredService<ISender>();
+    private IMediator? _mediator;
+    protected IMediator Mediator =>
+        _mediator ??= HttpContext.RequestServices.GetRequiredService<IMediator>();
 
-    protected IActionResult OkResponse<T>(T data, string? message = null)
-        => Ok(ApiResponse<T>.Ok(data, message));
+    protected IActionResult OkResponse<T>(T data) =>
+        Ok(ApiResponse<T>.Ok(data));
 
-    protected IActionResult CreatedResponse<T>(string actionName, object? routeValues, T data)
-        => CreatedAtAction(actionName, routeValues, ApiResponse<T>.Ok(data));
+    protected IActionResult CreatedResponse<T>(string routeName, object routeValues, T data) =>
+        CreatedAtRoute(routeName, routeValues, ApiResponse<T>.Ok(data));
 
     protected IActionResult NoContentResponse() => NoContent();
 
-    protected IActionResult NotFoundResponse(string message) => NotFound(ApiResponse.Fail(message));
+    protected IActionResult NotFoundResponse(string message) =>
+        NotFound(ApiResponse.Fail(message));
+
+    protected IActionResult BadRequest(ApiResponse response) =>
+        base.BadRequest(response);
 }

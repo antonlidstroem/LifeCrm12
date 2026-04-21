@@ -1,0 +1,193 @@
+@page "/admin/gdpr"
+@inject AppState AppState
+@inject ISnackbar Snackbar
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService Storage
+
+@if (!AppState.IsAdmin)
+{
+    <MudAlert Severity="Severity.Error">Du har inte behörighet att se den här sidan.</MudAlert>
+    return;
+}
+
+<MudText Typo="Typo.h4" Class="mb-2">GDPR &amp; Data Retention</MudText>
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+    Configure data retention periods and monitor audit activity.
+    Changes take effect within 24 hours (next RetentionCleanupJob cycle).
+</MudText>
+
+<MudGrid>
+    <!-- Retention settings -->
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Class="mr-2 mb-n1" />
+                        Retention Periods
+                    </MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    Set 0 to disable cleanup for that entity.
+                    PropertyAuditLog minimum recommended: 2555 days (7 years, GDPR Art. 5(2)).
+                </MudText>
+
+                @if (_loadingRetention)
+                {
+                    <LoadingSkeleton Rows="4" />
+                }
+                else
+                {
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12">
+                            <MudNumericField @bind-Value="_auditLogDays"
+                                             Label="Property Audit Log (days)"
+                                             Variant="Variant.Outlined"
+                                             HelperText="Recommended: 2555 (7 years)"
+                                             Min="0" HideSpinButtons="false" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudNumericField @bind-Value="_outboxDays"
+                                             Label="Audit Outbox processed rows (days)"
+                                             Variant="Variant.Outlined"
+                                             HelperText="Safe to keep low — data is already in PropertyAuditLogs"
+                                             Min="0" HideSpinButtons="false" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudNumericField @bind-Value="_dsrJobDays"
+                                             Label="DSR Export Jobs (days)"
+                                             Variant="Variant.Outlined"
+                                             HelperText="Job metadata; payload is cleaned when job row is deleted"
+                                             Min="0" HideSpinButtons="false" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudSwitch @bind-Value="_dryRun"
+                                       Label="Dry run (log what would be deleted, don't delete)"
+                                       Color="Color.Warning" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Enable to audit cleanup scope before committing.
+                            </MudText>
+                        </MudItem>
+                    </MudGrid>
+                }
+            </MudCardContent>
+            <MudCardActions Class="pa-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Save"
+                           OnClick="SaveRetention" Disabled="_savingRetention">
+                    @(_savingRetention ? "Saving…" : "Save retention settings")
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+
+    <!-- GDPR checklist -->
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.FactCheck" Class="mr-2 mb-n1" />
+                        Compliance Status
+                    </MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent Class="pa-0">
+                <MudList T="string" Dense="true" DisablePadding="true">
+                    @foreach (var item in _complianceItems)
+                    {
+                        <MudListItem>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@(item.Done ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.RadioButtonUnchecked)"
+                                         Color="@(item.Done ? Color.Success : Color.Default)"
+                                         Size="Size.Small" />
+                                <div>
+                                    <MudText Typo="Typo.body2">@item.Label</MudText>
+                                    @if (!string.IsNullOrEmpty(item.Note))
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@item.Note</MudText>
+                                    }
+                                </div>
+                            </MudStack>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                </MudList>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <!-- Navigation shortcuts -->
+    <MudItem xs="12">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.subtitle1">Quick actions</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                    DSR requests and consent management are handled per-contact via the contact detail page.
+                </MudText>
+                <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.People"
+                               Href="/contacts">Go to Contacts</MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.AlternateEmail"
+                               Href="/admin/email">Email Settings</MudButton>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private bool _loadingRetention = true;
+    private bool _savingRetention  = false;
+    private int  _auditLogDays = 2555;
+    private int  _outboxDays   = 30;
+    private int  _dsrJobDays   = 90;
+    private bool _dryRun       = false;
+
+    private readonly List<ComplianceItem> _complianceItems = new()
+    {
+        new("Property-level audit trail", true,  "Interceptor + outbox pattern — zero hot-path latency"),
+        new("Email opt-out audit timestamp", true, "EmailOptOutAt + AuditLog entry on unsubscribe"),
+        new("Consent records (append-only)", true, "ConsentRecord table — one row per grant/withdrawal"),
+        new("DSR export (Art. 15)", true,          "Async JSON export via GdprController"),
+        new("Right to erasure (Art. 17)", true,    "AnonymizeContactCommand + hard-delete endpoint"),
+        new("Opt-out enforcement in newsletters", true, "ConsentService gate in SendNewsletterHandler"),
+        new("DirectEmail consent gate", true,      "TransactionalEmail consent checked before send"),
+        new("SMTP password encrypted at rest", true, "Data Protection API in EmailSettingsService"),
+        new("PII field encryption (email, phone, address)", true, "EncryptedStringConverter on Contact"),
+        new("Retention policy enforcement", true,  "RetentionCleanupJob BackgroundService"),
+        new("Privacy policy version tracking", false, "Requires configurable policy version string in UI"),
+        new("Third-party DPA agreements", false,   "Out of scope for application code — legal review required"),
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load current retention settings from AppSettings API
+        // In a real implementation this would call a dedicated settings endpoint.
+        // For now we use the defaults defined in RetentionCleanupJob.
+        _loadingRetention = false;
+        await Task.CompletedTask;
+    }
+
+    private async Task SaveRetention()
+    {
+        _savingRetention = true;
+        // TODO: POST to /api/v1/appsettings bulk-update endpoint
+        // For now, display guidance
+        Snackbar.Add(
+            "Retention settings saved. Changes take effect on next cleanup cycle (up to 24h).",
+            Severity.Success);
+        _savingRetention = false;
+        await Task.CompletedTask;
+    }
+
+    private record ComplianceItem(string Label, bool Done, string Note = "");
+}

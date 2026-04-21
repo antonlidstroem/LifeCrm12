@@ -1,14 +1,19 @@
 window.lifecrm = {
-    downloadFile: function (filename, base64, mimeType) {
-        mimeType = mimeType || 'application/octet-stream';
-        const bytes = atob(base64);
-        const buffer = new Uint8Array(bytes.length);
-        for (let i = 0; i < bytes.length; i++) buffer[i] = bytes.charCodeAt(i);
-        const blob = new Blob([buffer], { type: mimeType });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href = url; a.download = filename;
-        document.body.appendChild(a); a.click();
-        document.body.removeChild(a); URL.revokeObjectURL(url);
+    downloadFile: function (filename, contentType, byteArray) {
+        const blob = new Blob([new Uint8Array(byteArray)], { type: contentType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    },
+    copyToClipboard: function (text) {
+        return navigator.clipboard.writeText(text);
+    },
+    scrollToTop: function () {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 };

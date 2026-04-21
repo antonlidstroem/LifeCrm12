@@ -1,0 +1,353 @@
+@page "/events"
+@inject EventsApiClient EventsApi
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageHeader Title="Events"
+            Subtitle="Services, gatherings, and activities"
+            FabIcon="@Icons.Material.Filled.Add"
+            OnFabClick="OpenCreateDialog">
+    <ActionContent>
+        @if (AppState.CanWrite)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="OpenCreateDialog">
+                New Event
+            </MudButton>
+        }
+    </ActionContent>
+</PageHeader>
+
+<!-- Search + view toggle row -->
+<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-4">
+    <MudTextField T="string"
+                  Value="_search"
+                  ValueChanged="OnSearchChanged"
+                  Placeholder="Search events…"
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Outlined.Search"
+                  Variant="Variant.Outlined"
+                  Immediate="true"
+                  DebounceInterval="320"
+                  Clearable="true"
+                  Margin="Margin.Dense"
+                  Style="max-width:400px;flex:1;" />
+    <MudTooltip Text="@(_cardView ? "Switch to table" : "Switch to cards")">
+        <MudIconButton Icon="@(_cardView
+                                ? Icons.Material.Outlined.TableRows
+                                : Icons.Material.Outlined.ViewModule)"
+                       Color="Color.Default"
+                       Size="Size.Small"
+                       OnClick="@(() => _cardView = !_cardView)" />
+    </MudTooltip>
+</MudStack>
+
+@if (_cardView)
+{
+    <!-- ── Card / timeline view ────────────────────────────────────────── -->
+    @if (_loading)
+    {
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            @for (var i = 0; i < 5; i++)
+            {
+                <div style="height:72px;border-radius:12px;background:#F0F2F5;
+                            animation:lcrm-shimmer 1.4s ease infinite;
+                            background-size:400% 100%;
+                            background-image:linear-gradient(90deg,#F0F2F5 25%,#E8EAED 50%,#F0F2F5 75%);"></div>
+            }
+        </div>
+    }
+    else if (!_events.Any())
+    {
+        <EmptyState Title="No events yet"
+                    Icon="@Icons.Material.Outlined.Event"
+                    Description="Create your first event to start tracking attendance.">
+            <ActionContent>
+                @if (AppState.CanWrite)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               OnClick="OpenCreateDialog">Create First Event</MudButton>
+                }
+            </ActionContent>
+        </EmptyState>
+    }
+    else
+    {
+        <!-- Upcoming -->
+        @{
+            var upcoming = _events.Where(e => e.StartsAt >= DateTimeOffset.UtcNow).ToList();
+            var past     = _events.Where(e => e.StartsAt <  DateTimeOffset.UtcNow).ToList();
+        }
+
+        @if (upcoming.Any())
+        {
+            <div class="lcrm-section-label" style="margin-bottom:10px;">Upcoming</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px;">
+                @foreach (var ev in upcoming.OrderBy(e => e.StartsAt))
+                {
+                    @EventCard(ev, false)
+                }
+            </div>
+        }
+
+        @if (past.Any())
+        {
+            <div class="lcrm-section-label" style="margin-bottom:10px;">Past</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                @foreach (var ev in past.OrderByDescending(e => e.StartsAt).Take(20))
+                {
+                    @EventCard(ev, true)
+                }
+            </div>
+        }
+
+        <!-- Load more -->
+        @if (_totalCount > _events.Count)
+        {
+            <div style="text-align:center;margin-top:20px;">
+                <MudButton Variant="Variant.Outlined" OnClick="LoadMore"
+                           Disabled="_loadingMore">
+                    @(_loadingMore ? "Loading…" : $"Load more ({_totalCount - _events.Count} remaining)")
+                </MudButton>
+            </div>
+        }
+    }
+}
+else
+{
+    <!-- ── Table view ──────────────────────────────────────────────────── -->
+    <MudTable T="EventListDto"
+              ServerData="ServerReload"
+              @ref="_table"
+              Hover="true"
+              Elevation="0"
+              OnRowClick="@((TableRowClickEventArgs<EventListDto> e) => Nav.NavigateTo($"/events/{e.Item.Id}"))">
+        <HeaderContent>
+            <MudTh>Title</MudTh>
+            <MudTh Class="lcrm-col-hide-xs">Type</MudTh>
+            <MudTh>Date</MudTh>
+            <MudTh Class="lcrm-col-hide-sm">Location</MudTh>
+            <MudTh Style="text-align:right;">Attendees</MudTh>
+            <MudTh Style="width:80px;"></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd Style="font-weight:500;">@context.Title</MudTd>
+            <MudTd Class="lcrm-col-hide-xs">
+                <span style="font-size:11.5px;font-weight:600;
+                             border-radius:4px;padding:2px 7px;
+                             background:@EventTypeBg(context.Type);
+                             color:@EventTypeFg(context.Type);">
+                    @EventTypeLabel(context.Type)
+                </span>
+            </MudTd>
+            <MudTd Style="font-size:13px;color:#57606A;">
+                @context.StartsAt.ToLocalTime().ToString("dd MMM yyyy")
+                <span style="color:#C6CDD4;"> @context.StartsAt.ToLocalTime().ToString("HH:mm")</span>
+            </MudTd>
+            <MudTd Class="lcrm-col-hide-sm"
+                   Style="font-size:13px;color:#57606A;">
+                @(context.Location ?? "—")
+            </MudTd>
+            <MudTd Style="text-align:right;">
+                <span style="font-size:13px;font-weight:600;color:#0F5B6B;">
+                    @context.AttendeeCount
+                </span>
+            </MudTd>
+            <MudTd @onclick:stopPropagation="true">
+                @if (AppState.CanWrite)
+                {
+                    <MudTooltip Text="Check in">
+                        <MudIconButton Icon="@Icons.Material.Outlined.HowToReg"
+                                       Size="Size.Small" Color="Color.Success"
+                                       OnClick="@(() => Nav.NavigateTo($"/events/{context.Id}"))" />
+                    </MudTooltip>
+                }
+                @if (AppState.IsAdmin)
+                {
+                    <MudIconButton Icon="@Icons.Material.Outlined.Delete"
+                                   Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => DeleteEvent(context))" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <EmptyState Title="No events found" Icon="@Icons.Material.Outlined.Event" />
+        </NoRecordsContent>
+        <LoadingContent>
+            <div style="padding:20px;"><LoadingSkeleton Rows="6" /></div>
+        </LoadingContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{25,50}" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private MudTable<EventListDto>? _table;
+    private string  _search      = string.Empty;
+    private bool    _cardView    = true;   // default to card view
+    private bool    _loading     = true;
+    private bool    _loadingMore = false;
+    private int     _page        = 1;
+    private int     _totalCount  = 0;
+    private readonly List<EventListDto> _events = new();
+
+    protected override async Task OnInitializedAsync()
+        => await LoadCardViewAsync(reset: true);
+
+    private async Task LoadCardViewAsync(bool reset)
+    {
+        if (reset) { _page = 1; _events.Clear(); }
+        _loading = reset;
+        try
+        {
+            var res = await EventsApi.GetEventsAsync(new PaginationParams
+            {
+                Page = _page, PageSize = 25, Search = _search, SortAscending = false
+            });
+            _totalCount = res.Data?.TotalCount ?? 0;
+            _events.AddRange(res.Data?.Items ?? Array.Empty<EventListDto>());
+        }
+        finally { _loading = false; _loadingMore = false; }
+    }
+
+    private async Task LoadMore()
+    {
+        _loadingMore = true;
+        _page++;
+        await LoadCardViewAsync(reset: false);
+    }
+
+    private async Task OnSearchChanged(string v)
+    {
+        _search = v;
+        if (_cardView) await LoadCardViewAsync(reset: true);
+        else if (_table is not null) await _table.ReloadServerData();
+    }
+
+    private async Task<TableData<EventListDto>> ServerReload(
+        TableState state, CancellationToken ct)
+    {
+        var res = await EventsApi.GetEventsAsync(new PaginationParams
+        {
+            Page          = state.Page + 1,
+            PageSize      = state.PageSize,
+            Search        = _search,
+            SortAscending = state.SortDirection != MudBlazor.SortDirection.Descending
+        });
+        return new TableData<EventListDto>
+        {
+            Items      = res.Data?.Items ?? Array.Empty<EventListDto>(),
+            TotalItems = res.Data?.TotalCount ?? 0
+        };
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var d = DialogService.Show<EventFormDialog>("New Event",
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await d.Result).Canceled)
+        {
+            if (_cardView) await LoadCardViewAsync(reset: true);
+            else if (_table is not null) await _table.ReloadServerData();
+        }
+    }
+
+    private async Task DeleteEvent(EventListDto ev)
+    {
+        var p = new DialogParameters
+        {
+            ["Title"]   = "Delete event",
+            ["Message"] = $"Delete \"{ev.Title}\"? Attendance records will also be removed.",
+            ["ConfirmText"]  = "Delete",
+            ["ConfirmColor"] = Color.Error
+        };
+        if ((await DialogService.Show<ConfirmDialog>("", p).Result).Canceled) return;
+        var res = await EventsApi.DeleteEventAsync(ev.Id);
+        if (res.Success)
+        {
+            Snackbar.Add("Event deleted.", Severity.Success);
+            if (_cardView) await LoadCardViewAsync(reset: true);
+            else if (_table is not null) await _table.ReloadServerData();
+        }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+
+    private RenderFragment EventCard(EventListDto ev, bool past) =>
+        @<div class="lcrm-event-card @(past ? "lcrm-event-card--past" : "")"
+              @onclick="@(() => Nav.NavigateTo($"/events/{ev.Id}"))">
+            <div class="lcrm-event-card__date">
+                <div class="lcrm-event-card__date-day">
+                    @ev.StartsAt.ToLocalTime().Day
+                </div>
+                <div class="lcrm-event-card__date-month">
+                    @ev.StartsAt.ToLocalTime().ToString("MMM")
+                </div>
+            </div>
+            <div class="lcrm-event-card__body">
+                <div class="lcrm-event-card__title">@ev.Title</div>
+                <div class="lcrm-event-card__meta">
+                    <span>@ev.StartsAt.ToLocalTime().ToString("HH:mm")</span>
+                    @if (!string.IsNullOrEmpty(ev.Location))
+                    {
+                        <span>@ev.Location</span>
+                    }
+                    <span style="background:@EventTypeBg(ev.Type);
+                                 color:@EventTypeFg(ev.Type);
+                                 font-size:10.5px;font-weight:600;
+                                 padding:1px 6px;border-radius:4px;">
+                        @EventTypeLabel(ev.Type)
+                    </span>
+                </div>
+            </div>
+            <div class="lcrm-event-card__badge">
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+                    <span style="font-size:12px;font-weight:600;color:#0F5B6B;
+                                 background:#E0F4F7;padding:3px 8px;border-radius:5px;">
+                        @ev.AttendeeCount 👤
+                    </span>
+                    @if (AppState.CanWrite && !past)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.HowToReg"
+                                       Size="Size.Small" Color="Color.Success"
+                                       Style="width:28px;height:28px;padding:0;"
+                                       OnClick:stopPropagation="true"
+                                       OnClick="@(() => Nav.NavigateTo($"/events/{ev.Id}"))" />
+                    }
+                </div>
+            </div>
+        </div>;
+
+    private static string EventTypeLabel(EventType t) => t switch
+    {
+        EventType.General    => "General",
+        EventType.Training   => "Training",
+        EventType.Outreach   => "Outreach",
+        EventType.SmallGroup => "Small Group",
+        EventType.OneOnOne   => "1-on-1",
+        _                    => t.ToString()
+    };
+
+    private static string EventTypeBg(EventType t) => t switch
+    {
+        EventType.General    => "#E0F4F7",
+        EventType.Training   => "#DBEAFE",
+        EventType.Outreach   => "#DCFCE7",
+        EventType.SmallGroup => "#EDE9FE",
+        EventType.OneOnOne   => "#FEF9C3",
+        _                    => "#F0F2F5"
+    };
+
+    private static string EventTypeFg(EventType t) => t switch
+    {
+        EventType.General    => "#0F5B6B",
+        EventType.Training   => "#1E40AF",
+        EventType.Outreach   => "#15803D",
+        EventType.SmallGroup => "#6D28D9",
+        EventType.OneOnOne   => "#A16207",
+        _                    => "#57606A"
+    };
+}

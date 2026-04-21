@@ -1,0 +1,139 @@
+@* src/LifeCrm.Web/Components/Shared/CheckInPanel.razor
+   Zero-friction check-in: search existing contacts or create new with name+email only. *@
+@inject EventsApiClient EventsApi
+@inject ContactsApiClient ContactsApi
+@inject ISnackbar Snackbar
+
+<MudCard Elevation="2">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.subtitle1">
+                <MudIcon Icon="@Icons.Material.Filled.HowToReg"
+                         Size="Size.Small" Class="mr-1 mb-n1" Color="Color.Success" />
+                Check In
+            </MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <!-- Step 1: search existing contacts -->
+        <MudAutocomplete T="ContactListDto"
+                         Label="Search by name or email…"
+                         @bind-Value="_selectedContact"
+                         SearchFunc="SearchContacts"
+                         ToStringFunc="@(c => c?.FullName ?? string.Empty)"
+                         MinCharacters="1"
+                         Variant="Variant.Outlined"
+                         Dense="true"
+                         AdornmentIcon="@Icons.Material.Filled.Search"
+                         Adornment="Adornment.Start"
+                         Class="mb-2"
+                         Clearable="true" />
+
+        @if (_selectedContact is not null)
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Primary" Size="Size.Small" />
+                <MudText Typo="Typo.body2" Style="flex:1">@_selectedContact.FullName</MudText>
+                <MudSelect T="AttendanceRole" @bind-Value="_role"
+                           Label="Role" Variant="Variant.Outlined"
+                           Dense="true" Margin="Margin.Dense" Style="max-width:140px">
+                    @foreach (AttendanceRole r in Enum.GetValues<AttendanceRole>())
+                    {
+                        <MudSelectItem Value="r">@r</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                           OnClick="CheckInExisting" Disabled="_saving">
+                    @(_saving ? "…" : "Check in")
+                </MudButton>
+            </MudStack>
+        }
+
+        <MudDivider Class="my-3" />
+
+        <!-- Step 2: OR create new contact inline -->
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+            Not found? Add a new person:
+        </MudText>
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="5">
+                <MudTextField @bind-Value="_firstName" Label="First name *"
+                              Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_email" Label="Email"
+                              Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense"
+                              InputType="InputType.Email" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudButton Variant="Variant.Outlined" Color="Color.Success" FullWidth="true"
+                           OnClick="CheckInNew" Disabled="@(_saving || string.IsNullOrWhiteSpace(_firstName))">
+                    @(_saving ? "…" : "Check in")
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired] public Guid EventId  { get; set; }
+    [Parameter] public EventCallback<CheckInResult> OnCheckIn { get; set; }
+
+    private ContactListDto?  _selectedContact;
+    private AttendanceRole   _role      = AttendanceRole.Attendee;
+    private string           _firstName = string.Empty;
+    private string           _email     = string.Empty;
+    private bool             _saving    = false;
+
+    private async Task<IEnumerable<ContactListDto>> SearchContacts(
+        string term, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(term)) return Enumerable.Empty<ContactListDto>();
+        var res = await ContactsApi.GetContactsAsync(
+            new PaginationParams { PageSize = 15, Search = term });
+        return res.Data?.Items ?? Enumerable.Empty<ContactListDto>();
+    }
+
+    private async Task CheckInExisting()
+    {
+        if (_selectedContact is null) return;
+        _saving = true;
+        var res = await EventsApi.CheckInAsync(EventId, new CheckInRequest
+        {
+            ContactId = _selectedContact.Id,
+            Role      = _role,
+            Source    = "checkin-panel"
+        });
+        _saving = false;
+
+        if (res.Success && res.Data is not null)
+        {
+            _selectedContact = null;
+            _role = AttendanceRole.Attendee;
+            await OnCheckIn.InvokeAsync(res.Data);
+        }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+
+    private async Task CheckInNew()
+    {
+        if (string.IsNullOrWhiteSpace(_firstName)) return;
+        _saving = true;
+        var res = await EventsApi.CheckInAsync(EventId, new CheckInRequest
+        {
+            FirstName = _firstName.Trim(),
+            Email     = _email.NullIfEmpty(),
+            Role      = AttendanceRole.Attendee,
+            Source    = "checkin-panel"
+        });
+        _saving = false;
+
+        if (res.Success && res.Data is not null)
+        {
+            _firstName = string.Empty;
+            _email     = string.Empty;
+            await OnCheckIn.InvokeAsync(res.Data);
+        }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+}

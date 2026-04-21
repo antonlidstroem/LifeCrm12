@@ -1,59 +1,225 @@
 @page "/contacts"
-@inject ApiClient Api
+@inject ContactsApiClient ContactsApi
 @inject AppState AppState
 @inject NavigationManager Nav
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
-<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
-    <MudText Typo="Typo.h4">Kontakter</MudText><MudSpacer />
-    @if (AppState.CanWrite)
-    {
-        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Upload" OnClick="OpenImportDialog" Class="mr-2">Importera CSV</MudButton>
-        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Download" OnClick="ExportCsv" Class="mr-2">Exportera CSV</MudButton>
-        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.PersonAdd" Color="Color.Primary" OnClick="OpenCreateDialog">Ny kontakt</MudButton>
-    }
-</MudStack>
-<MudTextField T="string" Value="_search" ValueChanged="OnSearchChanged" Placeholder="Sök på namn, e-post eller taggar…" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Immediate="true" DebounceInterval="350" Clearable="true" Class="mb-4" />
-<MudTable T="ContactListDto" ServerData="ServerReload" @ref="_table" Hover="true" Dense="true" OnRowClick="@((TableRowClickEventArgs<ContactListDto> e) => Nav.NavigateTo($"/contacts/{e.Item.Id}"))">
-    <HeaderContent><MudTh>Namn</MudTh><MudTh>Typ</MudTh><MudTh>E-post</MudTh><MudTh>Telefon</MudTh><MudTh>Totalt gåvor</MudTh><MudTh Style="width:100px"></MudTh></HeaderContent>
+<PageHeader Title="Contacts"
+            Subtitle="All people and organisations in your CRM"
+            FabIcon="@Icons.Material.Filled.PersonAdd"
+            OnFabClick="OpenCreateDialog">
+    <ActionContent>
+        @if (AppState.CanWrite)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.PersonAdd"
+                       OnClick="OpenCreateDialog">
+                New Contact
+            </MudButton>
+        }
+    </ActionContent>
+</PageHeader>
+
+<!-- Search bar -->
+<MudTextField T="string"
+              Value="_search"
+              ValueChanged="OnSearchChanged"
+              Placeholder="Search by name…"
+              Adornment="Adornment.Start"
+              AdornmentIcon="@Icons.Material.Outlined.Search"
+              Variant="Variant.Outlined"
+              Immediate="true"
+              DebounceInterval="320"
+              Clearable="true"
+              Margin="Margin.Dense"
+              Style="max-width:440px;margin-bottom:20px;" />
+
+<MudTable T="ContactListDto"
+          ServerData="ServerReload"
+          @ref="_table"
+          Hover="true"
+          Elevation="0"
+          OnRowClick="@((TableRowClickEventArgs<ContactListDto> e) => Nav.NavigateTo($"/contacts/{e.Item.Id}"))">
+    <HeaderContent>
+        <MudTh Style="width:40px;"></MudTh>
+        <MudTh>Name</MudTh>
+        <MudTh Class="lcrm-col-hide-xs">Email</MudTh>
+        <MudTh Class="lcrm-col-hide-sm">Engagement</MudTh>
+        <MudTh Class="lcrm-col-hide-sm" Style="text-align:right;">Donations</MudTh>
+        <MudTh Style="width:44px;"></MudTh>
+    </HeaderContent>
     <RowTemplate>
-        <MudTd><MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2"><MudAvatar Color="Color.Primary" Size="Size.Small">@context.Name[0]</MudAvatar><MudText>@context.Name</MudText></MudStack></MudTd>
-        <MudTd><MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@context.Type.ToMudColor()">@context.Type</MudChip></MudTd>
-        <MudTd>@(context.Email ?? "—")</MudTd><MudTd>@(context.Phone ?? "—")</MudTd>
-        <MudTd>$@context.TotalDonations.ToString("N2")</MudTd>
-        <MudTd Style="white-space:nowrap" @onclick:stopPropagation="true">
-            @if (AppState.CanWrite) { <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))" /> }
-            @if (AppState.IsAdmin) { <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteContact(context))" /> }
+        <!-- Avatar initial -->
+        <MudTd Style="padding-right:0;">
+            @{
+                var colors = new[]
+                {
+                    ("#E0F4F7","#0F5B6B"), ("#DCFCE7","#15803D"), ("#EDE9FE","#6D28D9"),
+                    ("#FEF9C3","#A16207"), ("#FCE7F3","#9D174D"), ("#DBEAFE","#1E40AF")
+                };
+                var idx  = Math.Abs(context.FullName.GetHashCode()) % colors.Length;
+                var (bg, fg) = colors[idx];
+                var initials = context.IsAnonymized ? "?" :
+                    (context.FirstName.Length > 0 ? context.FirstName[0].ToString() : "?") +
+                    (context.LastName?.Length > 0 ? context.LastName[0].ToString() : "");
+            }
+            <div class="lcrm-avatar"
+                 style="background:@bg;color:@fg;font-size:@(initials.Length > 1 ? "10.5px" : "12px");">
+                @initials
+            </div>
+        </MudTd>
+
+        <!-- Name -->
+        <MudTd>
+            <div style="font-size:13.5px;font-weight:500;color:#161B22;">
+                @if (context.IsAnonymized)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.PersonOff"
+                             Size="Size.Small" Color="Color.Warning"
+                             Style="vertical-align:middle;margin-right:4px;" />
+                }
+                @context.FullName
+            </div>
+            @if (!string.IsNullOrEmpty(context.Tags))
+            {
+                <div style="margin-top:2px;">
+                    <span style="font-size:11px;color:#8B949E;background:#F0F2F5;
+                                 padding:1px 6px;border-radius:4px;">@context.Tags</span>
+                </div>
+            }
+            <!-- Show email on mobile under the name -->
+            @if (!string.IsNullOrEmpty(context.Email))
+            {
+                <div class="d-block d-sm-none"
+                     style="font-size:11.5px;color:#8B949E;margin-top:1px;">
+                    @context.Email
+                </div>
+            }
+        </MudTd>
+
+        <!-- Email (hidden on xs) -->
+        <MudTd Class="lcrm-col-hide-xs"
+               Style="font-size:13px;color:#57606A;">
+            @(context.Email ?? "—")
+        </MudTd>
+
+        <!-- Engagement segment (hidden on sm) -->
+        <MudTd Class="lcrm-col-hide-sm">
+            @if (context.TotalDonations > 0 || context.LastDonationDate.HasValue)
+            {
+                var seg    = GetSegment(context);
+                var segCss = seg.ToLower() == "atrisk" ? "atrisk" : seg.ToLower();
+                <span class="lcrm-segment lcrm-segment--@segCss">@seg</span>
+            }
+        </MudTd>
+
+        <!-- Donations (hidden on sm) -->
+        <MudTd Class="lcrm-col-hide-sm"
+               Style="text-align:right;font-size:13px;font-weight:500;color:#161B22;">
+            @if (context.TotalDonations > 0)
+            {
+                @($"${context.TotalDonations:N0}")
+            }
+            else
+            {
+                <span style="color:#C6CDD4;">—</span>
+            }
+        </MudTd>
+
+        <!-- Edit action (stop row click propagation) -->
+        <MudTd @onclick:stopPropagation="true" Style="padding-left:4px;">
+            @if (AppState.CanWrite && !context.IsAnonymized)
+            {
+                <MudIconButton Icon="@Icons.Material.Outlined.Edit"
+                               Size="Size.Small"
+                               Style="color:#8B949E;"
+                               OnClick="@(() => OpenEditDialog(context.Id))" />
+            }
         </MudTd>
     </RowTemplate>
-    <NoRecordsContent><EmptyState Title="Inga kontakter hittades" Icon="@Icons.Material.Filled.People"><ActionContent>@if (AppState.CanWrite) { <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog">Lägg till kontakt</MudButton> }</ActionContent></EmptyState></NoRecordsContent>
-    <LoadingContent><LoadingSkeleton Rows="5" /></LoadingContent>
-    <PagerContent><MudTablePager PageSizeOptions="new int[] { 25, 50, 100 }" /></PagerContent>
+
+    <NoRecordsContent>
+        <EmptyState Title="No contacts yet"
+                    Icon="@Icons.Material.Outlined.People"
+                    Description="Add your first contact or import from CSV.">
+            <ActionContent>
+                @if (AppState.CanWrite)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               OnClick="OpenCreateDialog">Add First Contact</MudButton>
+                }
+            </ActionContent>
+        </EmptyState>
+    </NoRecordsContent>
+
+    <LoadingContent>
+        <div style="padding:20px 16px;">
+            <LoadingSkeleton Rows="8" Height="20" Gap="12" />
+        </div>
+    </LoadingContent>
+
+    <PagerContent>
+        <MudTablePager PageSizeOptions="new int[]{25,50,100}" />
+    </PagerContent>
 </MudTable>
 
 @code {
     private MudTable<ContactListDto>? _table;
     private string _search = string.Empty;
 
-    private async Task<TableData<ContactListDto>> ServerReload(TableState state, CancellationToken ct)
+    private async Task<TableData<ContactListDto>> ServerReload(
+        TableState state, CancellationToken ct)
     {
-        var res = await Api.GetContactsAsync(new PaginationParams { Page = state.Page + 1, PageSize = state.PageSize, Search = _search, SortBy = state.SortLabel, SortAscending = state.SortDirection != MudBlazor.SortDirection.Descending });
-        return new TableData<ContactListDto> { Items = res.Data?.Items ?? Array.Empty<ContactListDto>(), TotalItems = res.Data?.TotalCount ?? 0 };
+        var res = await ContactsApi.GetContactsAsync(new PaginationParams
+        {
+            Page     = state.Page + 1,
+            PageSize = state.PageSize,
+            Search   = _search
+        });
+        return new TableData<ContactListDto>
+        {
+            Items      = res.Data?.Items ?? Array.Empty<ContactListDto>(),
+            TotalItems = res.Data?.TotalCount ?? 0
+        };
     }
 
-    private async Task OnSearchChanged(string value) { _search = value; if (_table is not null) await _table.ReloadServerData(); }
-    private async Task OpenCreateDialog() { var d = DialogService.Show<ContactFormDialog>("Ny kontakt", new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true }); if (!(await d.Result).Canceled && _table is not null) await _table.ReloadServerData(); }
-    private async Task OpenEditDialog(ContactListDto contact) { var d = DialogService.Show<ContactFormDialog>("Redigera", new DialogParameters { ["ContactId"] = contact.Id }, new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true }); if (!(await d.Result).Canceled && _table is not null) await _table.ReloadServerData(); }
-    private async Task OpenImportDialog() { var d = DialogService.Show<ImportContactsDialog>("Importera", new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true }); if (!(await d.Result).Canceled && _table is not null) await _table.ReloadServerData(); }
-    private async Task ExportCsv() { var res = await Api.ExportContactsCsvAsync(); if (!res.Success) Snackbar.Add(res.Errors.FirstOrDefault() ?? "Export misslyckades.", Severity.Error); }
-    private async Task DeleteContact(ContactListDto contact)
+    private async Task OnSearchChanged(string v)
     {
-        var p = new DialogParameters { ["Title"] = "Ta bort kontakt", ["Message"] = $"Ta bort {contact.Name}?" };
-        var confirm = DialogService.Show<ConfirmDialog>("", p);
-        if ((await confirm.Result).Canceled) return;
-        var res = await Api.DeleteContactAsync(contact.Id);
-        if (res.Success) { Snackbar.Add($"{contact.Name} borttagen.", Severity.Success); if (_table is not null) await _table.ReloadServerData(); }
-        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Fel.", Severity.Error);
+        _search = v;
+        if (_table is not null) await _table.ReloadServerData();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var d = DialogService.Show<ContactFormDialog>("New Contact",
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await d.Result).Canceled && _table is not null)
+            await _table.ReloadServerData();
+    }
+
+    private async Task OpenEditDialog(Guid id)
+    {
+        var d = DialogService.Show<ContactFormDialog>("Edit Contact",
+            new DialogParameters { ["ContactId"] = id },
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await d.Result).Canceled && _table is not null)
+            await _table.ReloadServerData();
+    }
+
+    // Simple segment derived from available list data as a heuristic.
+    // Accurate segment is computed server-side on the detail page via EngagementService.
+    private static string GetSegment(ContactListDto c)
+    {
+        if (c.TotalDonations == 0) return "New";
+        if (!c.LastDonationDate.HasValue) return "New";
+        var days = (DateOnly.FromDateTime(DateTime.Today)
+            .DayNumber - c.LastDonationDate.Value.DayNumber);
+        return days switch
+        {
+            > 180 => "Lapsed",
+            > 60  => "AtRisk",
+            _     => c.TotalDonations >= 5 ? "Core" : "Growing"
+        };
     }
 }

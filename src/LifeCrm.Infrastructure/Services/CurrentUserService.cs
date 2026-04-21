@@ -6,29 +6,15 @@ namespace LifeCrm.Infrastructure.Services;
 
 public class CurrentUserService : ICurrentUserService
 {
-    private readonly IHttpContextAccessor _http;
-    public CurrentUserService(IHttpContextAccessor http) { _http = http; }
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    private ClaimsPrincipal? User => _http.HttpContext?.User;
+    public CurrentUserService(IHttpContextAccessor httpContextAccessor)
+        => _httpContextAccessor = httpContextAccessor;
 
-    public Guid? UserId
-    {
-        get
-        {
-            var val = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User?.FindFirst("sub")?.Value;
-            return Guid.TryParse(val, out var id) ? id : null;
-        }
-    }
+    private ClaimsPrincipal? User => _httpContextAccessor.HttpContext?.User;
 
-    public Guid? OrganizationId
-    {
-        get
-        {
-            var val = User?.FindFirst("org_id")?.Value;
-            return Guid.TryParse(val, out var id) ? id : null;
-        }
-    }
-
+    public Guid? UserId => User?.FindFirst(ClaimTypes.NameIdentifier)?.Value is { } s && Guid.TryParse(s, out var g) ? g : null;
+    public Guid? OrganizationId => User?.FindFirst("org_id")?.Value is { } s && Guid.TryParse(s, out var g) ? g : null;
     public string? UserRole => User?.FindFirst(ClaimTypes.Role)?.Value;
-    public bool IsAuthenticated => User?.Identity?.IsAuthenticated == true;
+    public bool IsAuthenticated => User?.Identity?.IsAuthenticated ?? false;
 }
