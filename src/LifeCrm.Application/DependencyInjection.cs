@@ -13,11 +13,18 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         MapsterConfig.RegisterMappings();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
+
+        services.AddMediatR(cfg =>
+            cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
+
+        // Order matters: Validation → Logging → Consent → Audit → Handler
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehaviour<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehaviour<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ConsentBehaviour<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditBehaviour<,>));
+
         services.AddValidatorsFromAssemblyContaining<CreateContactValidator>();
+
         return services;
     }
 }
