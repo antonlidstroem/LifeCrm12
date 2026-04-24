@@ -29,9 +29,27 @@ public class EmailService : IEmailService
             foreach (var att in attachments)
                 builder.Attachments.Add(att.FileName, att.Bytes, ContentType.Parse(att.ContentType));
         message.Body = builder.ToMessageBody();
+
+        // FIX: Make SecureSocketOptions configurable. Default to Auto for production,
+        // None for local dev ports (1025, 2525, 25).
+        var port = int.Parse(section["Port"] ?? "587");
+        var secureSocketStr = section["SecureSocket"];
+        var secureSocket = secureSocketStr switch
+        {
+            "None"      => SecureSocketOptions.None,
+            "StartTls"  => SecureSocketOptions.StartTls,
+            "SslOnConnect" => SecureSocketOptions.SslOnConnect,
+            _ => port is 1025 or 2525 or 25 ? SecureSocketOptions.None : SecureSocketOptions.Auto
+        };
+
         using var client = new SmtpClient();
-        await client.ConnectAsync(section["Host"], int.Parse(section["Port"] ?? "587"), SecureSocketOptions.StartTls, ct);
-        await client.AuthenticateAsync(section["Username"], section["Password"], ct);
+        await client.ConnectAsync(section["Host"], port, secureSocket, ct);
+
+        var username = section["Username"];
+        var password = section["Password"];
+        if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
+            await client.AuthenticateAsync(username, password, ct);
+
         await client.SendAsync(message, ct);
         await client.DisconnectAsync(true, ct);
     }

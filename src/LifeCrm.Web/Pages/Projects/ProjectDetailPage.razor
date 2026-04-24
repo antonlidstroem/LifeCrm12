@@ -10,8 +10,12 @@
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
     <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/projects"))" />
-    <MudText Typo="Typo.h5">@(_project?.Name ?? "Laddar…")</MudText><MudSpacer />
-    @if (AppState.CanWrite && _project is not null) { <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Edit" OnClick="OpenEditDialog">Redigera</MudButton> }
+    <MudText Typo="Typo.h5">@(_project?.Name ?? "Laddar…")</MudText>
+    <MudSpacer />
+    @if (AppState.CanWrite && _project is not null)
+    {
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Edit" OnClick="OpenEditDialog">Redigera</MudButton>
+    }
 </MudStack>
 
 @if (_loading) { <MudProgressLinear Color="Color.Primary" Indeterminate="true" /> }
@@ -26,15 +30,31 @@ else if (_project is not null)
                         <div><MudText Typo="Typo.caption" Color="Color.Secondary">Finansierat</MudText><MudText Typo="Typo.h6">$@_project.TotalFunded.ToString("N2")</MudText></div>
                         <div><MudText Typo="Typo.caption" Color="Color.Secondary">Mål</MudText><MudText Typo="Typo.h6">@(_project.BudgetGoal.HasValue ? $"${_project.BudgetGoal:N2}" : "—")</MudText></div>
                     </MudStack>
-                    @if (!string.IsNullOrEmpty(_project.Location)) { <MudList T="string" Dense="true"><MudListItem Icon="@Icons.Material.Filled.LocationOn">@_project.Location</MudListItem></MudList> }
-                    @if (!string.IsNullOrEmpty(_project.Description)) { <MudDivider Class="my-3" /><MudText Typo="Typo.caption" Color="Color.Secondary">Beskrivning</MudText><MudText Typo="Typo.body2" Class="mt-1">@_project.Description</MudText> }
+                    @if (!string.IsNullOrEmpty(_project.Location))
+                    {
+                        <MudList T="string" Dense="true">
+                            <MudListItem Icon="@Icons.Material.Filled.LocationOn">@_project.Location</MudListItem>
+                        </MudList>
+                    }
+                    @if (!string.IsNullOrEmpty(_project.Description))
+                    {
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Beskrivning</MudText>
+                        <MudText Typo="Typo.body2" Class="mt-1">@_project.Description</MudText>
+                    }
                 </MudCardContent>
             </MudCard>
         </MudItem>
+
         <MudItem xs="12" md="8">
             <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+
+                <!-- Donations tab -->
                 <MudTabPanel Text="Gåvor" Icon="@Icons.Material.Filled.AttachMoney">
-                    @if (!_donations.Any()) { <EmptyState Title="Inga gåvor kopplade" Icon="@Icons.Material.Outlined.AttachMoney" /> }
+                    @if (!_donations.Any())
+                    {
+                        <EmptyState Title="Inga gåvor kopplade" Icon="@Icons.Material.Outlined.AttachMoney" />
+                    }
                     else
                     {
                         <MudTable T="DonationListDto" Items="_donations" Dense="true" Hover="true" Elevation="0">
@@ -48,9 +68,18 @@ else if (_project is not null)
                         </MudTable>
                     }
                 </MudTabPanel>
+
+                <!-- Interactions tab -->
                 <MudTabPanel Text="Interaktioner" Icon="@Icons.Material.Filled.Chat">
-                    @if (AppState.CanWrite) { <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Class="mb-4" OnClick="OpenLogInteractionDialog">Logga interaktion</MudButton> }
-                    @if (!_interactions.Any()) { <EmptyState Title="Inga interaktioner" Icon="@Icons.Material.Outlined.Chat" /> }
+                    @if (AppState.CanWrite)
+                    {
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small"
+                                   Class="mb-4" OnClick="OpenLogInteractionDialog">Logga interaktion</MudButton>
+                    }
+                    @if (!_interactions.Any())
+                    {
+                        <EmptyState Title="Inga interaktioner" Icon="@Icons.Material.Outlined.Chat" />
+                    }
                     else
                     {
                         <MudTimeline TimelinePosition="TimelinePosition.Start">
@@ -69,22 +98,39 @@ else if (_project is not null)
                         </MudTimeline>
                     }
                 </MudTabPanel>
+
+                <!-- Field Reports tab -->
                 <MudTabPanel Text="@($"Field Reports ({_reports.Count})")" Icon="@Icons.Material.Filled.Article">
-                    @if (AppState.CanWrite) { <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Class="mb-3" OnClick="NewReport">New field report</MudButton> }
-                    @if (!_reports.Any()) { <EmptyState Title="No field reports" Icon="@Icons.Material.Outlined.Article" /> }
+                    @if (AppState.CanWrite)
+                    {
+                        <!-- FIX: was /reports/new?projectId which didn't exist as a route -->
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small"
+                                   Class="mb-3" OnClick="NewReport">New field report</MudButton>
+                    }
+                    @if (!_reports.Any())
+                    {
+                        <EmptyState Title="No field reports" Icon="@Icons.Material.Outlined.Article" />
+                    }
                     else
                     {
                         @foreach (var r in _reports)
                         {
-                            <MudPaper Elevation="0" Class="pa-3 mb-2 cursor-pointer" Style="border:1px solid var(--mud-palette-divider);border-radius:6px" @onclick="@(() => Nav.NavigateTo($"/reports/{r.Id}"))">
+                            <MudPaper Elevation="0" Class="pa-3 mb-2 cursor-pointer"
+                                      Style="border:1px solid var(--mud-palette-divider);border-radius:6px"
+                                      @onclick="@(() => Nav.NavigateTo($"/reports/{r.Id}"))">
                                 <MudStack Row="true" AlignItems="AlignItems.Center">
-                                    <div style="flex:1"><MudText Typo="Typo.body2"><b>@r.Title</b></MudText><MudText Typo="Typo.caption" Color="Color.Secondary">@r.ReportDate.ToString("yyyy-MM-dd") · @r.AuthorName</MudText></div>
+                                    <div style="flex:1">
+                                        <MudText Typo="Typo.body2"><b>@r.Title</b></MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@r.ReportDate.ToString("yyyy-MM-dd") · @r.AuthorName</MudText>
+                                    </div>
                                     @if (r.DecisionTotal > 0) { <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">@r.DecisionTotal</MudChip> }
+                                    <ReportStatusChip Status="@r.Status" />
                                 </MudStack>
                             </MudPaper>
                         }
                     }
                 </MudTabPanel>
+
             </MudTabs>
         </MudItem>
     </MudGrid>
@@ -108,12 +154,29 @@ else if (_project is not null)
         var t3 = InteractionsApi.GetProjectInteractionsAsync(Id);
         var t4 = ReportsApi.GetReportsAsync(new PaginationParams { PageSize = 100 }, projectId: Id);
         await Task.WhenAll(t1, t2, t3, t4);
-        _project = t1.Result.Data; _donations = t2.Result.Data?.Items ?? Array.Empty<DonationListDto>();
-        _interactions = t3.Result.Data ?? Array.Empty<InteractionDto>(); _reports = t4.Result.Data?.Items.ToList() ?? new();
-        _loading = false;
+        _project      = t1.Result.Data;
+        _donations    = t2.Result.Data?.Items ?? Array.Empty<DonationListDto>();
+        _interactions = t3.Result.Data ?? Array.Empty<InteractionDto>();
+        _reports      = t4.Result.Data?.Items.ToList() ?? new();
+        _loading      = false;
     }
 
+    // FIX: Navigate to /reports/new route which properly creates then redirects
     private void NewReport() => Nav.NavigateTo($"/reports/new?projectId={Id}");
-    private async Task OpenEditDialog() { var d = DialogService.Show<ProjectFormDialog>("Redigera", new DialogParameters { ["ProjectId"] = Id }, new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true }); if (!(await d.Result).Canceled) await LoadAsync(); }
-    private async Task OpenLogInteractionDialog() { var d = DialogService.Show<LogInteractionDialog>("Logga interaktion", new DialogParameters { ["ProjectId"] = Id }, new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true }); if (!(await d.Result).Canceled) await LoadAsync(); }
+
+    private async Task OpenEditDialog()
+    {
+        var d = DialogService.Show<ProjectFormDialog>("Redigera",
+            new DialogParameters { ["ProjectId"] = Id },
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await d.Result).Canceled) await LoadAsync();
+    }
+
+    private async Task OpenLogInteractionDialog()
+    {
+        var d = DialogService.Show<LogInteractionDialog>("Logga interaktion",
+            new DialogParameters { ["ProjectId"] = Id },
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await d.Result).Canceled) await LoadAsync();
+    }
 }

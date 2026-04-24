@@ -12,10 +12,15 @@ public class UsersApiClient : ApiClientBase
 
     public async Task<ApiResponse<IReadOnlyList<UserSummaryDto>>> GetUsersAsync()
         => await GetAsync<IReadOnlyList<UserSummaryDto>>("api/v1/users");
+
     public async Task<ApiResponse> ChangeUserRoleAsync(Guid id, UserRole newRole)
         => await PatchAsync($"api/v1/users/{id}/role", newRole);
+
+    // FIX: PATCH with empty body — endpoint has no [FromBody], but we still need to send
+    // a PATCH with a valid content-type. Use an empty JSON object.
     public async Task<ApiResponse> DeactivateUserAsync(Guid id)
-        => await PatchAsync($"api/v1/users/{id}/deactivate", new { });
+        => await PatchVoidAsync($"api/v1/users/{id}/deactivate");
+
     public async Task<ApiResponse> ActivateUserAsync(Guid id)
-        => await PatchAsync($"api/v1/users/{id}/activate", new { });
+        => await PatchVoidAsync($"api/v1/users/{id}/activate");
 }

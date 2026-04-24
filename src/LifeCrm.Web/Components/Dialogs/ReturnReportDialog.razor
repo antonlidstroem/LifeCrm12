@@ -1,0 +1,51 @@
+@inject ApiClient Api
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.AssignmentReturn" Color="Color.Warning" Class="mr-2 mb-n1" />
+            Return for Revision
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-3">
+            Provide feedback to the report author explaining what needs to be revised.
+        </MudText>
+        <MudTextField @bind-Value="_comment" Label="Revision comment *" Variant="Variant.Outlined" Lines="4"
+                      Placeholder="Please describe what changes are needed..." />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Warning" Variant="Variant.Filled" OnClick="Submit" Disabled="_saving">
+            @(_saving ? "Returning…" : "Return for Revision")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid ReportId { get; set; }
+
+    private string _comment = string.Empty;
+    private bool _saving;
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_comment))
+        {
+            Snackbar.Add("A revision comment is required.", Severity.Warning);
+            return;
+        }
+        _saving = true;
+        try
+        {
+            var res = await Api.ReturnReportAsync(ReportId, new ReturnForRevisionRequest { Comment = _comment.Trim() });
+            if (res.Success) MudDialog.Close(DialogResult.Ok(true));
+            else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+        }
+        finally { _saving = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

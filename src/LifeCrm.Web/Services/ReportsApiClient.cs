@@ -20,29 +20,57 @@ public class ReportsApiClient : ApiClientBase
         return await GetAsync<PagedResult<MissionReportListDto>>(url);
     }
 
-    public async Task<ApiResponse<MissionReportDetailDto>> GetReportAsync(Guid id)       => await GetAsync<MissionReportDetailDto>($"api/v1/missionreports/{id}");
-    public async Task<ApiResponse<Guid>>   CreateReportAsync(CreateReportRequest req)    => await PostAsync<Guid>("api/v1/missionreports", req);
-    public async Task<ApiResponse>         UpdateReportAsync(Guid id, UpdateReportRequest req) => await PutAsync($"api/v1/missionreports/{id}", req);
-    public async Task<ApiResponse>         DeleteReportAsync(Guid id)                    => await DeleteAsync($"api/v1/missionreports/{id}");
-    public async Task<ApiResponse>         SubmitReportAsync(Guid id)                    => await PostVoidAsync($"api/v1/missionreports/{id}/submit");
-    public async Task<ApiResponse>         ApproveReportAsync(Guid id)                   => await PostVoidAsync($"api/v1/missionreports/{id}/approve");
-    public async Task<ApiResponse>         ReturnReportAsync(Guid id, ReturnForRevisionRequest req) => await PostVoidAsync($"api/v1/missionreports/{id}/return", req);
+    public async Task<ApiResponse<MissionReportDetailDto>> GetReportAsync(Guid id)
+        => await GetAsync<MissionReportDetailDto>($"api/v1/missionreports/{id}");
+
+    public async Task<ApiResponse<Guid>> CreateReportAsync(CreateReportRequest req)
+        => await PostAsync<Guid>("api/v1/missionreports", req);
+
+    public async Task<ApiResponse> UpdateReportAsync(Guid id, UpdateReportRequest req)
+        => await PutAsync($"api/v1/missionreports/{id}", req);
+
+    public async Task<ApiResponse> DeleteReportAsync(Guid id)
+        => await DeleteAsync($"api/v1/missionreports/{id}");
+
+    public async Task<ApiResponse> SubmitReportAsync(Guid id)
+        => await PostVoidAsync($"api/v1/missionreports/{id}/submit");
+
+    public async Task<ApiResponse> ApproveReportAsync(Guid id)
+        => await PostVoidAsync($"api/v1/missionreports/{id}/approve");
+
+    // FIX: was missing from original client — return a report for revision
+    public async Task<ApiResponse> ReturnReportAsync(Guid id, ReturnForRevisionRequest req)
+        => await PostVoidAsync($"api/v1/missionreports/{id}/return", req);
+
     public async Task<ApiResponse<DecisionCountDto>> UpsertDecisionCountAsync(Guid reportId, UpsertDecisionCountRequest req)
         => await PutAsync<DecisionCountDto>($"api/v1/missionreports/{reportId}/decisions", req);
+
     public async Task<ApiResponse<IReadOnlyList<PeopleGroupSearchDto>>> SearchPeopleGroupsAsync(string q)
         => await GetAsync<IReadOnlyList<PeopleGroupSearchDto>>($"api/v1/missionreports/people-groups/search?q={Uri.EscapeDataString(q)}");
+
     public async Task<ApiResponse<PeopleGroupReachedDto>> AddPeopleGroupAsync(Guid reportId, AddPeopleGroupRequest req)
         => await PostAsync<PeopleGroupReachedDto>($"api/v1/missionreports/{reportId}/people-groups", req);
+
     public async Task<ApiResponse> RemovePeopleGroupAsync(Guid reportId, Guid entryId)
         => await DeleteAsync($"api/v1/missionreports/{reportId}/people-groups/{entryId}");
+
     public async Task<ApiResponse<PrayerPointDto>> AddReportPrayerPointAsync(Guid reportId, CreatePrayerPointRequest req)
         => await PostAsync<PrayerPointDto>($"api/v1/missionreports/{reportId}/prayer-points", req);
+
     public async Task<ApiResponse<IReadOnlyList<AnsweredPrayerWidgetDto>>> GetAnsweredPrayersThisMonthAsync()
         => await GetAsync<IReadOnlyList<AnsweredPrayerWidgetDto>>("api/v1/missionreports/answered-prayers/this-month");
+
+    // Standalone prayer points (PrayerPointsController)
     public async Task<ApiResponse<IReadOnlyList<PrayerPointDto>>> GetActivePrayerPointsAsync()
         => await GetAsync<IReadOnlyList<PrayerPointDto>>("api/v1/prayerpoints/active");
+
+    // FIX: was missing — create a standalone prayer point not linked to a report
+    public async Task<ApiResponse<PrayerPointDto>> CreateStandalonePrayerPointAsync(CreatePrayerPointRequest req)
+        => await PostAsync<PrayerPointDto>("api/v1/prayerpoints", req);
+
     public async Task<ApiResponse<PrayerPointDto>> MarkPrayerAnsweredAsync(Guid id, MarkAnsweredRequest req)
         => await PostAsync<PrayerPointDto>($"api/v1/prayerpoints/{id}/mark-answered", req);
+
     public async Task<ApiResponse> DeletePrayerPointAsync(Guid id)
         => await DeleteAsync($"api/v1/prayerpoints/{id}");
 }

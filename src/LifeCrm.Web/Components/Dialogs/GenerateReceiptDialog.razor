@@ -1,0 +1,49 @@
+@inject ApiClient Api
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2 mb-n1" />Generate Donation Receipt
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-3">
+            A PDF receipt will be generated for this donation.
+        </MudText>
+        <MudCheckBox @bind-Value="_sendByEmail" Label="Also send receipt by email to donor" Color="Color.Primary" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="_generating">
+            @(_generating ? "Generating…" : "Generate Receipt")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid DonationId { get; set; }
+
+    private bool _sendByEmail;
+    private bool _generating;
+
+    private async Task Submit()
+    {
+        _generating = true;
+        try
+        {
+            var res = await Api.GenerateReceiptAsync(DonationId, _sendByEmail);
+            if (res.Success)
+            {
+                var msg = _sendByEmail ? "Receipt generated and sent by email." : "Receipt generated.";
+                Snackbar.Add(msg, Severity.Success);
+                MudDialog.Close(DialogResult.Ok(res.Data));
+            }
+            else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error generating receipt.", Severity.Error);
+        }
+        finally { _generating = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

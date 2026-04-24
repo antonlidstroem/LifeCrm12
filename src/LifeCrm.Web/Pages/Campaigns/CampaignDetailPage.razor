@@ -2,14 +2,20 @@
 @inject CampaignsApiClient CampaignsApi
 @inject DonationsApiClient DonationsApi
 @inject ReportsApiClient ReportsApi
+@inject ApiClient Api
 @inject AppState AppState
 @inject IDialogService DialogService
+@inject ISnackbar Snackbar
 @inject NavigationManager Nav
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
     <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/campaigns"))" />
-    <MudText Typo="Typo.h5">@(_campaign?.Name ?? "Laddar…")</MudText><MudSpacer />
-    @if (AppState.CanWrite && _campaign is not null) { <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Edit" OnClick="OpenEditDialog" Class="mr-2">Redigera</MudButton> }
+    <MudText Typo="Typo.h5">@(_campaign?.Name ?? "Laddar…")</MudText>
+    <MudSpacer />
+    @if (AppState.CanWrite && _campaign is not null)
+    {
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Edit" OnClick="OpenEditDialog" Class="mr-2">Redigera</MudButton>
+    }
 </MudStack>
 
 @if (_loading) { <MudProgressLinear Color="Color.Primary" Indeterminate="true" /> }
@@ -20,20 +26,35 @@ else if (_campaign is not null)
             <MudCard Elevation="2">
                 <MudCardContent>
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@_campaign.Status.ToMudColor()" Class="mb-3">@_campaign.Status</MudChip>
-                    @if (_campaign.BudgetGoal.HasValue && _campaign.BudgetGoal > 0) { <MudProgressLinear Value="@(Math.Min((double)(_campaign.ProgressPercent ?? 0), 100))" Color="Color.Primary" Size="Size.Medium" Rounded="true" Class="mb-2" /> }
+                    @if (_campaign.BudgetGoal.HasValue && _campaign.BudgetGoal > 0)
+                    {
+                        <MudProgressLinear Value="@(Math.Min((double)(_campaign.ProgressPercent ?? 0), 100))"
+                                           Color="Color.Primary" Size="Size.Medium" Rounded="true" Class="mb-2" />
+                    }
                     <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-3">
                         <div><MudText Typo="Typo.caption" Color="Color.Secondary">Insamlat</MudText><MudText Typo="Typo.h6">$@_campaign.TotalRaised.ToString("N2")</MudText></div>
                         <div><MudText Typo="Typo.caption" Color="Color.Secondary">Mål</MudText><MudText Typo="Typo.h6">@(_campaign.BudgetGoal.HasValue ? $"${_campaign.BudgetGoal:N2}" : "—")</MudText></div>
                         <div><MudText Typo="Typo.caption" Color="Color.Secondary">Gåvor</MudText><MudText Typo="Typo.h6">@_campaign.DonationCount</MudText></div>
                     </MudStack>
-                    @if (!string.IsNullOrEmpty(_campaign.Description)) { <MudDivider Class="my-3" /><MudText Typo="Typo.caption" Color="Color.Secondary">Beskrivning</MudText><MudText Typo="Typo.body2" Class="mt-1">@_campaign.Description</MudText> }
+                    @if (!string.IsNullOrEmpty(_campaign.Description))
+                    {
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Beskrivning</MudText>
+                        <MudText Typo="Typo.body2" Class="mt-1">@_campaign.Description</MudText>
+                    }
                 </MudCardContent>
             </MudCard>
         </MudItem>
+
         <MudItem xs="12" md="8">
             <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+
+                <!-- Donations tab -->
                 <MudTabPanel Text="Donations" Icon="@Icons.Material.Filled.AttachMoney">
-                    @if (!_donations.Any()) { <EmptyState Title="No donations linked" Icon="@Icons.Material.Outlined.AttachMoney" /> }
+                    @if (!_donations.Any())
+                    {
+                        <EmptyState Title="No donations linked" Icon="@Icons.Material.Outlined.AttachMoney" />
+                    }
                     else
                     {
                         <MudTable T="DonationListDto" Items="_donations" Dense="true" Hover="true" Elevation="0">
@@ -47,16 +68,31 @@ else if (_campaign is not null)
                         </MudTable>
                     }
                 </MudTabPanel>
+
+                <!-- Field Reports tab -->
                 <MudTabPanel Text="@($"Field Reports ({_reports.Count})")" Icon="@Icons.Material.Filled.Article">
-                    @if (AppState.CanWrite) { <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Class="mb-3" OnClick="NewReport">New field report</MudButton> }
-                    @if (!_reports.Any()) { <EmptyState Title="No field reports" Icon="@Icons.Material.Outlined.Article" /> }
+                    @if (AppState.CanWrite)
+                    {
+                        <!-- FIX: was /reports/new?campaignId which didn't exist as a route -->
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small"
+                                   Class="mb-3" OnClick="NewReport">New field report</MudButton>
+                    }
+                    @if (!_reports.Any())
+                    {
+                        <EmptyState Title="No field reports" Icon="@Icons.Material.Outlined.Article" />
+                    }
                     else
                     {
                         @foreach (var r in _reports)
                         {
-                            <MudPaper Elevation="0" Class="pa-3 mb-2 cursor-pointer" Style="border:1px solid var(--mud-palette-divider);border-radius:6px" @onclick="@(() => Nav.NavigateTo($"/reports/{r.Id}"))">
+                            <MudPaper Elevation="0" Class="pa-3 mb-2 cursor-pointer"
+                                      Style="border:1px solid var(--mud-palette-divider);border-radius:6px"
+                                      @onclick="@(() => Nav.NavigateTo($"/reports/{r.Id}"))">
                                 <MudStack Row="true" AlignItems="AlignItems.Center">
-                                    <div style="flex:1"><MudText Typo="Typo.body2"><b>@r.Title</b></MudText><MudText Typo="Typo.caption" Color="Color.Secondary">@r.ReportDate.ToString("yyyy-MM-dd") · @r.AuthorName</MudText></div>
+                                    <div style="flex:1">
+                                        <MudText Typo="Typo.body2"><b>@r.Title</b></MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@r.ReportDate.ToString("yyyy-MM-dd") · @r.AuthorName</MudText>
+                                    </div>
                                     @if (r.DecisionTotal > 0) { <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">@r.DecisionTotal decisions</MudChip> }
                                     <ReportStatusChip Status="@r.Status" />
                                 </MudStack>
@@ -64,6 +100,59 @@ else if (_campaign is not null)
                         }
                     }
                 </MudTabPanel>
+
+                <!-- Newsletter tab -->
+                @if (AppState.IsFinanceOrAdmin)
+                {
+                    <MudTabPanel Text="Newsletter" Icon="@Icons.Material.Filled.MarkEmailRead">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                            Send a targeted newsletter to contacts linked to this campaign.
+                        </MudText>
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12">
+                                <MudTextField @bind-Value="_nlSubject" Label="Subject *" Variant="Variant.Outlined" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudTextField @bind-Value="_nlTagFilter" Label="Tag filter (optional, comma-separated)" Variant="Variant.Outlined"
+                                              TextChanged="@(_ => _previewLoaded = false)" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudTextField @bind-Value="_nlHtmlBody" Label="HTML body *" Variant="Variant.Outlined"
+                                              Lines="8" Style="font-family:monospace;font-size:13px" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Visibility"
+                                               OnClick="PreviewCampaignNewsletter" Disabled="_previewing">
+                                        @(_previewing ? "Loading…" : "Preview recipients")
+                                    </MudButton>
+                                    @if (_nlPreview is not null)
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Info">
+                                            <b>@_nlPreview.EligibleCount</b> eligible · @_nlPreview.OptedOutCount opted out · @_nlPreview.NoEmailCount no email
+                                        </MudText>
+                                    }
+                                </MudStack>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Send"
+                                           OnClick="SendCampaignNewsletter"
+                                           Disabled="@(_nlSending || string.IsNullOrWhiteSpace(_nlSubject) || string.IsNullOrWhiteSpace(_nlHtmlBody) || (_nlPreview?.EligibleCount ?? 0) == 0)">
+                                    @(_nlSending ? "Sending…" : $"Send to {_nlPreview?.EligibleCount ?? 0} recipients")
+                                </MudButton>
+                            </MudItem>
+                            @if (_nlResult is not null)
+                            {
+                                <MudItem xs="12">
+                                    <MudAlert Severity="@(_nlResult.ErrorCount > 0 ? Severity.Warning : Severity.Success)">
+                                        Sent: @_nlResult.SentCount · Errors: @_nlResult.ErrorCount
+                                    </MudAlert>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    </MudTabPanel>
+                }
+
             </MudTabs>
         </MudItem>
     </MudGrid>
@@ -73,8 +162,14 @@ else if (_campaign is not null)
     [Parameter] public Guid Id { get; set; }
     private CampaignDto? _campaign;
     private IReadOnlyList<DonationListDto> _donations = Array.Empty<DonationListDto>();
-    private List<MissionReportListDto> _reports = new();
+    private List<MissionReportListDto>     _reports   = new();
     private bool _loading = true;
+
+    // Newsletter state
+    private string _nlSubject = string.Empty, _nlHtmlBody = string.Empty, _nlTagFilter = string.Empty;
+    private NewsletterPreviewDto?    _nlPreview;
+    private NewsletterSendResultDto? _nlResult;
+    private bool _previewing, _nlSending, _previewLoaded;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -85,10 +180,52 @@ else if (_campaign is not null)
         var t2 = DonationsApi.GetDonationsAsync(new PaginationParams { PageSize = 500 }, campaignId: Id);
         var t3 = ReportsApi.GetReportsAsync(new PaginationParams { PageSize = 100 }, campaignId: Id);
         await Task.WhenAll(t1, t2, t3);
-        _campaign = t1.Result.Data; _donations = t2.Result.Data?.Items ?? Array.Empty<DonationListDto>(); _reports = t3.Result.Data?.Items.ToList() ?? new();
-        _loading = false;
+        _campaign  = t1.Result.Data;
+        _donations = t2.Result.Data?.Items ?? Array.Empty<DonationListDto>();
+        _reports   = t3.Result.Data?.Items.ToList() ?? new();
+        _loading   = false;
     }
 
+    // FIX: Navigate to /reports/new route which properly creates then redirects
     private void NewReport() => Nav.NavigateTo($"/reports/new?campaignId={Id}");
-    private async Task OpenEditDialog() { var d = DialogService.Show<CampaignFormDialog>("Redigera", new DialogParameters { ["CampaignId"] = Id }, new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true }); if (!(await d.Result).Canceled) await LoadAsync(); }
+
+    private async Task OpenEditDialog()
+    {
+        var d = DialogService.Show<CampaignFormDialog>("Redigera",
+            new DialogParameters { ["CampaignId"] = Id },
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await d.Result).Canceled) await LoadAsync();
+    }
+
+    private async Task PreviewCampaignNewsletter()
+    {
+        _previewing = true;
+        var res = await Api.PreviewCampaignNewsletterAsync(Id, _nlTagFilter.NullIfEmpty());
+        _nlPreview = res.Data;
+        _previewLoaded = true;
+        _previewing = false;
+    }
+
+    private async Task SendCampaignNewsletter()
+    {
+        if (string.IsNullOrWhiteSpace(_nlSubject) || string.IsNullOrWhiteSpace(_nlHtmlBody))
+        {
+            Snackbar.Add("Subject and body are required.", Severity.Warning);
+            return;
+        }
+        _nlSending = true;
+        var res = await Api.SendCampaignNewsletterAsync(Id, new CampaignSendNewsletterRequest
+        {
+            Subject   = _nlSubject,
+            HtmlBody  = _nlHtmlBody,
+            TagFilter = _nlTagFilter.NullIfEmpty()
+        });
+        _nlSending = false;
+        if (res.Success)
+        {
+            _nlResult = res.Data;
+            Snackbar.Add($"Sent to {res.Data?.SentCount} recipients.", Severity.Success);
+        }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Send failed.", Severity.Error);
+    }
 }

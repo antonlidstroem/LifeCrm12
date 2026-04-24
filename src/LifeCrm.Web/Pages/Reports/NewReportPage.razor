@@ -1,0 +1,35 @@
+@page "/reports/new"
+@inject ApiClient Api
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">Skapar rapport…</MudText>
+
+@code {
+    [SupplyParameterFromQuery] public Guid? CampaignId { get; set; }
+    [SupplyParameterFromQuery] public Guid? ProjectId  { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var req = new CreateReportRequest
+        {
+            Title      = $"Field Report {DateTime.Today:yyyy-MM-dd}",
+            ReportDate = DateOnly.FromDateTime(DateTime.Today),
+            Language   = ReportLanguage.English,
+            CampaignId = CampaignId,
+            ProjectId  = ProjectId
+        };
+
+        var res = await Api.CreateReportAsync(req);
+        if (res.Success && res.Data != default)
+        {
+            Nav.NavigateTo($"/reports/{res.Data}/edit", replace: true);
+        }
+        else
+        {
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Could not create report.", Severity.Error);
+            Nav.NavigateTo("/reports", replace: true);
+        }
+    }
+}

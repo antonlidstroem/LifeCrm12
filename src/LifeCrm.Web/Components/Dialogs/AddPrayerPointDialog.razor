@@ -1,0 +1,63 @@
+@inject ApiClient Api
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.VolunteerActivism" Class="mr-2 mb-n1" />Add Prayer Point
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_title" Label="Title *" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_detail" Label="Details *" Variant="Variant.Outlined" Lines="4"
+                              Placeholder="Describe this prayer request in detail." />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="_saving">
+            @(_saving ? "Adding…" : "Add")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid ReportId { get; set; }
+
+    private string _title = string.Empty, _detail = string.Empty;
+    private bool _saving;
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_title) || string.IsNullOrWhiteSpace(_detail))
+        {
+            Snackbar.Add("Title and details are required.", Severity.Warning);
+            return;
+        }
+        _saving = true;
+        try
+        {
+            var res = await Api.AddReportPrayerPointAsync(ReportId, new CreatePrayerPointRequest
+            {
+                ReportId = ReportId,
+                Title    = _title.Trim(),
+                Detail   = _detail.Trim()
+            });
+            if (res.Success)
+            {
+                Snackbar.Add("Prayer point added.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(res.Data));
+            }
+            else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+        }
+        finally { _saving = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}
