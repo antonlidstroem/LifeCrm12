@@ -40,6 +40,10 @@ namespace LifeCrm.Infrastructure.Migrations
                     Action = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ChangedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ChangedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    PropertyName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OldValue = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NewValue = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CorrelationId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     OldValues = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     NewValues = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
@@ -97,6 +101,23 @@ namespace LifeCrm.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "OutboxMessages",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Type = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Payload = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    ProcessedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    RetryCount = table.Column<int>(type: "int", nullable: false),
+                    Error = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OutboxMessages", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PeopleGroupSeeds",
                 columns: table => new
                 {
@@ -145,6 +166,29 @@ namespace LifeCrm.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "RetentionPolicies",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    EntityName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    RetentionDays = table.Column<int>(type: "int", nullable: false),
+                    Action = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    LastRunAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    LastRunAffected = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    LastModifiedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    LastModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    OrganizationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RetentionPolicies", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "NewsletterAttachments",
                 columns: table => new
                 {
@@ -177,12 +221,15 @@ namespace LifeCrm.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    FirstName = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    LastName = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     Type = table.Column<int>(type: "int", nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(450)", nullable: true),
-                    Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    AddressLine1 = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    AddressLine2 = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    EmailHash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    AddressLine1 = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    AddressLine2 = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     City = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     StateProvince = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PostalCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -269,6 +316,39 @@ namespace LifeCrm.Infrastructure.Migrations
                         principalTable: "Projects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ConsentRecords",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ContactId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ConsentType = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    PolicyVersion = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    LegalBasis = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Channel = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    IpAddressHash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
+                    RecordedBy = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    RecordedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    LastModifiedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    LastModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    OrganizationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ConsentRecords", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ConsentRecords_Contacts_ContactId",
+                        column: x => x.ContactId,
+                        principalTable: "Contacts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -538,9 +618,19 @@ namespace LifeCrm.Infrastructure.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Contacts_OrganizationId_Email",
+                name: "IX_ConsentRecords_Contact_Type_Date",
+                table: "ConsentRecords",
+                columns: new[] { "ContactId", "ConsentType", "RecordedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConsentRecords_Org_Date",
+                table: "ConsentRecords",
+                columns: new[] { "OrganizationId", "RecordedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Contacts_OrganizationId_EmailHash",
                 table: "Contacts",
-                columns: new[] { "OrganizationId", "Email" });
+                columns: new[] { "OrganizationId", "EmailHash" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_DecisionCounts_ReportId_DecisionType",
@@ -609,6 +699,11 @@ namespace LifeCrm.Infrastructure.Migrations
                 columns: new[] { "OrganizationId", "Status", "CreatedAt" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_OutboxMessages_Processor",
+                table: "OutboxMessages",
+                columns: new[] { "ProcessedAt", "RetryCount", "CreatedAt" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PeopleGroupSeeds_JpCode",
                 table: "PeopleGroupSeeds",
                 column: "JpCode",
@@ -635,6 +730,11 @@ namespace LifeCrm.Infrastructure.Migrations
                 column: "ReportId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RetentionPolicies_Org_Entity",
+                table: "RetentionPolicies",
+                columns: new[] { "OrganizationId", "EntityName", "IsActive" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Users_Email",
                 table: "Users",
                 column: "Email",
@@ -656,6 +756,9 @@ namespace LifeCrm.Infrastructure.Migrations
                 name: "AuditLogs");
 
             migrationBuilder.DropTable(
+                name: "ConsentRecords");
+
+            migrationBuilder.DropTable(
                 name: "DecisionCounts");
 
             migrationBuilder.DropTable(
@@ -668,6 +771,9 @@ namespace LifeCrm.Infrastructure.Migrations
                 name: "NewsletterAttachments");
 
             migrationBuilder.DropTable(
+                name: "OutboxMessages");
+
+            migrationBuilder.DropTable(
                 name: "PeopleGroupSeeds");
 
             migrationBuilder.DropTable(
@@ -675,6 +781,9 @@ namespace LifeCrm.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "PrayerPoints");
+
+            migrationBuilder.DropTable(
+                name: "RetentionPolicies");
 
             migrationBuilder.DropTable(
                 name: "Users");
