@@ -1,7 +1,8 @@
 @* src/LifeCrm.Web/Pages/Login.razor *@
 @page "/login"
 @using LifeCrm.Web.Services
-@using LifeCrm.Application.Common.DTOs
+@using LifeCrm.Contracts.Common.DTOs
+@using Blazored.LocalStorage
 @layout EmptyLayout
 @inject AuthApiClient AuthClient
 @inject AppState AppState
