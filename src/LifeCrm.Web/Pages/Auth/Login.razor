@@ -1,0 +1,161 @@
+@* src/LifeCrm.Web/Pages/Login.razor *@
+@page "/login"
+@using LifeCrm.Web.Services
+@using LifeCrm.Application.Common.DTOs
+@layout EmptyLayout
+@inject AuthApiClient AuthClient
+@inject AppState AppState
+@inject ILocalStorageService Storage
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Sign In — LifeCrm</PageTitle>
+
+<div class="lc-login">
+    <div class="lc-login__brand">
+        <div class="lc-login__brand-inner">
+            <div class="lc-login__logo">
+                <div class="lc-logo__mark lc-logo__mark--lg">L</div>
+                <div class="lc-logo__wordmark">
+                    <span class="lc-logo__name">LifeCrm</span>
+                    <span class="lc-logo__tagline">Relationship &amp; Donation Management</span>
+                </div>
+            </div>
+            <div class="lc-login__features">
+                <div class="lc-login__feature">
+                    <MudIcon Icon="@Icons.Material.Outlined.VolunteerActivism" />
+                    <span>Track donations and generate receipts</span>
+                </div>
+                <div class="lc-login__feature">
+                    <MudIcon Icon="@Icons.Material.Outlined.People" />
+                    <span>Manage contacts and interactions</span>
+                </div>
+                <div class="lc-login__feature">
+                    <MudIcon Icon="@Icons.Material.Outlined.Email" />
+                    <span>Send newsletters to your community</span>
+                </div>
+                <div class="lc-login__feature">
+                    <MudIcon Icon="@Icons.Material.Outlined.Assignment" />
+                    <span>Submit and review mission reports</span>
+                </div>
+            </div>
+        </div>
+        <div class="lc-login__grid" aria-hidden="true"></div>
+    </div>
+
+    <div class="lc-login__form-panel">
+        <div class="lc-login__form-inner">
+            <div class="lc-login__mobile-logo">
+                <div class="lc-logo__mark">L</div>
+                <span class="lc-logo__name">LifeCrm</span>
+            </div>
+
+            <div class="lc-login__heading">
+                <h1>Welcome back</h1>
+                <p>Sign in to your organisation account</p>
+            </div>
+
+            <EditForm Model="_model" OnValidSubmit="LoginAsync">
+                <DataAnnotationsValidator />
+                <div class="lc-login__fields">
+                    <MudTextField @bind-Value="_model.Email"
+                                  Label="Email address"
+                                  InputType="InputType.Email"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Outlined.AlternateEmail"
+                                  AdornmentColor="Color.Default"
+                                  FullWidth="true"
+                                  Disabled="_loading"
+                                  For="@(() => _model.Email)" />
+
+                    <MudTextField @bind-Value="_model.Password"
+                                  Label="Password"
+                                  InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@(_showPassword
+                                      ? Icons.Material.Outlined.VisibilityOff
+                                      : Icons.Material.Outlined.Visibility)"
+                                  OnAdornmentClick="() => _showPassword = !_showPassword"
+                                  AdornmentColor="Color.Default"
+                                  FullWidth="true"
+                                  Disabled="_loading"
+                                  For="@(() => _model.Password)" />
+                </div>
+
+                @if (_error is not null)
+                {
+                    <div class="lc-login__error">
+                        <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" />
+                        <span>@_error</span>
+                    </div>
+                }
+
+                <MudButton ButtonType="ButtonType.Submit"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           FullWidth="true"
+                           Size="Size.Large"
+                           Disabled="_loading"
+                           Class="lc-login__submit">
+                    @if (_loading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true"
+                                             Color="Color.Inherit"
+                                             Style="width:18px;height:18px;margin-right:8px;" />
+                        <span>Signing in…</span>
+                    }
+                    else
+                    {
+                        <span>Sign in</span>
+                    }
+                </MudButton>
+            </EditForm>
+
+            <div class="lc-login__footer">
+                <span>Having trouble? Contact your administrator.</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly LoginRequest _model = new();
+    private bool    _loading      = false;
+    private bool    _showPassword = false;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (AppState.IsAuthenticated)
+            Nav.NavigateTo("/", forceLoad: false);
+    }
+
+    private async Task LoginAsync()
+    {
+        _loading = true;
+        _error   = null;
+        try
+        {
+            var resp = await AuthClient.LoginAsync(_model);
+            if (!resp.Success || resp.Data is null)
+            {
+                _error = resp.Errors.FirstOrDefault() ?? "Sign in failed. Check your credentials.";
+                return;
+            }
+            await AuthClient.SaveTokenAsync(resp.Data.Token);
+            AppState.SetUser(resp.Data);
+            await AppState.PersistAsync(Storage);
+            Nav.NavigateTo("/", forceLoad: false);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Connection error: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

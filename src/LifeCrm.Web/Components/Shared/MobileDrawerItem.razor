@@ -1,0 +1,42 @@
+@* src/LifeCrm.Web/Shared/MobileDrawerItem.razor *@
+@inject NavigationManager Nav
+
+<a href="@Href"
+   class="lc-mobile-nav-item @(IsActive ? "lc-mobile-nav-item--active" : "")"
+   @onclick="HandleClick"
+   @onclick:preventDefault="false">
+    <span class="lc-mobile-nav-item__icon">
+        <MudIcon Icon="@Icon" Size="Size.Small" />
+    </span>
+    <span class="lc-mobile-nav-item__label">@Label</span>
+</a>
+
+@code {
+    [Parameter] public string        Href       { get; set; } = "/";
+    [Parameter] public string        Icon       { get; set; } = "";
+    [Parameter] public string        Label      { get; set; } = "";
+    [Parameter] public bool          ExactMatch { get; set; }
+    [Parameter] public EventCallback OnClose    { get; set; }
+
+    private bool IsActive
+    {
+        get
+        {
+            var current = "/" + Nav.ToBaseRelativePath(Nav.Uri).TrimStart('/');
+            var currentNorm = current.Length > 1 ? current.TrimEnd('/') : current;
+            var hrefNorm    = Href.Length > 1   ? Href.TrimEnd('/')    : Href;
+
+            return ExactMatch
+                ? string.Equals(currentNorm, hrefNorm, StringComparison.OrdinalIgnoreCase)
+                : currentNorm.StartsWith(hrefNorm, StringComparison.OrdinalIgnoreCase)
+                  && hrefNorm != "/";
+        }
+    }
+
+    // Invoke OnClose after the click so the drawer closes on navigation
+    private async Task HandleClick()
+    {
+        if (OnClose.HasDelegate)
+            await OnClose.InvokeAsync();
+    }
+}

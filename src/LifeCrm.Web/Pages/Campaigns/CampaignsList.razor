@@ -1,0 +1,232 @@
+@* src/LifeCrm.Web/Pages/Campaigns/CampaignsList.razor *@
+@page "/campaigns"
+@implements IDisposable
+@using LifeCrm.Web.Services
+@using LifeCrm.Web.Shared
+@using LifeCrm.Application.Common.DTOs
+@using LifeCrm.Application.Campaigns.DTOs
+@inject ApiClient Api
+@inject AppState AppState
+@inject NavigationManager Nav
+
+<PageTitle>Campaigns — LifeCrm</PageTitle>
+
+<div class="lc-page-enter">
+    <PageHeader Title="Campaigns"
+                Subtitle="@(_totalCount > 0 ? $"{_totalCount:N0} campaigns" : null)">
+        <Actions>
+            @if (AppState.CanWrite)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Outlined.AddCircleOutline"
+                           Href="/campaigns/new">New Campaign</MudButton>
+            }
+        </Actions>
+    </PageHeader>
+
+    <div class="lc-filter-bar">
+        <div class="lc-search" style="min-width:260px;">
+            <MudIcon Icon="@Icons.Material.Outlined.Search"
+                     Size="Size.Small" Class="lc-search__icon" />
+            <input class="lc-search__input" placeholder="Search campaigns…"
+                   @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKey" />
+        </div>
+    </div>
+
+    <DataCard>
+        <!-- Desktop table -->
+        <div class="lc-hide-mobile">
+            <MudTable Items="_campaigns" Dense="true" Hover="true"
+                      Loading="_loading" LoadingProgressColor="Color.Primary"
+                      FixedHeader="true" Height="calc(100vh - 300px)"
+                      OnRowClick="@((TableRowClickEventArgs<CampaignListDto> e) => GoTo(e.Item))"
+                      Style="cursor:pointer;">
+                <HeaderContent>
+                    <MudTh>Campaign</MudTh>
+                    <MudTh>Project</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh Style="text-align:right">Raised</MudTh>
+                    <MudTh Style="text-align:right" Class="lc-hide-md">Goal</MudTh>
+                    <MudTh Class="lc-hide-md">Progress</MudTh>
+                    <MudTh Class="lc-hide-md">Period</MudTh>
+                    <MudTh Style="width:48px"></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Campaign">
+                        <span style="font-weight:500">@context.Name</span>
+                    </MudTd>
+                    <MudTd DataLabel="Project" Class="lc-muted" Style="font-size:12px;">
+                        @context.ProjectName
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        <StatusBadge Text="@context.Status.ToString()"
+                                     Variant="@StatusBadge.VariantFromCampaignStatus(context.Status)" />
+                    </MudTd>
+                    <MudTd DataLabel="Raised" Style="text-align:right;">
+                        <span class="lc-col-amount">$@context.TotalRaised.ToString("N0")</span>
+                    </MudTd>
+                    <MudTd DataLabel="Goal" Style="text-align:right;" Class="lc-hide-md">
+                        @if (context.BudgetGoal.HasValue)
+                        {
+                            <span class="lc-col-amount lc-muted">
+                                $@context.BudgetGoal.Value.ToString("N0")
+                            </span>
+                        }
+                        else { <span class="lc-muted">—</span> }
+                    </MudTd>
+                    <MudTd DataLabel="Progress" Class="lc-hide-md" Style="min-width:120px;">
+                        @if (context.ProgressPercent.HasValue)
+                        {
+                            var w = Math.Min(context.ProgressPercent.Value, 100).ToString("F0");
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <div class="lc-progress-bar" style="flex:1;margin:0;">
+                                    <div class="lc-progress-bar__fill @(context.ProgressPercent >= 100
+                                                ? "lc-progress-bar__fill--success" : "")"
+                                         style="width:@w%"></div>
+                                </div>
+                                <span style="font-size:11px;color:var(--lc-text-secondary);
+                                             min-width:36px;text-align:right;">
+                                    @context.ProgressPercent.Value.ToString("N0")%
+                                </span>
+                            </div>
+                        }
+                        else { <span class="lc-muted">—</span> }
+                    </MudTd>
+                    <MudTd DataLabel="Period" Class="lc-hide-md">
+                        @if (context.StartDate.HasValue || context.EndDate.HasValue)
+                        {
+                            <span class="lc-col-date" style="font-size:11px;">
+                                @(context.StartDate?.ToString("yyyy-MM-dd") ?? "—")
+                                @if (context.EndDate.HasValue)
+                                {
+                                    <text> → @context.EndDate.Value.ToString("yyyy-MM-dd")</text>
+                                }
+                            </span>
+                        }
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
+                                       Size="Size.Small"
+                                       OnClick="@(() => GoTo(context))"
+                                       @onclick:stopPropagation="true" />
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <div class="lc-empty">
+                        <MudIcon Icon="@Icons.Material.Outlined.Campaign"
+                                 Style="font-size:40px;color:var(--lc-text-disabled)" />
+                        <span class="lc-empty__title">No campaigns found</span>
+                        <span class="lc-empty__subtitle">
+                            Create a campaign under a project to start tracking fundraising.
+                        </span>
+                    </div>
+                </NoRecordsContent>
+            </MudTable>
+        </div>
+
+        <!-- Mobile -->
+        <div class="lc-show-mobile lc-card-list" style="padding:8px;">
+            @if (_loading)
+            {
+                @for (int i = 0; i < 5; i++)
+                {
+                    <div class="lc-skeleton-row" style="height:96px;"></div>
+                }
+            }
+            else
+            {
+                @foreach (var c in _campaigns)
+                {
+                    <div class="lc-list-card" @onclick="() => GoTo(c)">
+                        <div class="lc-list-card__header">
+                            <span class="lc-list-card__title">@c.Name</span>
+                            <StatusBadge Text="@c.Status.ToString()"
+                                         Variant="@StatusBadge.VariantFromCampaignStatus(c.Status)" />
+                        </div>
+                        <div class="lc-list-card__meta">
+                            <span class="lc-mono"
+                                  style="font-weight:500;color:var(--lc-text-primary);">
+                                $@c.TotalRaised.ToString("N0")
+                            </span>
+                            @if (c.BudgetGoal.HasValue)
+                            {
+                                <span class="lc-muted">of $@c.BudgetGoal.Value.ToString("N0")</span>
+                            }
+                            @if (!string.IsNullOrEmpty(c.ProjectName))
+                            {
+                                <span class="lc-muted">· @c.ProjectName</span>
+                            }
+                        </div>
+                        @if (c.ProgressPercent.HasValue)
+                        {
+                            <div class="lc-progress-bar" style="margin-top:4px;">
+                                <div class="lc-progress-bar__fill"
+                                     style="width:@(Math.Min(c.ProgressPercent.Value,100).ToString("F0"))%">
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            }
+        </div>
+
+        <div class="lc-table-footer">
+            <span class="lc-muted" style="font-size:12px;">@_campaigns.Count of @_totalCount</span>
+            <MudPagination Count="_totalPages" Selected="_page"
+                           SelectedChanged="OnPageChanged"
+                           Color="Color.Primary" Size="Size.Small" />
+        </div>
+    </DataCard>
+</div>
+
+<style>
+    .lc-hide-md { }
+    @media (max-width: 1100px) { .lc-hide-md { display: none !important; } }
+</style>
+
+@code {
+    private List<CampaignListDto> _campaigns  = new();
+    private bool    _loading    = true;
+    private string? _search;
+    private int     _page       = 1;
+    private int     _totalCount = 0;
+    private int     _totalPages = 1;
+    private const int PageSize  = 25;
+    private System.Timers.Timer? _debounce;
+
+    // FIX: Dispose timer
+    public void Dispose() => _debounce?.Dispose();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var resp = await Api.GetCampaignsAsync(
+            new PaginationParams { Page = _page, PageSize = PageSize, Search = _search });
+        if (resp.Success && resp.Data is not null)
+        {
+            _campaigns  = resp.Data.Items.ToList();
+            _totalCount = resp.Data.TotalCount;
+            _totalPages = resp.Data.TotalPages;
+        }
+        _loading = false;
+    }
+
+    private void OnSearchKey(KeyboardEventArgs _)
+    {
+        _debounce?.Dispose();
+        _debounce = new System.Timers.Timer(350);
+        _debounce.Elapsed += async (_, _) =>
+        {
+            _debounce?.Dispose(); _page = 1;
+            await InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); });
+        };
+        _debounce.AutoReset = false;
+        _debounce.Start();
+    }
+
+    private async Task OnPageChanged(int p) { _page = p; await LoadAsync(); }
+    private void GoTo(CampaignListDto c) => Nav.NavigateTo($"/campaigns/{c.Id}");
+}

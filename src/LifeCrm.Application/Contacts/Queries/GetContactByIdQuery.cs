@@ -1,3 +1,4 @@
+// src/LifeCrm.Application/Contacts/Queries/GetContactByIdQuery.cs
 using LifeCrm.Application.Common.Exceptions;
 using LifeCrm.Application.Contacts.DTOs;
 using LifeCrm.Core.Entities;
@@ -20,19 +21,47 @@ public sealed class GetContactByIdHandler : IRequestHandler<GetContactByIdQuery,
 
     public async Task<ContactDto> Handle(GetContactByIdQuery q, CancellationToken ct)
     {
-        var c = await _uow.Contacts.GetByIdAsync(q.ContactId, ct)
+        // FIX D: Single projection query — computes all aggregates in one SQL
+        // statement. The original made 4 separate round-trips:
+        //   GetByIdAsync + SumAsync(donations) + CountAsync(donations) + CountAsync(interactions)
+        var result = await _uow.Contacts.Query()
+            .Where(c => c.Id == q.ContactId)
+            .Select(c => new
+            {
+                c.Id, c.Name, c.Type, c.Email, c.Phone,
+                c.AddressLine1, c.AddressLine2, c.City,
+                c.StateProvince, c.PostalCode, c.Country,
+                c.Tags, c.Notes, c.PrimaryContactName,
+                c.EmailOptOut, c.CreatedAt, c.LastModifiedAt,
+                TotalDonated     = c.Donations.Where(d => !d.IsDeleted).Sum(d => (decimal?)d.Amount) ?? 0,
+                DonationCount    = c.Donations.Count(d => !d.IsDeleted),
+                InteractionCount = c.Interactions.Count(i => !i.IsDeleted)
+            })
+            .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException(nameof(Contact), q.ContactId);
-        var donated       = await _uow.Donations.Query().Where(d => d.ContactId == q.ContactId).SumAsync(d => (decimal?)d.Amount, ct) ?? 0;
-        var donationCount = await _uow.Donations.CountAsync(d => d.ContactId == q.ContactId, ct);
-        var interactions  = await _uow.Interactions.CountAsync(i => i.ContactId == q.ContactId, ct);
+
         return new ContactDto
         {
-            Id = c.Id, Name = c.Name, Type = c.Type, Email = c.Email, Phone = c.Phone,
-            AddressLine1 = c.AddressLine1, AddressLine2 = c.AddressLine2, City = c.City,
-            StateProvince = c.StateProvince, PostalCode = c.PostalCode, Country = c.Country,
-            Tags = c.Tags, Notes = c.Notes, PrimaryContactName = c.PrimaryContactName,
-            EmailOptOut = c.EmailOptOut, CreatedAt = c.CreatedAt, LastModifiedAt = c.LastModifiedAt,
-            DonationCount = donationCount, TotalDonated = donated, InteractionCount = interactions
+            Id                 = result.Id,
+            Name               = result.Name,
+            Type               = result.Type,
+            Email              = result.Email,
+            Phone              = result.Phone,
+            AddressLine1       = result.AddressLine1,
+            AddressLine2       = result.AddressLine2,
+            City               = result.City,
+            StateProvince      = result.StateProvince,
+            PostalCode         = result.PostalCode,
+            Country            = result.Country,
+            Tags               = result.Tags,
+            Notes              = result.Notes,
+            PrimaryContactName = result.PrimaryContactName,
+            EmailOptOut        = result.EmailOptOut,
+            CreatedAt          = result.CreatedAt,
+            LastModifiedAt     = result.LastModifiedAt,
+            TotalDonated       = result.TotalDonated,
+            DonationCount      = result.DonationCount,
+            InteractionCount   = result.InteractionCount
         };
     }
 }

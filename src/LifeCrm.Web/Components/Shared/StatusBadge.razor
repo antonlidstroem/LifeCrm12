@@ -1,0 +1,51 @@
+@* src/LifeCrm.Web/Shared/StatusBadge.razor *@
+@using LifeCrm.Core.Enums
+
+<span class="lc-badge lc-badge--@Variant @CssClass">@Text</span>
+
+@code {
+    [Parameter] public string Text     { get; set; } = "";
+    [Parameter] public string Variant  { get; set; } = "neutral";
+    [Parameter] public string CssClass { get; set; } = "";
+
+    // ── Static helpers — call these from parent pages ────────────────────
+
+    public static string VariantFromDonationStatus(DonationStatus s) => s switch
+    {
+        DonationStatus.Confirmed => "success",
+        DonationStatus.Pending   => "warning",
+        DonationStatus.Refunded  => "info",
+        DonationStatus.Voided    => "error",
+        DonationStatus.Cancelled => "error",
+        _                        => "neutral"
+    };
+
+    public static string VariantFromCampaignStatus(CampaignStatus s) => s switch
+    {
+        CampaignStatus.Active    => "success",
+        CampaignStatus.Completed => "info",
+        CampaignStatus.Draft     => "neutral",
+        CampaignStatus.Paused    => "warning",
+        CampaignStatus.Cancelled => "error",
+        _                        => "neutral"
+    };
+
+    public static string VariantFromProjectStatus(ProjectStatus s) => s switch
+    {
+        ProjectStatus.Active    => "success",
+        ProjectStatus.Planning  => "warning",
+        ProjectStatus.Completed => "info",
+        ProjectStatus.OnHold    => "warning",
+        ProjectStatus.Archived  => "neutral",
+        _                       => "neutral"
+    };
+
+    public static string VariantFromReportStatus(ReportStatus s) => s switch
+    {
+        ReportStatus.Draft               => "neutral",
+        ReportStatus.Submitted           => "warning",
+        ReportStatus.Approved            => "success",
+        ReportStatus.ReturnedForRevision => "error",
+        _                                => "neutral"
+    };
+}

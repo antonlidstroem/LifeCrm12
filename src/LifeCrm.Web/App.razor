@@ -1,5 +1,13 @@
-@using LifeCrm.Web.Components.Layout
-@using Microsoft.AspNetCore.Components.Routing
+@* src/LifeCrm.Web/App.razor
+   Uses manual auth guard via AppState.IsAuthenticated instead of
+   AuthorizeRouteView, which requires a registered AuthenticationStateProvider.
+   The JWT-based AppState pattern used throughout this project makes
+   AuthorizeRouteView redundant and its absence removes a dependency
+   that would require additional DI registration. *@
+@using LifeCrm.Web.Services
+@inject AppState AppState
+@inject ILocalStorageService Storage
+@inject NavigationManager Nav
 
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
@@ -7,8 +15,35 @@
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>
+        <PageTitle>Not Found — LifeCrm</PageTitle>
         <LayoutView Layout="@typeof(MainLayout)">
-            <MudText Typo="Typo.h4">Page not found.</MudText>
+            <div class="lc-empty" style="min-height:60vh;">
+                <MudIcon Icon="@Icons.Material.Outlined.SearchOff"
+                         Style="font-size:56px;color:var(--lc-text-disabled)" />
+                <div class="lc-empty__title">Page not found</div>
+                <div class="lc-empty__subtitle">
+                    The page you're looking for doesn't exist or has been moved.
+                </div>
+                <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Outlined.Home" Class="mt-2">
+                    Go to Dashboard
+                </MudButton>
+            </div>
         </LayoutView>
     </NotFound>
 </Router>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await AppState.TryRestoreAsync(Storage);
+
+        // Guard: redirect to login if not authenticated, unless already there
+        if (!AppState.IsAuthenticated)
+        {
+            var path = new Uri(Nav.Uri).AbsolutePath;
+            if (!path.Equals("/login", StringComparison.OrdinalIgnoreCase))
+                Nav.NavigateTo("/login", forceLoad: false);
+        }
+    }
+}

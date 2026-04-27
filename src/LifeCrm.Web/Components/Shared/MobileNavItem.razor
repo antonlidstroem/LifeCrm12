@@ -1,0 +1,29 @@
+@* src/LifeCrm.Web/Shared/MobileNavItem.razor *@
+@inject NavigationManager Nav
+
+<a href="@Href" class="lc-bnav-item @(IsActive ? "lc-bnav-item--active" : "")">
+    <MudIcon Icon="@Icon" Size="Size.Small" />
+    <span class="lc-bnav-item__label">@Label</span>
+</a>
+
+@code {
+    [Parameter] public string Href       { get; set; } = "/";
+    [Parameter] public string Icon       { get; set; } = "";
+    [Parameter] public string Label      { get; set; } = "";
+    [Parameter] public bool   ExactMatch { get; set; }
+
+    private bool IsActive
+    {
+        get
+        {
+            var current = "/" + Nav.ToBaseRelativePath(Nav.Uri).TrimStart('/');
+            var currentNorm = current.Length > 1 ? current.TrimEnd('/') : current;
+            var hrefNorm    = Href.Length > 1   ? Href.TrimEnd('/')    : Href;
+
+            return ExactMatch
+                ? string.Equals(currentNorm, hrefNorm, StringComparison.OrdinalIgnoreCase)
+                : currentNorm.StartsWith(hrefNorm, StringComparison.OrdinalIgnoreCase)
+                  && hrefNorm != "/";
+        }
+    }
+}

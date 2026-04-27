@@ -1,0 +1,268 @@
+@* src/LifeCrm.Web/Pages/Admin/EmailSettings.razor *@
+@page "/admin/email-settings"
+@using LifeCrm.Web.Services
+@using LifeCrm.Web.Shared
+@inject EmailSettingsApiClient EmailApi
+@inject ISnackbar Snackbar
+
+<PageTitle>Email Settings — LifeCrm Admin</PageTitle>
+
+<div class="lc-page-enter">
+    <PageHeader Title="Email Settings"
+                Subtitle="Configure outgoing SMTP for newsletters, receipts and notifications" />
+
+    <div class="lc-settings-grid">
+
+        <!-- SMTP config -->
+        <DataCard Title="SMTP Configuration" CssClass="lc-settings-grid__main">
+            @if (_loading)
+            {
+                @for (int i = 0; i < 5; i++)
+                {
+                    <div class="lc-skeleton-row" style="height:52px;margin-bottom:12px;"></div>
+                }
+            }
+            else
+            {
+                <div class="lc-form-fields">
+                    <div class="lc-form-row">
+                        <MudTextField @bind-Value="_form.Host"
+                                      Label="SMTP Host"
+                                      Placeholder="smtp.sendgrid.net"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true" />
+                        <MudNumericField @bind-Value="_form.Port"
+                                         Label="Port" Min="1" Max="65535"
+                                         Variant="Variant.Outlined"
+                                         Style="max-width:120px;" />
+                    </div>
+
+                    <div class="lc-form-section">
+                        <span class="lc-form-section__label">Authentication</span>
+                    </div>
+
+                    <MudTextField @bind-Value="_form.Username"
+                                  Label="Username"
+                                  Placeholder="apikey"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true" />
+
+                    <MudTextField @bind-Value="_form.Password"
+                                  Label="Password / API Key"
+                                  InputType="@(_showPwd ? InputType.Text : InputType.Password)"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@(_showPwd
+                                      ? Icons.Material.Outlined.VisibilityOff
+                                      : Icons.Material.Outlined.Visibility)"
+                                  OnAdornmentClick="() => _showPwd = !_showPwd"
+                                  AdornmentColor="Color.Default"
+                                  HelperText="Sending ••••••• preserves the existing password"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true" />
+
+                    <div class="lc-form-section">
+                        <span class="lc-form-section__label">Sender Identity</span>
+                    </div>
+
+                    <div class="lc-form-row">
+                        <MudTextField @bind-Value="_form.FromEmail"
+                                      Label="From Email"
+                                      InputType="InputType.Email"
+                                      Placeholder="noreply@yourdomain.org"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true" />
+                        <MudTextField @bind-Value="_form.FromName"
+                                      Label="From Name"
+                                      Placeholder="Your Organisation"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true" />
+                    </div>
+
+                    <div class="lc-form-section">
+                        <span class="lc-form-section__label">Options</span>
+                    </div>
+
+                    <div style="display:flex;gap:24px;flex-wrap:wrap;">
+                        <MudSwitch @bind-Value="_form.UseSsl"
+                                   Label="Use SSL/TLS"
+                                   Color="Color.Primary" />
+                        <MudSwitch @bind-Value="_form.DryRun"
+                                   Label="Dry run (log only, don't send)"
+                                   Color="Color.Warning" />
+                    </div>
+
+                    @if (_form.DryRun)
+                    {
+                        <div class="lc-info-banner">
+                            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+                            <span>
+                                Dry run mode is enabled. Emails will be logged but not delivered.
+                            </span>
+                        </div>
+                    }
+                </div>
+
+                <div class="lc-settings-actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Outlined.Save"
+                               OnClick="SaveAsync" Disabled="_saving">
+                        @(_saving ? "Saving…" : "Save Settings")
+                    </MudButton>
+                </div>
+            }
+        </DataCard>
+
+        <!-- Test + guide -->
+        <DataCard Title="Test Connection"
+                  Subtitle="Send a test email to verify your settings"
+                  CssClass="lc-settings-grid__side">
+            <div class="lc-form-fields">
+                <MudTextField @bind-Value="_testEmail"
+                              Label="Send test to"
+                              InputType="InputType.Email"
+                              Placeholder="you@example.com"
+                              Variant="Variant.Outlined"
+                              FullWidth="true" />
+
+                <MudButton Variant="Variant.Outlined" FullWidth="true"
+                           StartIcon="@Icons.Material.Outlined.Send"
+                           OnClick="TestAsync"
+                           Disabled="@(_testing || string.IsNullOrWhiteSpace(_testEmail))">
+                    @(_testing ? "Sending…" : "Send Test Email")
+                </MudButton>
+
+                @if (_testResult is not null)
+                {
+                    <div class="lc-result-banner @(_testSuccess
+                            ? "lc-result-banner--success"
+                            : "lc-result-banner--error")">
+                        <MudIcon Icon="@(_testSuccess
+                            ? Icons.Material.Outlined.CheckCircle
+                            : Icons.Material.Outlined.Error)"
+                                 Size="Size.Small" />
+                        <span>@_testResult</span>
+                    </div>
+                }
+            </div>
+
+            <div class="lc-form-section" style="margin-top:20px;">
+                <span class="lc-form-section__label">Quick Setup — SendGrid</span>
+            </div>
+
+            <div class="lc-guide">
+                <div class="lc-guide__step">
+                    <span class="lc-guide__num">1</span>
+                    <div>
+                        <div class="lc-guide__title">Create a free SendGrid account</div>
+                        <div class="lc-guide__desc">sendgrid.com — 100 emails/day free forever</div>
+                    </div>
+                </div>
+                <div class="lc-guide__step">
+                    <span class="lc-guide__num">2</span>
+                    <div>
+                        <div class="lc-guide__title">Generate an API key</div>
+                        <div class="lc-guide__desc">
+                            Settings → API Keys → Mail Send permission
+                        </div>
+                    </div>
+                </div>
+                <div class="lc-guide__step">
+                    <span class="lc-guide__num">3</span>
+                    <div>
+                        <div class="lc-guide__title">Fill in the fields</div>
+                        <div class="lc-guide__desc">
+                            Host: <code>smtp.sendgrid.net</code><br />
+                            Port: <code>587</code> · Username: <code>apikey</code><br />
+                            Password: your API key
+                        </div>
+                    </div>
+                </div>
+                <div class="lc-guide__step">
+                    <span class="lc-guide__num">4</span>
+                    <div>
+                        <div class="lc-guide__title">Test then save</div>
+                        <div class="lc-guide__desc">
+                            Verify with the test button above before saving.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </DataCard>
+    </div>
+</div>
+
+@code {
+    private EmailSettingsFormModel _form    = new();
+    private bool   _loading    = true;
+    private bool   _saving     = false;
+    private bool   _testing    = false;
+    private bool   _showPwd    = false;
+    private string _testEmail  = "";
+    private string? _testResult;
+    private bool   _testSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        var resp = await EmailApi.GetAsync();
+        if (resp.Success && resp.Data is not null)
+        {
+            _form = new EmailSettingsFormModel
+            {
+                Host      = resp.Data.Host,
+                Port      = resp.Data.Port,
+                Username  = resp.Data.Username,
+                Password  = resp.Data.Password,
+                FromEmail = resp.Data.FromEmail,
+                FromName  = resp.Data.FromName,
+                UseSsl    = resp.Data.UseSsl,
+                DryRun    = resp.Data.DryRun,
+            };
+        }
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        var resp = await EmailApi.SaveAsync(new EmailSettingsSaveRequest
+        {
+            Host      = _form.Host,
+            Port      = _form.Port,
+            Username  = _form.Username,
+            Password  = _form.Password,
+            FromEmail = _form.FromEmail,
+            FromName  = _form.FromName,
+            UseSsl    = _form.UseSsl,
+            DryRun    = _form.DryRun,
+        });
+        if (resp.Success)
+            Snackbar.Add("Settings saved.", Severity.Success);
+        else
+            Snackbar.Add(resp.Errors.FirstOrDefault() ?? "Save failed.", Severity.Error);
+        _saving = false;
+    }
+
+    private async Task TestAsync()
+    {
+        _testing    = true;
+        _testResult = null;
+        var resp    = await EmailApi.TestAsync(_testEmail);
+        _testSuccess = resp.Success &&
+            (resp.Data?.Contains("success", StringComparison.OrdinalIgnoreCase) == true);
+        _testResult  = resp.Data ?? resp.Errors.FirstOrDefault() ?? "Unknown result.";
+        _testing = false;
+    }
+
+    private class EmailSettingsFormModel
+    {
+        public string Host      { get; set; } = "";
+        public int    Port      { get; set; } = 587;
+        public string Username  { get; set; } = "";
+        public string Password  { get; set; } = "";
+        public string FromEmail { get; set; } = "";
+        public string FromName  { get; set; } = "";
+        public bool   UseSsl    { get; set; } = true;
+        public bool   DryRun    { get; set; } = false;
+    }
+}

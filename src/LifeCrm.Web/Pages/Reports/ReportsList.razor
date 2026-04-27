@@ -1,0 +1,256 @@
+@* src/LifeCrm.Web/Pages/Reports/ReportsList.razor *@
+@page "/reports"
+@implements IDisposable
+@using LifeCrm.Web.Services
+@using LifeCrm.Web.Shared
+@using LifeCrm.Application.Common.DTOs
+@using LifeCrm.Application.Reports.DTOs
+@using LifeCrm.Core.Enums
+@inject ApiClient Api
+@inject AppState AppState
+@inject NavigationManager Nav
+
+<PageTitle>Mission Reports — LifeCrm</PageTitle>
+
+<div class="lc-page-enter">
+    <PageHeader Title="Mission Reports"
+                Subtitle="@(_totalCount > 0 ? $"{_totalCount:N0} reports" : null)">
+        <Actions>
+            @if (AppState.CanWrite)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Outlined.NoteAdd"
+                           Href="/reports/new">New Report</MudButton>
+            }
+        </Actions>
+    </PageHeader>
+
+    <!-- Status filter tabs -->
+    <div class="lc-tab-bar">
+        @foreach (var (label, val) in _tabs)
+        {
+            var localLabel = label;
+            var localVal   = val;
+            <button class="lc-tab @(_statusFilter == localVal ? "lc-tab--active" : "")"
+                    @onclick="() => SetFilter(localVal)">
+                @localLabel
+                @* FIX: _submittedCount read directly — no dict lookup with null key risk *@
+                @if (localVal == ReportStatus.Submitted && _submittedCount > 0)
+                {
+                    <span class="lc-tab-badge">@_submittedCount</span>
+                }
+            </button>
+        }
+    </div>
+
+    <!-- Search bar -->
+    <div class="lc-filter-bar" style="margin-bottom:16px;">
+        <div class="lc-search" style="min-width:280px;">
+            <MudIcon Icon="@Icons.Material.Outlined.Search"
+                     Size="Size.Small" Class="lc-search__icon" />
+            <input class="lc-search__input" placeholder="Search title, location, author…"
+                   @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKey" />
+        </div>
+    </div>
+
+    <DataCard>
+        <!-- Desktop table -->
+        <div class="lc-hide-mobile">
+            <MudTable Items="_reports" Dense="true" Hover="true"
+                      Loading="_loading" LoadingProgressColor="Color.Primary"
+                      FixedHeader="true" Height="calc(100vh - 360px)"
+                      OnRowClick="@((TableRowClickEventArgs<MissionReportListDto> e) => GoTo(e.Item))"
+                      Style="cursor:pointer;">
+                <HeaderContent>
+                    <MudTh>Title</MudTh>
+                    <MudTh>Author</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Date</MudTh>
+                    <MudTh Class="lc-hide-md">Location</MudTh>
+                    <MudTh Style="text-align:right" Class="lc-hide-md">Decisions</MudTh>
+                    <MudTh Style="text-align:right" Class="lc-hide-md">Prayers</MudTh>
+                    <MudTh Style="width:48px"></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Title">
+                        <div>
+                            <div style="font-weight:500;">@context.Title</div>
+                            @if (!string.IsNullOrEmpty(context.ProjectName)
+                                 || !string.IsNullOrEmpty(context.CampaignName))
+                            {
+                                <div class="lc-muted" style="font-size:11px;margin-top:1px;">
+                                    @(context.ProjectName ?? context.CampaignName)
+                                </div>
+                            }
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Author" Class="lc-muted" Style="font-size:13px;">
+                        @context.AuthorName
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        <StatusBadge Text="@context.Status.ToString()"
+                                     Variant="@StatusBadge.VariantFromReportStatus(context.Status)" />
+                    </MudTd>
+                    <MudTd DataLabel="Date">
+                        <span class="lc-col-date">@context.ReportDate.ToString("yyyy-MM-dd")</span>
+                    </MudTd>
+                    <MudTd DataLabel="Location" Class="lc-hide-md lc-muted" Style="font-size:12px;">
+                        @context.Location
+                    </MudTd>
+                    <MudTd DataLabel="Decisions" Style="text-align:right;" Class="lc-hide-md">
+                        @if (context.DecisionTotal > 0)
+                        {
+                            <span class="lc-mono" style="color:var(--lc-success);">
+                                @context.DecisionTotal
+                            </span>
+                        }
+                        else { <span class="lc-muted">—</span> }
+                    </MudTd>
+                    <MudTd DataLabel="Prayers" Style="text-align:right;" Class="lc-hide-md">
+                        @if (context.PrayerCount > 0)
+                        {
+                            <span class="lc-mono" style="color:var(--lc-info);">
+                                @context.PrayerCount
+                            </span>
+                        }
+                        else { <span class="lc-muted">—</span> }
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
+                                       Size="Size.Small"
+                                       OnClick="@(() => GoTo(context))"
+                                       @onclick:stopPropagation="true" />
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <div class="lc-empty">
+                        <MudIcon Icon="@Icons.Material.Outlined.Assignment"
+                                 Style="font-size:40px;color:var(--lc-text-disabled)" />
+                        <span class="lc-empty__title">No reports found</span>
+                        <span class="lc-empty__subtitle">
+                            @(_statusFilter == ReportStatus.Submitted
+                                ? "No reports awaiting review."
+                                : "Create your first mission report.")
+                        </span>
+                    </div>
+                </NoRecordsContent>
+            </MudTable>
+        </div>
+
+        <!-- Mobile -->
+        <div class="lc-show-mobile lc-card-list" style="padding:8px;">
+            @if (_loading)
+            {
+                @for (int i = 0; i < 5; i++)
+                {
+                    <div class="lc-skeleton-row" style="height:88px;"></div>
+                }
+            }
+            else
+            {
+                @foreach (var r in _reports)
+                {
+                    <div class="lc-list-card" @onclick="() => GoTo(r)">
+                        <div class="lc-list-card__header">
+                            <span class="lc-list-card__title">@r.Title</span>
+                            <StatusBadge Text="@r.Status.ToString()"
+                                         Variant="@StatusBadge.VariantFromReportStatus(r.Status)" />
+                        </div>
+                        <div class="lc-list-card__meta">
+                            <span class="lc-muted">@r.AuthorName</span>
+                            <span class="lc-col-date">@r.ReportDate.ToString("yyyy-MM-dd")</span>
+                            @if (r.DecisionTotal > 0)
+                            {
+                                <span style="color:var(--lc-success);font-size:12px;">
+                                    @r.DecisionTotal decisions
+                                </span>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+
+        <div class="lc-table-footer">
+            <span class="lc-muted" style="font-size:12px;">@_reports.Count of @_totalCount</span>
+            <MudPagination Count="_totalPages" Selected="_page"
+                           SelectedChanged="OnPageChanged"
+                           Color="Color.Primary" Size="Size.Small" />
+        </div>
+    </DataCard>
+</div>
+
+<style>
+    .lc-hide-md { }
+    @media (max-width: 1100px) { .lc-hide-md { display: none !important; } }
+</style>
+
+@code {
+    private List<MissionReportListDto> _reports        = new();
+    private bool          _loading        = true;
+    private string?       _search;
+    private ReportStatus? _statusFilter;
+    private int           _page           = 1;
+    private int           _totalCount     = 0;
+    private int           _totalPages     = 1;
+    private int           _submittedCount = 0;  // FIX: dedicated field, not dict
+    private const int     PageSize        = 25;
+
+    private readonly List<(string Label, ReportStatus? Val)> _tabs = new()
+    {
+        ("All",      null),
+        ("Draft",    ReportStatus.Draft),
+        ("Awaiting", ReportStatus.Submitted),
+        ("Approved", ReportStatus.Approved),
+        ("Returned", ReportStatus.ReturnedForRevision),
+    };
+
+    private System.Timers.Timer? _debounce;
+
+    // FIX: Dispose timer
+    public void Dispose() => _debounce?.Dispose();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var resp = await Api.GetReportsAsync(
+            new PaginationParams { Page = _page, PageSize = PageSize, Search = _search },
+            _statusFilter);
+
+        if (resp.Success && resp.Data is not null)
+        {
+            _reports    = resp.Data.Items.ToList();
+            _totalCount = resp.Data.TotalCount;
+            _totalPages = resp.Data.TotalPages;
+
+            // Count submitted on unfiltered load for the tab badge
+            if (_statusFilter is null)
+                _submittedCount = _reports.Count(r => r.Status == ReportStatus.Submitted);
+        }
+        _loading = false;
+    }
+
+    private void OnSearchKey(KeyboardEventArgs _)
+    {
+        _debounce?.Dispose();
+        _debounce = new System.Timers.Timer(350);
+        _debounce.Elapsed += async (_, _) =>
+        {
+            _debounce?.Dispose(); _page = 1;
+            await InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); });
+        };
+        _debounce.AutoReset = false;
+        _debounce.Start();
+    }
+
+    private async Task SetFilter(ReportStatus? s)
+    {
+        _statusFilter = s; _page = 1; await LoadAsync();
+    }
+
+    private async Task OnPageChanged(int p) { _page = p; await LoadAsync(); }
+    private void GoTo(MissionReportListDto r) => Nav.NavigateTo($"/reports/{r.Id}");
+}

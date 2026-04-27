@@ -1,0 +1,322 @@
+@* src/LifeCrm.Web/Pages/Reports/PrayerPoints.razor *@
+@page "/prayer-points"
+@using LifeCrm.Web.Services
+@using LifeCrm.Web.Shared
+@using LifeCrm.Application.Reports.DTOs
+@inject ApiClient Api
+@inject AppState AppState
+@inject ISnackbar Snackbar
+
+<PageTitle>Prayer Points — LifeCrm</PageTitle>
+
+<div class="lc-page-enter">
+    <PageHeader Title="Prayer Points"
+                Subtitle="Active requests and answered prayers">
+        <Actions>
+            @if (AppState.CanWrite)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Outlined.AddCircleOutline"
+                           OnClick="OpenCreateDialog">
+                    Add Prayer Point
+                </MudButton>
+            }
+        </Actions>
+    </PageHeader>
+
+    <div class="lc-prayer-grid">
+
+        <!-- Active prayer points -->
+        <DataCard Title="Active" CssClass="lc-prayer-grid__active">
+            <HeaderActions>
+                <MudIconButton Icon="@Icons.Material.Outlined.Refresh"
+                               Size="Size.Small" OnClick="LoadAsync"
+                               Disabled="_loading" />
+            </HeaderActions>
+            <ChildContent>
+                @if (_loading)
+                {
+                    @for (int i = 0; i < 4; i++)
+                    {
+                        <div class="lc-skeleton-row" style="height:80px;margin-bottom:8px;"></div>
+                    }
+                }
+                else if (!_active.Any())
+                {
+                    <div class="lc-empty" style="padding:32px 0;">
+                        <MudIcon Icon="@Icons.Material.Outlined.Favorite"
+                                 Style="font-size:36px;color:var(--lc-text-disabled)" />
+                        <span class="lc-empty__title">No active prayer points</span>
+                        <span class="lc-empty__subtitle">
+                            Add a prayer request to get started.
+                        </span>
+                    </div>
+                }
+                else
+                {
+                    <div class="lc-prayer-list">
+                        @foreach (var p in _active)
+                        {
+                            <div class="lc-prayer-card">
+                                <div class="lc-prayer-card__body">
+                                    <div class="lc-prayer-card__title">@p.Title</div>
+                                    <div class="lc-prayer-card__detail">@p.Detail</div>
+                                    @if (p.ReportId.HasValue)
+                                    {
+                                        <a href="/reports/@p.ReportId"
+                                           class="lc-prayer-card__report">
+                                            <MudIcon Icon="@Icons.Material.Outlined.Assignment"
+                                                     Size="Size.Small" />
+                                            View Report
+                                        </a>
+                                    }
+                                    <div class="lc-prayer-card__date lc-col-date">
+                                        @p.CreatedAt.LocalDateTime.ToString("yyyy-MM-dd")
+                                    </div>
+                                </div>
+                                @if (AppState.CanWrite)
+                                {
+                                    <div class="lc-prayer-card__actions">
+                                        <MudTooltip Text="Mark as answered">
+                                            <MudIconButton
+                                                Icon="@Icons.Material.Outlined.CheckCircle"
+                                                Size="Size.Small" Color="Color.Success"
+                                                OnClick="@(() => OpenAnswerDialog(p))" />
+                                        </MudTooltip>
+                                        <MudTooltip Text="Delete">
+                                            <MudIconButton
+                                                Icon="@Icons.Material.Outlined.DeleteOutline"
+                                                Size="Size.Small" Color="Color.Error"
+                                                OnClick="@(() => DeleteAsync(p))" />
+                                        </MudTooltip>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </ChildContent>
+        </DataCard>
+
+        <!-- Answered this month -->
+        <DataCard Title="Answered This Month"
+                  CssClass="lc-prayer-grid__answered">
+            @if (_loading)
+            {
+                @for (int i = 0; i < 3; i++)
+                {
+                    <div class="lc-skeleton-row" style="height:72px;margin-bottom:8px;"></div>
+                }
+            }
+            else if (!_answered.Any())
+            {
+                <div class="lc-empty" style="padding:24px 0;">
+                    <span class="lc-muted" style="font-size:13px;">
+                        No answered prayers this month.
+                    </span>
+                </div>
+            }
+            else
+            {
+                <div class="lc-prayer-list">
+                    @foreach (var p in _answered)
+                    {
+                        <div class="lc-prayer-card lc-prayer-card--answered">
+                            <div class="lc-prayer-card__answered-icon">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                                         Size="Size.Small"
+                                         Style="color:var(--lc-success);" />
+                            </div>
+                            <div class="lc-prayer-card__body">
+                                <div class="lc-prayer-card__title">@p.Title</div>
+                                @if (!string.IsNullOrEmpty(p.AnsweredNote))
+                                {
+                                    <div class="lc-prayer-card__detail lc-muted">
+                                        @p.AnsweredNote
+                                    </div>
+                                }
+                                <div class="lc-prayer-card__date lc-col-date">
+                                    Answered @p.AnsweredAt.LocalDateTime.ToString("yyyy-MM-dd")
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </DataCard>
+    </div>
+</div>
+
+<!-- Create dialog -->
+@if (_showCreate)
+{
+    <div class="lc-dialog-overlay" @onclick="() => _showCreate = false">
+        <div class="lc-dialog" @onclick:stopPropagation="true">
+            <div class="lc-dialog__header">
+                <h3>New Prayer Point</h3>
+                <MudIconButton Icon="@Icons.Material.Outlined.Close"
+                               Size="Size.Small"
+                               OnClick="() => _showCreate = false" />
+            </div>
+            <div class="lc-dialog__body">
+                <div class="lc-form-fields">
+                    <MudTextField @bind-Value="_newTitle" Label="Title"
+                                  Placeholder="Brief prayer request title"
+                                  Variant="Variant.Outlined" FullWidth="true" />
+                    <MudTextField @bind-Value="_newDetail" Label="Detail"
+                                  Placeholder="Describe the prayer request…"
+                                  Variant="Variant.Outlined" FullWidth="true"
+                                  Lines="4" />
+                </div>
+            </div>
+            <div class="lc-dialog__footer">
+                <MudButton Variant="Variant.Text"
+                           OnClick="() => _showCreate = false">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="CreateAsync" Disabled="_saving">
+                    @(_saving ? "Saving…" : "Add Prayer Point")
+                </MudButton>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Mark answered dialog -->
+@if (_showAnswer && _answeringPoint is not null)
+{
+    <div class="lc-dialog-overlay" @onclick="() => _showAnswer = false">
+        <div class="lc-dialog" @onclick:stopPropagation="true">
+            <div class="lc-dialog__header">
+                <h3>Mark as Answered</h3>
+                <MudIconButton Icon="@Icons.Material.Outlined.Close"
+                               Size="Size.Small"
+                               OnClick="() => _showAnswer = false" />
+            </div>
+            <div class="lc-dialog__body">
+                <div class="lc-prayer-answered-banner">
+                    <MudIcon Icon="@Icons.Material.Outlined.Favorite"
+                             Style="color:var(--lc-success);" Size="Size.Small" />
+                    <span style="font-weight:500;">@_answeringPoint.Title</span>
+                </div>
+                <div class="lc-form-fields" style="margin-top:14px;">
+                    <MudTextField @bind-Value="_answerNote"
+                                  Label="How was this prayer answered? (optional)"
+                                  Variant="Variant.Outlined" FullWidth="true"
+                                  Lines="3" />
+                </div>
+            </div>
+            <div class="lc-dialog__footer">
+                <MudButton Variant="Variant.Text"
+                           OnClick="() => _showAnswer = false">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Success"
+                           StartIcon="@Icons.Material.Outlined.CheckCircle"
+                           OnClick="MarkAnsweredAsync" Disabled="_saving">
+                    @(_saving ? "Saving…" : "Mark Answered")
+                </MudButton>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .lc-prayer-answered-banner {
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px 12px;
+        background: var(--lc-success-bg);
+        border: 1px solid rgba(34,197,94,0.2);
+        border-radius: var(--lc-radius);
+        font-size: 13px; color: var(--lc-text-primary);
+    }
+</style>
+
+@code {
+    private List<PrayerPointDto>          _active   = new();
+    private List<AnsweredPrayerWidgetDto> _answered = new();
+    private bool _loading      = true;
+    private bool _saving       = false;
+    private bool _showCreate   = false;
+    private bool _showAnswer   = false;
+
+    private string _newTitle   = "";
+    private string _newDetail  = "";
+
+    private PrayerPointDto? _answeringPoint;
+    private string _answerNote = "";
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+
+        // FIX: Use Task.WhenAll instead of sequential tuple await.
+        // The previous pattern (await A(), await B()) was sequential.
+        var activeTask   = Api.GetActivePrayerPointsAsync();
+        var answeredTask = Api.GetAnsweredPrayersThisMonthAsync();
+        await Task.WhenAll(activeTask, answeredTask);
+
+        if (activeTask.Result.Success && activeTask.Result.Data is not null)
+            _active = activeTask.Result.Data.ToList();
+        if (answeredTask.Result.Success && answeredTask.Result.Data is not null)
+            _answered = answeredTask.Result.Data.ToList();
+
+        _loading = false;
+    }
+
+    private void OpenCreateDialog()
+    {
+        _newTitle = ""; _newDetail = ""; _showCreate = true;
+    }
+
+    private async Task CreateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newTitle) || string.IsNullOrWhiteSpace(_newDetail))
+        {
+            Snackbar.Add("Title and detail are required.", Severity.Warning);
+            return;
+        }
+        _saving = true;
+        var resp = await Api.CreateStandalonePrayerPointAsync(new CreatePrayerPointRequest
+        {
+            Title  = _newTitle,
+            Detail = _newDetail
+        });
+        if (resp.Success)
+        {
+            Snackbar.Add("Prayer point added.", Severity.Success);
+            _showCreate = false;
+            await LoadAsync();
+        }
+        else Snackbar.Add(resp.Errors.FirstOrDefault() ?? "Failed.", Severity.Error);
+        _saving = false;
+    }
+
+    private void OpenAnswerDialog(PrayerPointDto p)
+    {
+        _answeringPoint = p; _answerNote = ""; _showAnswer = true;
+    }
+
+    private async Task MarkAnsweredAsync()
+    {
+        if (_answeringPoint is null) return;
+        _saving = true;
+        var resp = await Api.MarkPrayerAnsweredAsync(_answeringPoint.Id,
+            new MarkAnsweredRequest { AnsweredNote = _answerNote });
+        if (resp.Success)
+        {
+            Snackbar.Add("Marked as answered!", Severity.Success);
+            _showAnswer = false;
+            await LoadAsync();
+        }
+        else Snackbar.Add(resp.Errors.FirstOrDefault() ?? "Failed.", Severity.Error);
+        _saving = false;
+    }
+
+    private async Task DeleteAsync(PrayerPointDto p)
+    {
+        var resp = await Api.DeletePrayerPointAsync(p.Id);
+        if (resp.Success) { Snackbar.Add("Deleted.", Severity.Info); await LoadAsync(); }
+        else Snackbar.Add(resp.Errors.FirstOrDefault() ?? "Failed.", Severity.Error);
+    }
+}

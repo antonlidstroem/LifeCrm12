@@ -1,29 +1,33 @@
+@* src/LifeCrm.Web/_Imports.razor *@
 @using System.Net.Http
 @using System.Net.Http.Json
-@using System.Timers
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 @using Microsoft.AspNetCore.Components.WebAssembly.Http
 @using Microsoft.JSInterop
+@using Blazored.LocalStorage
+@using MudBlazor
+
+@* ── Project namespaces ──────────────────────────────────────────────────── *@
 @using LifeCrm.Web
+@using LifeCrm.Web.Layout
 @using LifeCrm.Web.Services
-@using LifeCrm.Web.Extensions
-@using LifeCrm.Web.Components.Shared
-@using LifeCrm.Web.Components.Dialogs
+@using LifeCrm.Web.Shared
+@using LifeCrm.Web.Theme
+
+@* ── Application DTOs (used in pages for binding) ───────────────────────── *@
 @using LifeCrm.Application.Common.DTOs
 @using LifeCrm.Application.Contacts.DTOs
-@using LifeCrm.Application.Contacts.Commands
 @using LifeCrm.Application.Donations.DTOs
 @using LifeCrm.Application.Campaigns.DTOs
 @using LifeCrm.Application.Projects.DTOs
 @using LifeCrm.Application.Interactions.DTOs
-@using LifeCrm.Application.Documents.DTOs
-@using LifeCrm.Application.Dashboard
-@using LifeCrm.Application.Users.DTOs
 @using LifeCrm.Application.Newsletters.DTOs
 @using LifeCrm.Application.Reports.DTOs
+@using LifeCrm.Application.Users.DTOs
+@using LifeCrm.Application.Documents.DTOs
+
+@* ── Core enums ──────────────────────────────────────────────────────────── *@
 @using LifeCrm.Core.Enums
-@using LifeCrm.Core.Interfaces
-@using MudBlazor

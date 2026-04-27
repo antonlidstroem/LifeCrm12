@@ -1,0 +1,262 @@
+@* src/LifeCrm.Web/Pages/Dashboard.razor *@
+@page "/"
+@using LifeCrm.Web.Services
+@using LifeCrm.Web.Shared
+@using LifeCrm.Application.Common.DTOs
+@inject ApiClient Api
+@inject AppState AppState
+
+<PageTitle>Dashboard — LifeCrm</PageTitle>
+
+<div class="lc-page-enter">
+
+    <PageHeader Title="Dashboard"
+                Subtitle="@($"Good {Greeting()}, {AppState.UserFullName?.Split(' ').FirstOrDefault()}.")" />
+
+    <div class="lc-kpi-grid">
+        <KpiCard Label="Donations this month"
+                 Value="@(_data is null ? "—" : $"${_data.DonationsThisMonth:N0}")"
+                 Icon="@Icons.Material.Outlined.VolunteerActivism"
+                 Trend="@TrendText()"
+                 TrendPositive="@(_data?.DonationsMoMChangePercent >= 0)"
+                 TrendLabel="vs last month"
+                 Loading="_loading" />
+
+        <KpiCard Label="Total contacts"
+                 Value="@(_data?.TotalContacts.ToString("N0") ?? "—")"
+                 Icon="@Icons.Material.Outlined.People"
+                 SubValue="@(_data is null ? null : $"+{_data.NewContactsThisMonth} this month")"
+                 Loading="_loading" />
+
+        <KpiCard Label="Active campaigns"
+                 Value="@(_data?.ActiveCampaigns.ToString() ?? "—")"
+                 Icon="@Icons.Material.Outlined.Campaign"
+                 Loading="_loading" />
+
+        <KpiCard Label="Last month donations"
+                 Value="@(_data is null ? "—" : $"${_data.DonationsLastMonth:N0}")"
+                 Icon="@Icons.Material.Outlined.BarChart"
+                 Loading="_loading" />
+    </div>
+
+    <div class="lc-dash-grid">
+
+        <DataCard Title="Recent Activity" CssClass="lc-dash-grid__activity">
+            <HeaderActions>
+                <MudIconButton Icon="@Icons.Material.Outlined.Refresh"
+                               Size="Size.Small" OnClick="LoadAsync"
+                               Disabled="_loading" />
+            </HeaderActions>
+            <ChildContent>
+                @if (_loading)
+                {
+                    @for (int i = 0; i < 6; i++)
+                    {
+                        <div class="lc-skeleton-row" style="margin-bottom:8px;"></div>
+                    }
+                }
+                else if (_data?.RecentActivity.Count == 0)
+                {
+                    <div class="lc-empty" style="padding:32px 0;">
+                        <MudIcon Icon="@Icons.Material.Outlined.Inbox"
+                                 Style="font-size:36px;color:var(--lc-text-disabled)" />
+                        <span class="lc-muted" style="font-size:13px;">No recent activity</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="lc-timeline">
+                        @foreach (var item in _data?.RecentActivity ?? Array.Empty<ActivityFeedItemDto>())
+                        {
+                            <div class="lc-timeline-item">
+                                <div class="lc-timeline-icon @(item.ActivityType == "Donation"
+                                    ? "lc-timeline-icon--donation"
+                                    : "lc-timeline-icon--interaction")">
+                                    <MudIcon Icon="@(item.ActivityType == "Donation"
+                                        ? Icons.Material.Outlined.VolunteerActivism
+                                        : Icons.Material.Outlined.Forum)"
+                                             Size="Size.Small" />
+                                </div>
+                                <div class="lc-timeline-body">
+                                    <div class="lc-timeline-title">@item.ContactName</div>
+                                    <div class="lc-timeline-sub">@item.Summary</div>
+                                </div>
+                                <div class="lc-timeline-time">@RelativeTime(item.OccurredAt)</div>
+                            </div>
+                        }
+                    </div>
+                }
+            </ChildContent>
+        </DataCard>
+
+        <DataCard Title="Top Campaigns" Subtitle="Active · by funds raised"
+                  CssClass="lc-dash-grid__campaigns">
+            @if (_loading)
+            {
+                @for (int i = 0; i < 4; i++)
+                {
+                    <div class="lc-skeleton-row" style="margin-bottom:12px;height:52px;"></div>
+                }
+            }
+            else if (_data?.TopCampaigns.Count == 0)
+            {
+                <div class="lc-empty" style="padding:24px 0;">
+                    <span class="lc-muted" style="font-size:13px;">No active campaigns</span>
+                </div>
+            }
+            else
+            {
+                <div class="lc-campaign-list">
+                    @foreach (var c in _data?.TopCampaigns ?? Array.Empty<CampaignSummaryDto>())
+                    {
+                        <div class="lc-campaign-row">
+                            <div class="lc-campaign-row__header">
+                                <span class="lc-campaign-row__name">@c.Name</span>
+                                <span class="lc-campaign-row__amount lc-mono">
+                                    $@c.TotalRaised.ToString("N0")
+                                </span>
+                            </div>
+                            @if (c.BudgetGoal.HasValue && c.BudgetGoal > 0)
+                            {
+                                <div class="lc-progress-bar">
+                                    <div class="lc-progress-bar__fill @(c.ProgressPercent >= 100
+                                            ? "lc-progress-bar__fill--success" : "")"
+                                         style="width:@(Math.Min(c.ProgressPercent ?? 0, 100).ToString("F0"))%">
+                                    </div>
+                                </div>
+                                <div class="lc-campaign-row__meta">
+                                    <span class="lc-muted" style="font-size:11px;">
+                                        @(c.ProgressPercent?.ToString("N1") ?? "0")%
+                                        of $@c.BudgetGoal.Value.ToString("N0") goal
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </DataCard>
+
+        <DataCard Title="Quick Actions" CssClass="lc-dash-grid__quick">
+            <div class="lc-quick-actions">
+                <a href="/contacts" class="lc-quick-action">
+                    <MudIcon Icon="@Icons.Material.Outlined.PersonAdd" />
+                    <span>New Contact</span>
+                </a>
+                @if (AppState.IsFinanceOrAdmin)
+                {
+                    <a href="/donations" class="lc-quick-action">
+                        <MudIcon Icon="@Icons.Material.Outlined.AddCard" />
+                        <span>Record Donation</span>
+                    </a>
+                }
+                <a href="/reports" class="lc-quick-action">
+                    <MudIcon Icon="@Icons.Material.Outlined.NoteAdd" />
+                    <span>New Report</span>
+                </a>
+                <a href="/newsletters" class="lc-quick-action">
+                    <MudIcon Icon="@Icons.Material.Outlined.SendAndArchive" />
+                    <span>Newsletters</span>
+                </a>
+                <a href="/projects" class="lc-quick-action">
+                    <MudIcon Icon="@Icons.Material.Outlined.AccountTree" />
+                    <span>Projects</span>
+                </a>
+                <a href="/prayer-points" class="lc-quick-action">
+                    <MudIcon Icon="@Icons.Material.Outlined.Favorite" />
+                    <span>Prayer Points</span>
+                </a>
+            </div>
+        </DataCard>
+    </div>
+</div>
+
+<style>
+    .lc-dash-grid {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        grid-template-rows: auto auto;
+        gap: 16px;
+    }
+    .lc-dash-grid__activity  { grid-column: 1; grid-row: 1 / 3; }
+    .lc-dash-grid__campaigns { grid-column: 2; grid-row: 1; }
+    .lc-dash-grid__quick     { grid-column: 2; grid-row: 2; }
+
+    .lc-campaign-list { display: flex; flex-direction: column; gap: 16px; }
+    .lc-campaign-row  { display: flex; flex-direction: column; gap: 6px; }
+    .lc-campaign-row__header {
+        display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+    }
+    .lc-campaign-row__name {
+        font-size: 13px; font-weight: 500; color: var(--lc-text-primary);
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
+    }
+    .lc-campaign-row__amount { font-size: 13px; color: var(--lc-text-primary); flex-shrink: 0; }
+    .lc-campaign-row__meta   { margin-top: 2px; }
+
+    .lc-quick-actions {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    }
+    .lc-quick-action {
+        display: flex; flex-direction: column; align-items: center;
+        gap: 8px; padding: 14px 8px;
+        background: var(--lc-surface-2);
+        border: 1px solid var(--lc-border);
+        border-radius: var(--lc-radius);
+        color: var(--lc-text-secondary);
+        font-size: 12px; font-weight: 500; text-decoration: none; text-align: center;
+        transition: border-color var(--lc-transition), color var(--lc-transition), background var(--lc-transition);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .lc-quick-action:hover {
+        border-color: var(--lc-accent); color: var(--lc-accent);
+        background: var(--lc-accent-dim); text-decoration: none;
+    }
+    .lc-quick-action .mud-icon-root { font-size: 20px; }
+
+    @media (max-width: 1100px) {
+        .lc-dash-grid { grid-template-columns: 1fr; }
+        .lc-dash-grid__activity  { grid-column: 1; grid-row: auto; }
+        .lc-dash-grid__campaigns { grid-column: 1; grid-row: auto; }
+        .lc-dash-grid__quick     { grid-column: 1; grid-row: auto; }
+    }
+</style>
+
+@code {
+    private DashboardDto? _data;
+    private bool          _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var resp = await Api.GetDashboardAsync();
+        if (resp.Success) _data = resp.Data;
+        _loading = false;
+    }
+
+    private string? TrendText()
+    {
+        if (_data is null) return null;
+        var pct = _data.DonationsMoMChangePercent;
+        return pct == 0 ? "No change" : $"{(pct > 0 ? "+" : "")}{pct:N1}%";
+    }
+
+    private static string Greeting()
+    {
+        var h = DateTime.Now.Hour;
+        return h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
+    }
+
+    private static string RelativeTime(DateTimeOffset dt)
+    {
+        var diff = DateTimeOffset.UtcNow - dt;
+        if (diff.TotalMinutes < 1)  return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours   < 24) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays    < 7)  return $"{(int)diff.TotalDays}d ago";
+        return dt.LocalDateTime.ToString("dd MMM");
+    }
+}

@@ -1,0 +1,40 @@
+@* src/LifeCrm.Web/Shared/NavItem.razor *@
+@inject NavigationManager Nav
+
+<MudTooltip Text="@(Mini ? Label : "")" Placement="Placement.Right" Delay="200">
+    <a href="@Href"
+       class="lc-nav-item @(IsActive ? "lc-nav-item--active" : "") @(Mini ? "lc-nav-item--mini" : "")">
+        <span class="lc-nav-item__icon">
+            <MudIcon Icon="@Icon" Size="Size.Small" />
+        </span>
+        @if (!Mini)
+        {
+            <span class="lc-nav-item__label">@Label</span>
+        }
+    </a>
+</MudTooltip>
+
+@code {
+    [Parameter] public string Href       { get; set; } = "/";
+    [Parameter] public string Icon       { get; set; } = "";
+    [Parameter] public string Label      { get; set; } = "";
+    [Parameter] public bool   Mini       { get; set; }
+    [Parameter] public bool   ExactMatch { get; set; }
+
+    private bool IsActive
+    {
+        get
+        {
+            // Strip base URI to get the path segment only
+            var current = "/" + Nav.ToBaseRelativePath(Nav.Uri).TrimStart('/');
+            // Normalise to remove trailing slash (except root)
+            var currentNorm = current.Length > 1 ? current.TrimEnd('/') : current;
+            var hrefNorm    = Href.Length > 1   ? Href.TrimEnd('/')    : Href;
+
+            return ExactMatch
+                ? string.Equals(currentNorm, hrefNorm, StringComparison.OrdinalIgnoreCase)
+                : currentNorm.StartsWith(hrefNorm, StringComparison.OrdinalIgnoreCase)
+                  && hrefNorm != "/"; // prevent "/" matching everything
+        }
+    }
+}

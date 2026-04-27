@@ -1,0 +1,156 @@
+@* src/LifeCrm.Web/Pages/Profile.razor *@
+@page "/profile"
+@using LifeCrm.Web.Services
+@using LifeCrm.Web.Shared
+@using LifeCrm.Application.Common.DTOs
+@inject AuthApiClient AuthClient
+@inject AppState AppState
+@inject ISnackbar Snackbar
+
+<PageTitle>Profile — LifeCrm</PageTitle>
+
+<div class="lc-page-enter">
+    <PageHeader Title="Profile"
+                Subtitle="Your account and security settings" />
+
+    <div class="lc-settings-grid">
+
+        <!-- Identity -->
+        <DataCard Title="Account Information" CssClass="lc-settings-grid__main">
+            <div class="lc-profile-identity">
+                <div class="lc-profile-avatar">
+                    @(AppState.UserFullName?.Length > 0
+                        ? AppState.UserFullName[0].ToString().ToUpper()
+                        : "?")
+                </div>
+                <div class="lc-profile-info">
+                    <div class="lc-profile-name">@AppState.UserFullName</div>
+                    <div class="lc-profile-email">@AppState.UserEmail</div>
+                    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+                        <StatusBadge Text="@(AppState.UserRole ?? "—")"
+                                     Variant="@RoleBadge(AppState.UserRole)" />
+                        <StatusBadge Text="@(AppState.OrganizationName ?? "—")"
+                                     Variant="neutral" />
+                    </div>
+                </div>
+            </div>
+        </DataCard>
+
+        <!-- Change password -->
+        <DataCard Title="Change Password" CssClass="lc-settings-grid__side">
+            <div class="lc-form-fields">
+                <MudTextField @bind-Value="_currentPassword"
+                              Label="Current password"
+                              InputType="InputType.Password"
+                              Variant="Variant.Outlined"
+                              FullWidth="true" />
+                <MudTextField @bind-Value="_newPassword"
+                              Label="New password"
+                              InputType="InputType.Password"
+                              HelperText="Minimum 10 characters"
+                              Variant="Variant.Outlined"
+                              FullWidth="true" />
+                <MudTextField @bind-Value="_confirmPassword"
+                              Label="Confirm new password"
+                              InputType="InputType.Password"
+                              Variant="Variant.Outlined"
+                              FullWidth="true" />
+
+                @if (_passwordError is not null)
+                {
+                    <div class="lc-result-banner lc-result-banner--error">
+                        <MudIcon Icon="@Icons.Material.Outlined.Error" Size="Size.Small" />
+                        <span>@_passwordError</span>
+                    </div>
+                }
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Outlined.Lock"
+                           OnClick="ChangePasswordAsync"
+                           Disabled="_savingPassword">
+                    @(_savingPassword ? "Updating…" : "Update Password")
+                </MudButton>
+            </div>
+        </DataCard>
+
+        <!-- Session info -->
+        <DataCard Title="Session" CssClass="lc-settings-grid__main">
+            <div class="lc-session-info">
+                <div class="lc-session-row">
+                    <span class="lc-muted">Organisation</span>
+                    <span>@AppState.OrganizationName</span>
+                </div>
+                <div class="lc-session-row">
+                    <span class="lc-muted">Organisation ID</span>
+                    <span class="lc-mono" style="font-size:12px;">
+                        @AppState.OrganizationId
+                    </span>
+                </div>
+                <div class="lc-session-row">
+                    <span class="lc-muted">User ID</span>
+                    <span class="lc-mono" style="font-size:12px;">@AppState.UserId</span>
+                </div>
+                <div class="lc-session-row">
+                    <span class="lc-muted">Role</span>
+                    <span>@AppState.UserRole</span>
+                </div>
+            </div>
+        </DataCard>
+    </div>
+</div>
+
+@code {
+    private string  _currentPassword  = "";
+    private string  _newPassword      = "";
+    private string  _confirmPassword  = "";
+    private bool    _savingPassword   = false;
+    private string? _passwordError;
+
+    private async Task ChangePasswordAsync()
+    {
+        _passwordError = null;
+
+        if (string.IsNullOrWhiteSpace(_currentPassword))
+        {
+            _passwordError = "Current password is required.";
+            return;
+        }
+        if (_newPassword.Length < 10)
+        {
+            _passwordError = "New password must be at least 10 characters.";
+            return;
+        }
+        if (_newPassword != _confirmPassword)
+        {
+            _passwordError = "Passwords do not match.";
+            return;
+        }
+
+        _savingPassword = true;
+        var resp = await AuthClient.ChangePasswordAsync(new ChangePasswordRequest
+        {
+            CurrentPassword = _currentPassword,
+            NewPassword     = _newPassword
+        });
+
+        if (resp.Success)
+        {
+            Snackbar.Add("Password updated successfully.", Severity.Success);
+            _currentPassword = _newPassword = _confirmPassword = "";
+        }
+        else
+        {
+            _passwordError = resp.Errors.FirstOrDefault() ?? "Failed to update password.";
+        }
+
+        _savingPassword = false;
+    }
+
+    private static string RoleBadge(string? role) => role switch
+    {
+        "Admin"   => "error",
+        "Finance" => "warning",
+        "Manager" => "info",
+        _         => "neutral"
+    };
+}
