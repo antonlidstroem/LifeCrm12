@@ -1,0 +1,396 @@
+@* src/LifeCrm.Web/Pages/Admin/UsersList.razor *@
+@page "/admin/users"
+@using LifeCrm.Web.Services
+@using LifeCrm.Web.Shared
+@using LifeCrm.Application.Users.DTOs
+@using LifeCrm.Core.Enums
+@inject ApiClient Api
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Users — LifeCrm Admin</PageTitle>
+
+<div class="lc-page-enter">
+    <PageHeader Title="Users"
+                Subtitle="@(_users.Count > 0 ? $"{_users.Count} members in your organisation" : null)">
+        <Actions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Outlined.PersonAdd"
+                       OnClick="OpenCreateDialog">
+                Add User
+            </MudButton>
+        </Actions>
+    </PageHeader>
+
+    <DataCard>
+        <div class="lc-hide-mobile">
+            <MudTable Items="_users" Dense="true" Hover="true"
+                      Loading="_loading" LoadingProgressColor="Color.Primary">
+                <HeaderContent>
+                    <MudTh Style="width:36px"></MudTh>
+                    <MudTh>
+                        <MudTableSortLabel SortBy="new Func<UserSummaryDto,object>(x=>x.FullName)">
+                            Name
+                        </MudTableSortLabel>
+                    </MudTh>
+                    <MudTh>Email</MudTh>
+                    <MudTh>Role</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh Class="lc-hide-md">Last Login</MudTh>
+                    <MudTh Style="width:96px"></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <div class="lc-contact-avatar">
+                            @(context.FullName.Length > 0 ? context.FullName[0].ToString().ToUpper() : "?")
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Name">
+                        <div>
+                            <span style="font-weight:500;">@context.FullName</span>
+                            @if (context.Id == Guid.Parse(AppState.UserId ?? Guid.Empty.ToString()))
+                            {
+                                <span class="lc-badge lc-badge--primary" style="margin-left:8px;font-size:10px;">You</span>
+                            }
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Email" Class="lc-muted" Style="font-size:13px;">
+                        @context.Email
+                    </MudTd>
+                    <MudTd DataLabel="Role">
+                        <StatusBadge Text="@context.Role.ToString()"
+                                     Variant="@RoleBadge(context.Role)" />
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        @if (context.IsActive)
+                        {
+                            <StatusBadge Text="Active" Variant="success" />
+                        }
+                        else
+                        {
+                            <StatusBadge Text="Inactive" Variant="neutral" />
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Last Login" Class="lc-hide-md">
+                        <span class="lc-col-date">
+                            @(context.LastLoginAt?.LocalDateTime.ToString("yyyy-MM-dd HH:mm") ?? "Never")
+                        </span>
+                    </MudTd>
+                    <MudTd>
+                        <div style="display:flex;gap:2px;">
+                            <MudTooltip Text="Edit user">
+                                <MudIconButton Icon="@Icons.Material.Outlined.Edit"
+                                               Size="Size.Small"
+                                               OnClick="@(() => OpenEditDialog(context))" />
+                            </MudTooltip>
+                            @if (context.IsActive)
+                            {
+                                <MudTooltip Text="Deactivate">
+                                    <MudIconButton Icon="@Icons.Material.Outlined.PersonOff"
+                                                   Size="Size.Small" Color="Color.Warning"
+                                                   OnClick="@(() => DeactivateAsync(context))"
+                                                   Disabled="@(context.Id == Guid.Parse(AppState.UserId ?? Guid.Empty.ToString()))" />
+                                </MudTooltip>
+                            }
+                            else
+                            {
+                                <MudTooltip Text="Activate">
+                                    <MudIconButton Icon="@Icons.Material.Outlined.PersonAdd"
+                                                   Size="Size.Small" Color="Color.Success"
+                                                   OnClick="@(() => ActivateAsync(context))" />
+                                </MudTooltip>
+                            }
+                            <MudTooltip Text="Delete user">
+                                <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
+                                               Size="Size.Small" Color="Color.Error"
+                                               OnClick="@(() => DeleteAsync(context))"
+                                               Disabled="@(context.Id == Guid.Parse(AppState.UserId ?? Guid.Empty.ToString()))" />
+                            </MudTooltip>
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <div class="lc-empty">
+                        <MudIcon Icon="@Icons.Material.Outlined.Group"
+                                 Style="font-size:40px;color:var(--lc-text-disabled)" />
+                        <span class="lc-empty__title">No users found</span>
+                    </div>
+                </NoRecordsContent>
+            </MudTable>
+        </div>
+
+        <!-- Mobile -->
+        <div class="lc-show-mobile lc-card-list" style="padding:8px;">
+            @if (_loading)
+            {
+                @for (int i = 0; i < 4; i++) { <div class="lc-skeleton-row" style="height:80px;"></div> }
+            }
+            else
+            {
+                @foreach (var u in _users)
+                {
+                    <div class="lc-list-card">
+                        <div class="lc-list-card__header">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div class="lc-contact-avatar">
+                                    @(u.FullName.Length > 0 ? u.FullName[0].ToString().ToUpper() : "?")
+                                </div>
+                                <div>
+                                    <div class="lc-list-card__title">@u.FullName</div>
+                                    <div class="lc-muted" style="font-size:12px;">@u.Email</div>
+                                </div>
+                            </div>
+                            <StatusBadge Text="@u.Role.ToString()" Variant="@RoleBadge(u.Role)" />
+                        </div>
+                        <div style="display:flex;gap:4px;justify-content:flex-end;margin-top:4px;">
+                            <MudIconButton Icon="@Icons.Material.Outlined.Edit"
+                                           Size="Size.Small"
+                                           OnClick="@(() => OpenEditDialog(u))" />
+                            <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
+                                           Size="Size.Small" Color="Color.Error"
+                                           OnClick="@(() => DeleteAsync(u))"
+                                           Disabled="@(u.Id == Guid.Parse(AppState.UserId ?? Guid.Empty.ToString()))" />
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </DataCard>
+</div>
+
+<!-- Create/Edit Dialog -->
+@if (_showDialog)
+{
+    <div class="lc-dialog-overlay" @onclick="CloseDialog">
+        <div class="lc-dialog" @onclick:stopPropagation="true">
+            <div class="lc-dialog__header">
+                <h3>@(_editingUser == null ? "Add User" : "Edit User")</h3>
+                <MudIconButton Icon="@Icons.Material.Outlined.Close"
+                               Size="Size.Small" OnClick="CloseDialog" />
+            </div>
+            <div class="lc-dialog__body">
+                @if (_editingUser == null)
+                {
+                    <!-- Create form -->
+                    <div class="lc-form-fields">
+                        <MudTextField @bind-Value="_createReq.FullName" Label="Full name"
+                                      Variant="Variant.Outlined" FullWidth="true" />
+                        <MudTextField @bind-Value="_createReq.Email" Label="Email address"
+                                      InputType="InputType.Email"
+                                      Variant="Variant.Outlined" FullWidth="true" />
+                        <MudTextField @bind-Value="_createReq.Password" Label="Password"
+                                      InputType="InputType.Password"
+                                      HelperText="Minimum 10 characters"
+                                      Variant="Variant.Outlined" FullWidth="true" />
+                        <MudSelect @bind-Value="_createReq.Role" Label="Role"
+                                   Variant="Variant.Outlined" FullWidth="true">
+                            @foreach (UserRole r in Enum.GetValues<UserRole>())
+                            {
+                                <MudSelectItem Value="r">@r.ToString()</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </div>
+                }
+                else
+                {
+                    <!-- Edit form -->
+                    <div class="lc-form-fields">
+                        <MudTextField @bind-Value="_updateReq.FullName" Label="Full name"
+                                      Variant="Variant.Outlined" FullWidth="true" />
+                        <MudTextField @bind-Value="_updateReq.NewPassword" Label="New password (optional)"
+                                      InputType="InputType.Password"
+                                      HelperText="Leave blank to keep current password"
+                                      Variant="Variant.Outlined" FullWidth="true" />
+                        <MudSelect @bind-Value="_updateReq.Role" Label="Role"
+                                   Variant="Variant.Outlined" FullWidth="true">
+                            @foreach (UserRole r in Enum.GetValues<UserRole>())
+                            {
+                                <MudSelectItem Value="r">@r.ToString()</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </div>
+                }
+            </div>
+            <div class="lc-dialog__footer">
+                <MudButton Variant="Variant.Text" OnClick="CloseDialog">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="SaveAsync" Disabled="_saving">
+                    @(_saving ? "Saving…" : "Save")
+                </MudButton>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .lc-contact-avatar {
+        width: 28px; height: 28px; border-radius: 50%;
+        background: var(--lc-accent-dim); border: 1px solid var(--lc-accent);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11px; font-weight: 600; color: var(--lc-accent); flex-shrink: 0;
+    }
+    .lc-form-fields { display: flex; flex-direction: column; gap: 16px; }
+    .lc-dialog-overlay {
+        position: fixed; inset: 0; z-index: 500;
+        background: rgba(8, 14, 24, 0.75);
+        display: flex; align-items: center; justify-content: center;
+        padding: 16px;
+        animation: lc-fade-in 200ms ease;
+    }
+    .lc-dialog {
+        background: var(--lc-surface);
+        border: 1px solid var(--lc-border);
+        border-radius: var(--lc-radius);
+        width: 100%; max-width: 440px;
+        box-shadow: var(--lc-shadow-panel);
+        animation: lc-slide-up 220ms cubic-bezier(0.4,0,0.2,1);
+    }
+    .lc-dialog__header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 18px 20px 14px;
+        border-bottom: 1px solid var(--lc-border);
+    }
+    .lc-dialog__header h3 {
+        margin: 0; font-size: 15px; font-weight: 600; color: var(--lc-text-primary);
+    }
+    .lc-dialog__body { padding: 20px; }
+    .lc-dialog__footer {
+        display: flex; justify-content: flex-end; gap: 8px;
+        padding: 14px 20px; border-top: 1px solid var(--lc-border);
+    }
+    @keyframes lc-fade-in { from { opacity:0; } to { opacity:1; } }
+    @keyframes lc-slide-up {
+        from { opacity:0; transform: translateY(12px); }
+        to   { opacity:1; transform: translateY(0); }
+    }
+    .lc-hide-md { }
+    @media (max-width: 1100px) { .lc-hide-md { display: none !important; } }
+</style>
+
+@code {
+    private List<UserSummaryDto> _users     = new();
+    private bool        _loading    = true;
+    private bool        _saving     = false;
+    private bool        _showDialog = false;
+    private UserSummaryDto? _editingUser;
+
+    // Form models — simple mutable classes to avoid record immutability issues in forms
+    private CreateUserFormModel _createReq = new();
+    private UpdateUserFormModel _updateReq = new();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var resp = await Api.GetUsersAsync();
+        if (resp.Success && resp.Data is not null)
+            _users = resp.Data.ToList();
+        _loading = false;
+    }
+
+    private void OpenCreateDialog()
+    {
+        _editingUser = null;
+        _createReq   = new();
+        _showDialog  = true;
+    }
+
+    private void OpenEditDialog(UserSummaryDto u)
+    {
+        _editingUser = u;
+        _updateReq   = new() { Role = u.Role };
+        _showDialog  = true;
+    }
+
+    private void CloseDialog() => _showDialog = false;
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        if (_editingUser == null)
+        {
+            var resp = await Api.CreateUserAsync(new Application.Users.DTOs.CreateUserRequest
+            {
+                FullName = _createReq.FullName,
+                Email    = _createReq.Email,
+                Password = _createReq.Password,
+                Role     = _createReq.Role
+            });
+            if (resp.Success)
+            {
+                Snackbar.Add("User created.", Severity.Success);
+                _showDialog = false;
+                await LoadAsync();
+            }
+            else Snackbar.Add(resp.Errors.FirstOrDefault() ?? "Failed.", Severity.Error);
+        }
+        else
+        {
+            var resp = await Api.UpdateUserAsync(_editingUser.Id, new Application.Users.DTOs.UpdateUserRequest
+            {
+                FullName    = _updateReq.FullName,
+                NewPassword = string.IsNullOrWhiteSpace(_updateReq.NewPassword) ? null : _updateReq.NewPassword,
+                Role        = _updateReq.Role
+            });
+            if (resp.Success)
+            {
+                Snackbar.Add("User updated.", Severity.Success);
+                _showDialog = false;
+                await LoadAsync();
+            }
+            else Snackbar.Add(resp.Errors.FirstOrDefault() ?? "Failed.", Severity.Error);
+        }
+        _saving = false;
+    }
+
+    private async Task DeactivateAsync(UserSummaryDto u)
+    {
+        var resp = await Api.DeactivateUserAsync(u.Id);
+        if (resp.Success) { Snackbar.Add("User deactivated.", Severity.Warning); await LoadAsync(); }
+        else Snackbar.Add(resp.Errors.FirstOrDefault() ?? "Failed.", Severity.Error);
+    }
+
+    private async Task ActivateAsync(UserSummaryDto u)
+    {
+        var resp = await Api.ActivateUserAsync(u.Id);
+        if (resp.Success) { Snackbar.Add("User activated.", Severity.Success); await LoadAsync(); }
+        else Snackbar.Add(resp.Errors.FirstOrDefault() ?? "Failed.", Severity.Error);
+    }
+
+    private async Task DeleteAsync(UserSummaryDto u)
+    {
+        // Simple confirm via snackbar action — replace with dialog if preferred
+        var resp = await Api.DeleteUserAsync(u.Id);
+        if (resp.Success) { Snackbar.Add("User deleted.", Severity.Success); await LoadAsync(); }
+        else Snackbar.Add(resp.Errors.FirstOrDefault() ?? "Failed.", Severity.Error);
+    }
+
+    private static string RoleBadge(UserRole r) => r switch
+    {
+        UserRole.Admin   => "error",
+        UserRole.Finance => "warning",
+        UserRole.Manager => "info",
+        UserRole.Viewer  => "neutral",
+        _                => "neutral"
+    };
+
+    // Mutable form models (records can't be used directly in two-way binding)
+    private class CreateUserFormModel
+    {
+        public string   FullName { get; set; } = "";
+        public string   Email    { get; set; } = "";
+        public string   Password { get; set; } = "";
+        public UserRole Role     { get; set; } = UserRole.Manager;
+    }
+
+    private class UpdateUserFormModel
+    {
+        public string?  FullName    { get; set; }
+        public string?  NewPassword { get; set; }
+        public UserRole Role        { get; set; } = UserRole.Manager;
+    }
+}

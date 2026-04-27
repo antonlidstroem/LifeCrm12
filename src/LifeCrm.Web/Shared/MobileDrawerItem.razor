@@ -1,0 +1,36 @@
+@* src/LifeCrm.Web/Shared/MobileDrawerItem.razor *@
+@inject NavigationManager Nav
+
+<a href="@Href"
+   class="lc-mobile-nav-item @(IsActive ? "lc-mobile-nav-item--active" : "")"
+   @onclick="OnClose"
+   @onclick:preventDefault="false">
+    <span class="lc-mobile-nav-item__icon">
+        <MudIcon Icon="@Icon" Size="Size.Small" />
+    </span>
+    <span class="lc-mobile-nav-item__label">@Label</span>
+    @if (IsActive)
+    {
+        <span class="lc-mobile-nav-item__indicator"></span>
+    }
+</a>
+
+@code {
+    [Parameter] public string Href       { get; set; } = "/";
+    [Parameter] public string Icon       { get; set; } = "";
+    [Parameter] public string Label      { get; set; } = "";
+    [Parameter] public bool   ExactMatch { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool IsActive
+    {
+        get
+        {
+            var current = Nav.Uri.Replace(Nav.BaseUri.TrimEnd('/'), "").TrimEnd('/');
+            var href    = Href.TrimEnd('/');
+            return ExactMatch
+                ? current == href || (href == "" && current == "")
+                : current.StartsWith(href, StringComparison.OrdinalIgnoreCase) && href != "";
+        }
+    }
+}

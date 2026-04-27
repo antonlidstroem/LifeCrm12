@@ -1,4 +1,4 @@
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;

@@ -1,4 +1,4 @@
-using LifeCrm.Application.Reports.DTOs;
+using LifeCrm.Contracts.Reports.DTOs;
 using LifeCrm.Core.Entities;
 
 namespace LifeCrm.Application.Reports.Commands;

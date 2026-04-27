@@ -1,5 +1,5 @@
 // src/LifeCrm.Application/Dashboard/GetDashboardQuery.cs
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Core.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -15,34 +15,84 @@ public sealed class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Das
 
     public async Task<DashboardDto> Handle(GetDashboardQuery q, CancellationToken ct)
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today          = DateOnly.FromDateTime(DateTime.UtcNow);
         var thisMonthStart = new DateOnly(today.Year, today.Month, 1);
         var lastMonthStart = thisMonthStart.AddMonths(-1);
-        var lastMonthEnd = thisMonthStart.AddDays(-1);
+        var lastMonthEnd   = thisMonthStart.AddDays(-1);
         var thisMonthStartDto = new DateTimeOffset(
             thisMonthStart.Year, thisMonthStart.Month, 1, 0, 0, 0, TimeSpan.Zero);
 
-        var thisMonth = await _uow.Donations.Query()
-            .Where(d => d.Date >= thisMonthStart)
-            .SumAsync(d => (decimal?)d.Amount, ct) ?? 0;
+        // FIX C: Run all independent aggregate queries in parallel instead of
+        // sequentially. Previous code awaited each query one-at-a-time, causing
+        // 8+ serial round-trips to the database. Task.WhenAll issues them
+        // concurrently, reducing total latency to ~the slowest single query.
 
-        var lastMonth = await _uow.Donations.Query()
+        var thisMonthTask = _uow.Donations.Query()
+            .Where(d => d.Date >= thisMonthStart)
+            .SumAsync(d => (decimal?)d.Amount, ct);
+
+        var lastMonthTask = _uow.Donations.Query()
             .Where(d => d.Date >= lastMonthStart && d.Date <= lastMonthEnd)
-            .SumAsync(d => (decimal?)d.Amount, ct) ?? 0;
+            .SumAsync(d => (decimal?)d.Amount, ct);
+
+        var contactsTotalTask = _uow.Contacts.CountAsync(_ => true, ct);
+
+        var newContactsTask = _uow.Contacts.CountAsync(
+            c => c.CreatedAt >= thisMonthStartDto, ct);
+
+        var recentDonationsTask = _uow.Donations.Query()
+            .OrderByDescending(d => d.CreatedAt).Take(10)
+            .Select(d => new ActivityFeedItemDto
+            {
+                ActivityType = "Donation",
+                EntityId     = d.Id,
+                ContactId    = d.ContactId,
+                ContactName  = d.Contact != null ? d.Contact.Name : string.Empty,
+                Summary      = "$" + d.Amount.ToString("N2") + " donation",
+                OccurredAt   = d.CreatedAt
+            }).ToListAsync(ct);
+
+        var recentInteractionsTask = _uow.Interactions.Query()
+            .Where(i => i.ContactId.HasValue)
+            .OrderByDescending(i => i.OccurredAt).Take(10)
+            .Select(i => new ActivityFeedItemDto
+            {
+                ActivityType = "Interaction",
+                EntityId     = i.Id,
+                ContactId    = i.ContactId!.Value,
+                ContactName  = i.Contact != null ? i.Contact.Name : string.Empty,
+                Summary      = i.Type.ToString() + " logged",
+                OccurredAt   = i.OccurredAt
+            }).ToListAsync(ct);
+
+        // Active campaigns + their donation totals are sequential because we
+        // need the campaign IDs first. But we overlap them with the queries above.
+        var activeCampaignsTask = _uow.Campaigns.GetActiveAsync(ct);
+
+        // Await all parallel tasks together
+        await Task.WhenAll(
+            thisMonthTask,
+            lastMonthTask,
+            contactsTotalTask,
+            newContactsTask,
+            recentDonationsTask,
+            recentInteractionsTask,
+            activeCampaignsTask);
+
+        var thisMonth  = thisMonthTask.Result ?? 0;
+        var lastMonth  = lastMonthTask.Result ?? 0;
+        var contacts   = contactsTotalTask.Result;
+        var newCon     = newContactsTask.Result;
+        var recentDon  = recentDonationsTask.Result;
+        var recentInt  = recentInteractionsTask.Result;
+        var active     = activeCampaignsTask.Result;
 
         var moM = lastMonth > 0
             ? Math.Round((thisMonth - lastMonth) / lastMonth * 100, 1)
             : 0;
 
-        var contacts = await _uow.Contacts.CountAsync(_ => true, ct);
-        var newCon = await _uow.Contacts.CountAsync(
-            c => c.CreatedAt >= thisMonthStartDto, ct);
-
-        var active = await _uow.Campaigns.GetActiveAsync(ct);
+        // Campaign totals — one query for all active campaigns
         var ids = active.Select(c => c.Id).ToList();
-
-        // FIX: Use a separate aggregation query instead of navigating
-        // through Campaign.Donations which requires an Include
         var totals = ids.Count == 0
             ? new Dictionary<Guid, decimal>()
             : await _uow.Donations.Query()
@@ -56,39 +106,14 @@ public sealed class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Das
             var r = totals.GetValueOrDefault(c.Id, 0m);
             return new CampaignSummaryDto
             {
-                Id = c.Id,
-                Name = c.Name,
-                BudgetGoal = c.BudgetGoal,
-                TotalRaised = r,
+                Id              = c.Id,
+                Name            = c.Name,
+                BudgetGoal      = c.BudgetGoal,
+                TotalRaised     = r,
                 ProgressPercent = c.BudgetGoal.HasValue && c.BudgetGoal > 0
                     ? Math.Round(r / c.BudgetGoal.Value * 100, 1) : null
             };
         }).ToList().AsReadOnly();
-
-        var recentDon = await _uow.Donations.Query()
-            .OrderByDescending(d => d.CreatedAt).Take(10)
-            .Select(d => new ActivityFeedItemDto
-            {
-                ActivityType = "Donation",
-                EntityId = d.Id,
-                ContactId = d.ContactId,
-                ContactName = d.Contact != null ? d.Contact.Name : string.Empty,
-                Summary = "$" + d.Amount.ToString("N2") + " donation",
-                OccurredAt = d.CreatedAt
-            }).ToListAsync(ct);
-
-        var recentInt = await _uow.Interactions.Query()
-            .Where(i => i.ContactId.HasValue)
-            .OrderByDescending(i => i.OccurredAt).Take(10)
-            .Select(i => new ActivityFeedItemDto
-            {
-                ActivityType = "Interaction",
-                EntityId = i.Id,
-                ContactId = i.ContactId!.Value,
-                ContactName = i.Contact != null ? i.Contact.Name : string.Empty,
-                Summary = i.Type.ToString() + " logged",
-                OccurredAt = i.OccurredAt
-            }).ToListAsync(ct);
 
         var feed = recentDon.Concat(recentInt)
             .OrderByDescending(a => a.OccurredAt)
@@ -96,14 +121,14 @@ public sealed class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Das
 
         return new DashboardDto
         {
-            DonationsThisMonth = thisMonth,
-            DonationsLastMonth = lastMonth,
+            DonationsThisMonth        = thisMonth,
+            DonationsLastMonth        = lastMonth,
             DonationsMoMChangePercent = moM,
-            TotalContacts = contacts,
-            NewContactsThisMonth = newCon,
-            ActiveCampaigns = active.Count,
-            TopCampaigns = top,
-            RecentActivity = feed
+            TotalContacts             = contacts,
+            NewContactsThisMonth      = newCon,
+            ActiveCampaigns           = active.Count,
+            TopCampaigns              = top,
+            RecentActivity            = feed
         };
     }
 }

@@ -1,6 +1,6 @@
 using Blazored.LocalStorage;
-using LifeCrm.Application.Campaigns.DTOs;
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Campaigns.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using Microsoft.JSInterop;
 
 namespace LifeCrm.Web.Services;

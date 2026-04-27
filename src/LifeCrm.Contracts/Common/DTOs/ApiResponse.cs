@@ -1,0 +1,20 @@
+namespace LifeCrm.Contracts.Common.DTOs;
+public record ApiResponse<T>
+{
+    public bool Success { get; init; }
+    public T? Data { get; init; }
+    public string? Message { get; init; }
+    public IReadOnlyList<string> Errors { get; init; } = Array.Empty<string>();
+    public static ApiResponse<T> Ok(T data, string? message = null) => new() { Success = true, Data = data, Message = message };
+    public static ApiResponse<T> Fail(string error) => new() { Success = false, Errors = new[] { error } };
+    public static ApiResponse<T> Fail(IEnumerable<string> errors) => new() { Success = false, Errors = errors.ToList().AsReadOnly() };
+}
+public record ApiResponse
+{
+    public bool Success { get; init; }
+    public string? Message { get; init; }
+    public IReadOnlyList<string> Errors { get; init; } = Array.Empty<string>();
+    public static ApiResponse Ok(string? message = null) => new() { Success = true, Message = message };
+    public static ApiResponse Fail(string error) => new() { Success = false, Errors = new[] { error } };
+    public static ApiResponse Fail(IEnumerable<string> errors) => new() { Success = false, Errors = errors.ToList().AsReadOnly() };
+}

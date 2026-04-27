@@ -1,5 +1,5 @@
 using FluentValidation;
-using LifeCrm.Application.Interactions.DTOs;
+using LifeCrm.Contracts.Interactions.DTOs;
 
 namespace LifeCrm.Application.Interactions.Commands;
 

@@ -1,7 +1,7 @@
 // src/LifeCrm.Web/Services/UsersApiClient.cs
 using Blazored.LocalStorage;
-using LifeCrm.Application.Common.DTOs;
-using LifeCrm.Application.Users.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
+using LifeCrm.Contracts.Users.DTOs;
 using LifeCrm.Core.Enums;
 using Microsoft.JSInterop;
 

@@ -1,6 +1,6 @@
 // src/LifeCrm.Application/Reports/Queries/GetReportByIdQuery.cs
 using LifeCrm.Application.Common.Exceptions;
-using LifeCrm.Application.Reports.DTOs;
+using LifeCrm.Contracts.Reports.DTOs;
 using LifeCrm.Core.Entities;
 using LifeCrm.Core.Interfaces;
 using MediatR;

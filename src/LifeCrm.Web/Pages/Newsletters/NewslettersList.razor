@@ -1,0 +1,249 @@
+@* src/LifeCrm.Web/Pages/Newsletters/NewslettersList.razor *@
+@page "/newsletters"
+@using LifeCrm.Web.Services
+@using LifeCrm.Web.Shared
+@using LifeCrm.Application.Common.DTOs
+@using LifeCrm.Application.Newsletters.DTOs
+@using LifeCrm.Core.Enums
+@inject ApiClient Api
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Newsletters — LifeCrm</PageTitle>
+
+<div class="lc-page-enter">
+    <PageHeader Title="Newsletters"
+                Subtitle="Email campaigns sent to your contacts">
+        <Actions>
+            @if (AppState.CanWrite)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Outlined.EditNote"
+                           Href="/newsletters/new">
+                    Compose
+                </MudButton>
+            }
+        </Actions>
+    </PageHeader>
+
+    <!-- Status filter tabs -->
+    <div class="lc-tab-bar">
+        <button class="lc-tab @(_statusFilter == null ? "lc-tab--active" : "")"
+                @onclick="() => SetFilter(null)">
+            All
+        </button>
+        <button class="lc-tab @(_statusFilter == NewsletterStatus.Draft ? "lc-tab--active" : "")"
+                @onclick="() => SetFilter(NewsletterStatus.Draft)">
+            Drafts
+        </button>
+        <button class="lc-tab @(_statusFilter == NewsletterStatus.Sent ? "lc-tab--active" : "")"
+                @onclick="() => SetFilter(NewsletterStatus.Sent)">
+            Sent
+        </button>
+    </div>
+
+    <DataCard>
+        <!-- Desktop table -->
+        <div class="lc-hide-mobile">
+            <MudTable Items="_newsletters" Dense="true" Hover="true"
+                      Loading="_loading" LoadingProgressColor="Color.Primary"
+                      FixedHeader="true" Height="calc(100vh - 310px)"
+                      OnRowClick="@((TableRowClickEventArgs<NewsletterListDto> e) => GoTo(e.Item))"
+                      Style="cursor:pointer;">
+                <HeaderContent>
+                    <MudTh>Title</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh Style="text-align:right">Sent</MudTh>
+                    <MudTh Style="text-align:right">Errors</MudTh>
+                    <MudTh Class="lc-hide-md">Filters</MudTh>
+                    <MudTh>Date</MudTh>
+                    <MudTh Style="width:96px"></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Title">
+                        <div>
+                            <div style="font-weight:500;">@context.Title</div>
+                            <div class="lc-muted" style="font-size:11px;margin-top:1px;">@context.Subject</div>
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        <StatusBadge Text="@context.Status.ToString()"
+                                     Variant="@(context.Status == NewsletterStatus.Sent ? "success" : "neutral")" />
+                    </MudTd>
+                    <MudTd DataLabel="Sent" Style="text-align:right;">
+                        @if (context.Status == NewsletterStatus.Sent)
+                        {
+                            <span class="lc-mono">@context.SentCount.ToString("N0")</span>
+                        }
+                        else { <span class="lc-muted">—</span> }
+                    </MudTd>
+                    <MudTd DataLabel="Errors" Style="text-align:right;">
+                        @if (context.ErrorCount > 0)
+                        {
+                            <span class="lc-mono" style="color:var(--lc-error);">@context.ErrorCount</span>
+                        }
+                        else if (context.Status == NewsletterStatus.Sent)
+                        {
+                            <span class="lc-mono" style="color:var(--lc-success);">0</span>
+                        }
+                        else { <span class="lc-muted">—</span> }
+                    </MudTd>
+                    <MudTd DataLabel="Filters" Class="lc-hide-md">
+                        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                            @if (!string.IsNullOrEmpty(context.TagFilter))
+                            {
+                                <span class="lc-tag">@context.TagFilter</span>
+                            }
+                            @if (!string.IsNullOrEmpty(context.ContactTypeFilter))
+                            {
+                                <span class="lc-tag">@context.ContactTypeFilter</span>
+                            }
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Date">
+                        <span class="lc-col-date">
+                            @(context.SentAt?.LocalDateTime.ToString("yyyy-MM-dd HH:mm")
+                              ?? context.CreatedAt.LocalDateTime.ToString("yyyy-MM-dd"))
+                        </span>
+                    </MudTd>
+                    <MudTd>
+                        <div style="display:flex;gap:4px;">
+                            @if (context.Status == NewsletterStatus.Draft && AppState.IsFinanceOrAdmin)
+                            {
+                                <MudTooltip Text="Send newsletter">
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Send"
+                                                   Size="Size.Small" Color="Color.Primary"
+                                                   OnClick="@(() => GoTo(context))"
+                                                   @onclick:stopPropagation="true" />
+                                </MudTooltip>
+                            }
+                            <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
+                                           Size="Size.Small"
+                                           OnClick="@(() => GoTo(context))"
+                                           @onclick:stopPropagation="true" />
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <div class="lc-empty">
+                        <MudIcon Icon="@Icons.Material.Outlined.Email"
+                                 Style="font-size:40px;color:var(--lc-text-disabled)" />
+                        <span class="lc-empty__title">No newsletters</span>
+                        <span class="lc-empty__subtitle">
+                            @(_statusFilter == NewsletterStatus.Draft ? "No drafts." :
+                              _statusFilter == NewsletterStatus.Sent  ? "Nothing sent yet." :
+                              "Compose your first newsletter.")
+                        </span>
+                    </div>
+                </NoRecordsContent>
+            </MudTable>
+        </div>
+
+        <!-- Mobile -->
+        <div class="lc-show-mobile lc-card-list" style="padding:8px;">
+            @if (_loading)
+            {
+                @for (int i = 0; i < 4; i++) { <div class="lc-skeleton-row" style="height:80px;"></div> }
+            }
+            else
+            {
+                @foreach (var n in _newsletters)
+                {
+                    <div class="lc-list-card" @onclick="() => GoTo(n)">
+                        <div class="lc-list-card__header">
+                            <span class="lc-list-card__title">@n.Title</span>
+                            <StatusBadge Text="@n.Status.ToString()"
+                                         Variant="@(n.Status == NewsletterStatus.Sent ? "success" : "neutral")" />
+                        </div>
+                        <div class="lc-list-card__meta">
+                            <span class="lc-muted">@n.Subject</span>
+                            @if (n.Status == NewsletterStatus.Sent)
+                            {
+                                <span class="lc-mono">@n.SentCount sent</span>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+
+        <div class="lc-table-footer">
+            <span class="lc-muted" style="font-size:12px;">@_newsletters.Count of @_totalCount</span>
+            <MudPagination Count="_totalPages" Selected="_page"
+                           SelectedChanged="OnPageChanged"
+                           Color="Color.Primary" Size="Size.Small" />
+        </div>
+    </DataCard>
+</div>
+
+<style>
+    .lc-tab-bar {
+        display: flex; gap: 2px;
+        margin-bottom: 16px;
+        background: var(--lc-surface);
+        border: 1px solid var(--lc-border);
+        border-radius: var(--lc-radius);
+        padding: 4px;
+        width: fit-content;
+    }
+    .lc-tab {
+        padding: 6px 16px;
+        border: none; background: none;
+        border-radius: calc(var(--lc-radius) - 2px);
+        color: var(--lc-text-secondary);
+        font-size: 13px; font-weight: 500;
+        cursor: pointer;
+        font-family: var(--lc-font-body);
+        transition: color var(--lc-transition), background var(--lc-transition);
+    }
+    .lc-tab:hover { color: var(--lc-text-primary); background: var(--lc-accent-hover); }
+    .lc-tab--active {
+        background: var(--lc-accent-dim);
+        color: var(--lc-accent);
+    }
+    .lc-tag {
+        display: inline-block; padding: 1px 7px;
+        border-radius: 3px; background: var(--lc-neutral-bg);
+        color: var(--lc-text-secondary); font-size: 11px;
+    }
+    .lc-hide-md { }
+    @media (max-width: 1100px) { .lc-hide-md { display: none !important; } }
+</style>
+
+@code {
+    private List<NewsletterListDto> _newsletters = new();
+    private bool              _loading      = true;
+    private NewsletterStatus? _statusFilter;
+    private int               _page         = 1;
+    private int               _totalCount   = 0;
+    private int               _totalPages   = 1;
+    private const int         PageSize      = 25;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var resp = await Api.GetNewslettersAsync(
+            new PaginationParams { Page = _page, PageSize = PageSize },
+            _statusFilter);
+        if (resp.Success && resp.Data is not null)
+        {
+            _newsletters = resp.Data.Items.ToList();
+            _totalCount  = resp.Data.TotalCount;
+            _totalPages  = resp.Data.TotalPages;
+        }
+        _loading = false;
+    }
+
+    private async Task SetFilter(NewsletterStatus? s)
+    {
+        _statusFilter = s; _page = 1; await LoadAsync();
+    }
+
+    private async Task OnPageChanged(int p) { _page = p; await LoadAsync(); }
+    private void GoTo(NewsletterListDto n) => Nav.NavigateTo($"/newsletters/{n.Id}");
+}

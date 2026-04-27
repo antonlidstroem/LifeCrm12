@@ -1,0 +1,30 @@
+@* src/LifeCrm.Web/Shared/MobileNavItem.razor *@
+@inject NavigationManager Nav
+
+<a href="@Href" class="lc-bnav-item @(IsActive ? "lc-bnav-item--active" : "")">
+    <MudIcon Icon="@Icon" Size="Size.Small" />
+    <span class="lc-bnav-item__label">@Label</span>
+</a>
+
+@code {
+    [Parameter] public string Href       { get; set; } = "/";
+    [Parameter] public string Icon       { get; set; } = "";
+    [Parameter] public string Label      { get; set; } = "";
+    [Parameter] public bool   ExactMatch { get; set; }
+
+    private bool IsActive
+    {
+        get
+        {
+            var current = Nav.Uri.Replace(Nav.BaseUri.TrimEnd('/'), "").TrimEnd('/');
+            var href    = Href.TrimEnd('/');
+            return ExactMatch
+                ? current == href || (href == "" && current == "")
+                : current.StartsWith(href, StringComparison.OrdinalIgnoreCase) && href != "";
+        }
+    }
+}
+
+
+@* src/LifeCrm.Web/Shared/MobileDrawerItem.razor *@
+@* (append to same file for brevity — in practice split into separate files) *@

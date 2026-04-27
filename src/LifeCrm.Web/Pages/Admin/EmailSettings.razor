@@ -1,0 +1,311 @@
+@* src/LifeCrm.Web/Pages/Admin/EmailSettings.razor *@
+@page "/admin/email-settings"
+@using LifeCrm.Web.Services
+@using LifeCrm.Web.Shared
+@inject EmailSettingsApiClient EmailApi
+@inject ISnackbar Snackbar
+@inject AppState AppState
+
+<PageTitle>Email Settings — LifeCrm Admin</PageTitle>
+
+<div class="lc-page-enter">
+    <PageHeader Title="Email Settings"
+                Subtitle="Configure outgoing SMTP for newsletters, receipts and notifications">
+    </PageHeader>
+
+    <div class="lc-settings-grid">
+
+        <!-- SMTP config card -->
+        <DataCard Title="SMTP Configuration" CssClass="lc-settings-grid__main">
+            @if (_loading)
+            {
+                @for (int i = 0; i < 5; i++)
+                {
+                    <div class="lc-skeleton-row" style="height:52px;margin-bottom:12px;"></div>
+                }
+            }
+            else
+            {
+                <div class="lc-form-fields">
+                    <div class="lc-form-row">
+                        <MudTextField @bind-Value="_form.Host" Label="SMTP Host"
+                                      Placeholder="smtp.sendgrid.net"
+                                      Variant="Variant.Outlined" FullWidth="true" />
+                        <MudNumericField @bind-Value="_form.Port" Label="Port"
+                                         Min="1" Max="65535"
+                                         Variant="Variant.Outlined" Style="max-width:120px;" />
+                    </div>
+
+                    <div class="lc-form-section">
+                        <span class="lc-form-section__label">Authentication</span>
+                    </div>
+
+                    <MudTextField @bind-Value="_form.Username" Label="Username"
+                                  Placeholder="apikey"
+                                  Variant="Variant.Outlined" FullWidth="true" />
+                    <MudTextField @bind-Value="_form.Password" Label="Password / API Key"
+                                  InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@(_showPassword ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)"
+                                  OnAdornmentClick="() => _showPassword = !_showPassword"
+                                  AdornmentColor="Color.Default"
+                                  HelperText="Sending ••••••• preserves the existing password"
+                                  Variant="Variant.Outlined" FullWidth="true" />
+
+                    <div class="lc-form-section">
+                        <span class="lc-form-section__label">Sender Identity</span>
+                    </div>
+
+                    <div class="lc-form-row">
+                        <MudTextField @bind-Value="_form.FromEmail" Label="From Email"
+                                      InputType="InputType.Email"
+                                      Placeholder="noreply@yourdomain.org"
+                                      Variant="Variant.Outlined" FullWidth="true" />
+                        <MudTextField @bind-Value="_form.FromName" Label="From Name"
+                                      Placeholder="Your Organisation"
+                                      Variant="Variant.Outlined" FullWidth="true" />
+                    </div>
+
+                    <div class="lc-form-section">
+                        <span class="lc-form-section__label">Options</span>
+                    </div>
+
+                    <div style="display:flex;gap:24px;flex-wrap:wrap;">
+                        <MudSwitch @bind-Value="_form.UseSsl" Label="Use SSL/TLS"
+                                   Color="Color.Primary" />
+                        <MudSwitch @bind-Value="_form.DryRun" Label="Dry run (log only, don't send)"
+                                   Color="Color.Warning" />
+                    </div>
+
+                    @if (_form.DryRun)
+                    {
+                        <div class="lc-info-banner">
+                            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+                            <span>Dry run mode is enabled. Emails will be logged but not delivered.</span>
+                        </div>
+                    }
+                </div>
+
+                <div class="lc-settings-actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Outlined.Save"
+                               OnClick="SaveAsync" Disabled="_saving">
+                        @(_saving ? "Saving…" : "Save Settings")
+                    </MudButton>
+                </div>
+            }
+        </DataCard>
+
+        <!-- Test card -->
+        <DataCard Title="Test Connection" Subtitle="Send a test email to verify your settings"
+                  CssClass="lc-settings-grid__side">
+            <div class="lc-form-fields">
+                <MudTextField @bind-Value="_testEmail" Label="Send test to"
+                              InputType="InputType.Email"
+                              Placeholder="you@example.com"
+                              Variant="Variant.Outlined" FullWidth="true" />
+
+                <MudButton Variant="Variant.Outlined" FullWidth="true"
+                           StartIcon="@Icons.Material.Outlined.Send"
+                           OnClick="TestAsync" Disabled="_testing || string.IsNullOrWhiteSpace(_testEmail)">
+                    @(_testing ? "Sending…" : "Send Test Email")
+                </MudButton>
+
+                @if (_testResult is not null)
+                {
+                    <div class="lc-result-banner @(_testSuccess ? "lc-result-banner--success" : "lc-result-banner--error")">
+                        <MudIcon Icon="@(_testSuccess ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Error)"
+                                 Size="Size.Small" />
+                        <span>@_testResult</span>
+                    </div>
+                }
+            </div>
+
+            <div class="lc-form-section" style="margin-top:20px;">
+                <span class="lc-form-section__label">Quick Setup Guide</span>
+            </div>
+
+            <div class="lc-guide">
+                <div class="lc-guide__step">
+                    <span class="lc-guide__num">1</span>
+                    <div>
+                        <div class="lc-guide__title">Create a free SendGrid account</div>
+                        <div class="lc-guide__desc">sendgrid.com — 100 emails/day free</div>
+                    </div>
+                </div>
+                <div class="lc-guide__step">
+                    <span class="lc-guide__num">2</span>
+                    <div>
+                        <div class="lc-guide__title">Generate an API key</div>
+                        <div class="lc-guide__desc">Settings → API Keys → "Mail Send" permission</div>
+                    </div>
+                </div>
+                <div class="lc-guide__step">
+                    <span class="lc-guide__num">3</span>
+                    <div>
+                        <div class="lc-guide__title">Fill in the fields</div>
+                        <div class="lc-guide__desc">
+                            Host: <code>smtp.sendgrid.net</code><br />
+                            Port: <code>587</code><br />
+                            Username: <code>apikey</code><br />
+                            Password: your API key
+                        </div>
+                    </div>
+                </div>
+                <div class="lc-guide__step">
+                    <span class="lc-guide__num">4</span>
+                    <div>
+                        <div class="lc-guide__title">Test &amp; save</div>
+                        <div class="lc-guide__desc">Use the test button above to verify before saving</div>
+                    </div>
+                </div>
+            </div>
+        </DataCard>
+    </div>
+</div>
+
+<style>
+    .lc-settings-grid {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: 16px;
+        align-items: start;
+    }
+    .lc-settings-grid__main { grid-column: 1; }
+    .lc-settings-grid__side { grid-column: 2; }
+
+    .lc-form-fields { display: flex; flex-direction: column; gap: 14px; }
+    .lc-form-row { display: flex; gap: 12px; align-items: flex-start; }
+
+    .lc-settings-actions {
+        display: flex; justify-content: flex-end;
+        margin-top: 20px; padding-top: 16px;
+        border-top: 1px solid var(--lc-border);
+    }
+
+    .lc-info-banner {
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px 14px;
+        background: var(--lc-warning-bg);
+        border: 1px solid rgba(245,158,11,0.25);
+        border-radius: var(--lc-radius);
+        color: var(--lc-warning);
+        font-size: 13px;
+    }
+
+    .lc-result-banner {
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px 14px; border-radius: var(--lc-radius);
+        font-size: 13px;
+    }
+    .lc-result-banner--success {
+        background: var(--lc-success-bg);
+        border: 1px solid rgba(34,197,94,0.25);
+        color: var(--lc-success);
+    }
+    .lc-result-banner--error {
+        background: var(--lc-error-bg);
+        border: 1px solid rgba(239,68,68,0.25);
+        color: var(--lc-error);
+    }
+
+    .lc-guide { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
+    .lc-guide__step { display: flex; gap: 12px; align-items: flex-start; }
+    .lc-guide__num {
+        width: 22px; height: 22px; border-radius: 50%;
+        background: var(--lc-accent-dim); color: var(--lc-accent);
+        font-size: 11px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0; margin-top: 1px;
+    }
+    .lc-guide__title { font-size: 13px; font-weight: 500; color: var(--lc-text-primary); }
+    .lc-guide__desc  { font-size: 12px; color: var(--lc-text-secondary); margin-top: 2px; }
+    .lc-guide__desc code {
+        font-family: var(--lc-font-mono); font-size: 11px;
+        background: var(--lc-surface-2); padding: 1px 5px;
+        border-radius: 3px; color: var(--lc-accent);
+    }
+
+    @media (max-width: 900px) {
+        .lc-settings-grid {
+            grid-template-columns: 1fr;
+        }
+        .lc-settings-grid__side { grid-column: 1; }
+    }
+    @media (max-width: 600px) {
+        .lc-form-row { flex-direction: column; }
+    }
+</style>
+
+@code {
+    private EmailSettingsFormModel _form      = new();
+    private bool   _loading     = true;
+    private bool   _saving      = false;
+    private bool   _testing     = false;
+    private bool   _showPassword = false;
+    private string _testEmail   = "";
+    private string? _testResult;
+    private bool   _testSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        var resp = await EmailApi.GetAsync();
+        if (resp.Success && resp.Data is not null)
+        {
+            _form = new EmailSettingsFormModel
+            {
+                Host      = resp.Data.Host,
+                Port      = resp.Data.Port,
+                Username  = resp.Data.Username,
+                Password  = resp.Data.Password,
+                FromEmail = resp.Data.FromEmail,
+                FromName  = resp.Data.FromName,
+                UseSsl    = resp.Data.UseSsl,
+                DryRun    = resp.Data.DryRun,
+            };
+        }
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        var resp = await EmailApi.SaveAsync(new EmailSettingsSaveRequest
+        {
+            Host      = _form.Host,
+            Port      = _form.Port,
+            Username  = _form.Username,
+            Password  = _form.Password,
+            FromEmail = _form.FromEmail,
+            FromName  = _form.FromName,
+            UseSsl    = _form.UseSsl,
+            DryRun    = _form.DryRun,
+        });
+        if (resp.Success) Snackbar.Add("Settings saved.", Severity.Success);
+        else Snackbar.Add(resp.Errors.FirstOrDefault() ?? "Save failed.", Severity.Error);
+        _saving = false;
+    }
+
+    private async Task TestAsync()
+    {
+        _testing    = true;
+        _testResult = null;
+        var resp = await EmailApi.TestAsync(_testEmail);
+        _testSuccess = resp.Success && (resp.Data?.Contains("success", StringComparison.OrdinalIgnoreCase) == true);
+        _testResult  = resp.Data ?? resp.Errors.FirstOrDefault() ?? "Unknown result.";
+        _testing = false;
+    }
+
+    private class EmailSettingsFormModel
+    {
+        public string Host      { get; set; } = "";
+        public int    Port      { get; set; } = 587;
+        public string Username  { get; set; } = "";
+        public string Password  { get; set; } = "";
+        public string FromEmail { get; set; } = "";
+        public string FromName  { get; set; } = "";
+        public bool   UseSsl    { get; set; } = true;
+        public bool   DryRun    { get; set; } = false;
+    }
+}

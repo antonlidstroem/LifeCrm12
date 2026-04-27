@@ -1,7 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Application.Common.Exceptions;
 using LifeCrm.Core.Interfaces;
 using LifeCrm.Infrastructure.Persistence;

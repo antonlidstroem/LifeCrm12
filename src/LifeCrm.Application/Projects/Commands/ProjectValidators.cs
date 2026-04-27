@@ -1,5 +1,5 @@
 using FluentValidation;
-using LifeCrm.Application.Projects.DTOs;
+using LifeCrm.Contracts.Projects.DTOs;
 
 namespace LifeCrm.Application.Projects.Commands;
 

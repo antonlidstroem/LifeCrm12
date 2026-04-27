@@ -1,4 +1,4 @@
-﻿using LifeCrm.Application.Common.DTOs;
+﻿using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Application.Dsr.Commands;
 using LifeCrm.Application.Dsr.Queries;
 using LifeCrm.Core.Interfaces;

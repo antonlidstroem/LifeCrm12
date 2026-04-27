@@ -1,0 +1,37 @@
+@* src/LifeCrm.Web/Shared/DataCard.razor *@
+
+<div class="lc-card @(Padded ? "lc-card--padded" : "") @CssClass">
+    @if (!string.IsNullOrEmpty(Title) || HeaderActions is not null)
+    {
+        <div class="lc-card__header">
+            <div class="lc-card__header-left">
+                @if (!string.IsNullOrEmpty(Title))
+                {
+                    <h3 class="lc-card__title">@Title</h3>
+                }
+                @if (!string.IsNullOrEmpty(Subtitle))
+                {
+                    <span class="lc-card__subtitle">@Subtitle</span>
+                }
+            </div>
+            @if (HeaderActions is not null)
+            {
+                <div class="lc-card__header-actions">
+                    @HeaderActions
+                </div>
+            }
+        </div>
+    }
+    <div class="lc-card__body">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter] public string?         Title         { get; set; }
+    [Parameter] public string?         Subtitle      { get; set; }
+    [Parameter] public RenderFragment? ChildContent  { get; set; }
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+    [Parameter] public bool            Padded        { get; set; } = true;
+    [Parameter] public string          CssClass      { get; set; } = "";
+}

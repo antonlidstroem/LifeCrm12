@@ -1,14 +1,50 @@
-@using LifeCrm.Web.Components.Layout
-@using Microsoft.AspNetCore.Components.Routing
+@* src/LifeCrm.Web/App.razor *@
+@using LifeCrm.Web.Services
+@using LifeCrm.Web.Theme
+@inject AppState AppState
+@inject ILocalStorageService Storage
+@inject AuthApiClient AuthClient
+@inject NavigationManager Nav
 
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+            <NotAuthorized>
+                @{
+                    Nav.NavigateTo("/login", forceLoad: false);
+                }
+            </NotAuthorized>
+        </AuthorizeRouteView>
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>
+        <PageTitle>Not Found — LifeCrm</PageTitle>
         <LayoutView Layout="@typeof(MainLayout)">
-            <MudText Typo="Typo.h4">Page not found.</MudText>
+            <div class="lc-empty" style="min-height: 60vh;">
+                <MudIcon Icon="@Icons.Material.Outlined.SearchOff"
+                         Style="font-size:56px; color:var(--lc-text-disabled)" />
+                <div class="lc-empty__title">Page not found</div>
+                <div class="lc-empty__subtitle">
+                    The page you're looking for doesn't exist or has been moved.
+                </div>
+                <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Outlined.Home" Class="mt-2">
+                    Go to Dashboard
+                </MudButton>
+            </div>
         </LayoutView>
     </NotFound>
 </Router>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await AppState.TryRestoreAsync(Storage);
+        if (!AppState.IsAuthenticated)
+        {
+            var currentPath = new Uri(Nav.Uri).PathAndQuery;
+            if (currentPath != "/login")
+                Nav.NavigateTo("/login");
+        }
+    }
+}

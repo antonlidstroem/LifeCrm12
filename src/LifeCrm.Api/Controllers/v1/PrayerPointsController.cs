@@ -1,7 +1,7 @@
 // src/LifeCrm.Api/Controllers/v1/PrayerPointsController.cs
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Application.Reports.Commands;
-using LifeCrm.Application.Reports.DTOs;
+using LifeCrm.Contracts.Reports.DTOs;
 using LifeCrm.Application.Reports.Queries;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;

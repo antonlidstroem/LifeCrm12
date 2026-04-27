@@ -1,5 +1,5 @@
 using FluentValidation;
-using LifeCrm.Application.Contacts.DTOs;
+using LifeCrm.Contracts.Contacts.DTOs;
 
 namespace LifeCrm.Application.Contacts.Commands;
 

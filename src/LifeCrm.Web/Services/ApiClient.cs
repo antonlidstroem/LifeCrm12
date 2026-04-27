@@ -1,15 +1,15 @@
 using Blazored.LocalStorage;
-using LifeCrm.Application.Campaigns.DTOs;
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Campaigns.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Application.Contacts.Commands;
-using LifeCrm.Application.Contacts.DTOs;
-using LifeCrm.Application.Documents.DTOs;
-using LifeCrm.Application.Donations.DTOs;
-using LifeCrm.Application.Interactions.DTOs;
-using LifeCrm.Application.Newsletters.DTOs;
-using LifeCrm.Application.Projects.DTOs;
-using LifeCrm.Application.Reports.DTOs;
-using LifeCrm.Application.Users.DTOs;
+using LifeCrm.Contracts.Contacts.DTOs;
+using LifeCrm.Contracts.Documents.DTOs;
+using LifeCrm.Contracts.Donations.DTOs;
+using LifeCrm.Contracts.Interactions.DTOs;
+using LifeCrm.Contracts.Newsletters.DTOs;
+using LifeCrm.Contracts.Projects.DTOs;
+using LifeCrm.Contracts.Reports.DTOs;
+using LifeCrm.Contracts.Users.DTOs;
 using LifeCrm.Core.Enums;
 using Microsoft.JSInterop;
 

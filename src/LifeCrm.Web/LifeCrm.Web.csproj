@@ -8,7 +8,8 @@
     <UserSecretsId>540bc006-a079-4f1d-af9a-5a261cdad700</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\LifeCrm.Application\LifeCrm.Application.csproj" />
+    <ProjectReference Include="..\LifeCrm.Contracts\LifeCrm.Contracts.csproj" />
+	  <ProjectReference Include="..\LifeCrm.Application\LifeCrm.Application.csproj" />
     <ProjectReference Include="..\LifeCrm.Core\LifeCrm.Core.csproj" />
   </ItemGroup>
   <ItemGroup>

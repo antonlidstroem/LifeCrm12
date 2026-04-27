@@ -1,0 +1,51 @@
+@* src/LifeCrm.Web/Shared/KpiCard.razor *@
+
+<div class="lc-kpi @CssClass">
+    <div class="lc-kpi__header">
+        <span class="lc-kpi__label">@Label</span>
+        <div class="lc-kpi__icon">
+            <MudIcon Icon="@Icon" Size="Size.Small" />
+        </div>
+    </div>
+
+    <div class="lc-kpi__value">
+        @if (Loading)
+        {
+            <div class="lc-kpi__skeleton"></div>
+        }
+        else
+        {
+            <span class="lc-kpi__number">@Value</span>
+        }
+    </div>
+
+    @if (Trend is not null && !Loading)
+    {
+        <div class="lc-kpi__trend @(TrendPositive ? "lc-kpi__trend--up" : "lc-kpi__trend--down")">
+            <MudIcon Icon="@(TrendPositive ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
+                     Size="Size.Small" />
+            <span>@Trend</span>
+            @if (TrendLabel is not null)
+            {
+                <span class="lc-kpi__trend-label">@TrendLabel</span>
+            }
+        </div>
+    }
+
+    @if (SubValue is not null && !Loading)
+    {
+        <div class="lc-kpi__sub">@SubValue</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string  Label         { get; set; } = "";
+    [Parameter] public string  Value         { get; set; } = "—";
+    [Parameter] public string  Icon          { get; set; } = Icons.Material.Outlined.Analytics;
+    [Parameter] public string? Trend         { get; set; }
+    [Parameter] public string? TrendLabel    { get; set; }
+    [Parameter] public bool    TrendPositive { get; set; } = true;
+    [Parameter] public string? SubValue      { get; set; }
+    [Parameter] public bool    Loading       { get; set; }
+    [Parameter] public string  CssClass      { get; set; } = "";
+}

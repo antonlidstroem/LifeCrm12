@@ -1,9 +1,9 @@
 using System.Net.Http.Json;
 using Blazored.LocalStorage;
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Application.Contacts.Commands;
-using LifeCrm.Application.Contacts.DTOs;
-using LifeCrm.Application.Interactions.DTOs;
+using LifeCrm.Contracts.Contacts.DTOs;
+using LifeCrm.Contracts.Interactions.DTOs;
 using Microsoft.JSInterop;
 
 namespace LifeCrm.Web.Services;

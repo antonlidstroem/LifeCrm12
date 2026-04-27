@@ -1,6 +1,6 @@
 // src/LifeCrm.Application/Campaigns/Queries/GetCampaignsQuery.cs
-using LifeCrm.Application.Campaigns.DTOs;
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Campaigns.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Core.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

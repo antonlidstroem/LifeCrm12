@@ -1,4 +1,4 @@
-using LifeCrm.Application.Interactions.DTOs;
+using LifeCrm.Contracts.Interactions.DTOs;
 using LifeCrm.Core.Interfaces;
 using MediatR;
 

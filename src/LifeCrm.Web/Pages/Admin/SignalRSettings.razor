@@ -1,0 +1,98 @@
+@* src/LifeCrm.Web/Pages/Admin/SignalRSettings.razor *@
+@page "/admin/signalr"
+@using LifeCrm.Web.Services
+@using LifeCrm.Web.Shared
+@inject SignalRSettingsApiClient SignalRApi
+@inject ISnackbar Snackbar
+
+<PageTitle>SignalR Settings — LifeCrm Admin</PageTitle>
+
+<div class="lc-page-enter">
+    <PageHeader Title="Real-Time Settings"
+                Subtitle="Control the SignalR hub for live activity updates" />
+
+    <div style="max-width:560px;">
+        <DataCard Title="SignalR Hub">
+            @if (_loading)
+            {
+                <div class="lc-skeleton-row" style="height:60px;"></div>
+            }
+            else
+            {
+                <div class="lc-signalr-row">
+                    <div class="lc-signalr-status">
+                        <div class="lc-signalr-indicator @(_enabled ? "lc-signalr-indicator--on" : "lc-signalr-indicator--off")">
+                        </div>
+                        <div>
+                            <div style="font-size:14px;font-weight:500;color:var(--lc-text-primary);">
+                                Hub is @(_enabled ? "Enabled" : "Disabled")
+                            </div>
+                            <div class="lc-muted" style="font-size:12px;margin-top:2px;">
+                                @(_enabled
+                                    ? "Live updates are pushed to all active browser sessions."
+                                    : "Real-time updates are paused. The app works fully in offline mode.")
+                            </div>
+                        </div>
+                    </div>
+                    <MudSwitch @bind-Value="_enabled"
+                               ValueChanged="ToggleAsync"
+                               Color="Color.Primary"
+                               Label="@(_enabled ? "On" : "Off")" />
+                </div>
+
+                <div class="lc-info-banner" style="margin-top:16px;">
+                    <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+                    <span>
+                        Changes take effect within 30 seconds across all server instances.
+                        Disable to reduce CPU when real-time updates are not needed.
+                    </span>
+                </div>
+            }
+        </DataCard>
+    </div>
+</div>
+
+<style>
+    .lc-signalr-row {
+        display: flex; align-items: center;
+        justify-content: space-between; gap: 16px;
+    }
+    .lc-signalr-status { display: flex; align-items: center; gap: 12px; }
+    .lc-signalr-indicator {
+        width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .lc-signalr-indicator--on  { background: var(--lc-success); box-shadow: 0 0 6px var(--lc-success); }
+    .lc-signalr-indicator--off { background: var(--lc-text-disabled); }
+    .lc-info-banner {
+        display: flex; align-items: flex-start; gap: 8px;
+        padding: 10px 14px;
+        background: var(--lc-neutral-bg);
+        border: 1px solid var(--lc-border);
+        border-radius: var(--lc-radius);
+        color: var(--lc-text-secondary);
+        font-size: 12px; line-height: 1.5;
+    }
+</style>
+
+@code {
+    private bool _enabled = true;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        var resp = await SignalRApi.GetAsync();
+        if (resp.Success) _enabled = resp.Data;
+        _loading = false;
+    }
+
+    private async Task ToggleAsync(bool value)
+    {
+        _enabled = value;
+        var resp = await SignalRApi.SetAsync(value);
+        if (resp.Success)
+            Snackbar.Add(value ? "SignalR hub enabled." : "SignalR hub disabled.", Severity.Info);
+        else
+            Snackbar.Add(resp.Errors.FirstOrDefault() ?? "Failed.", Severity.Error);
+    }
+}

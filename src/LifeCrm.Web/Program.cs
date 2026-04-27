@@ -1,3 +1,4 @@
+// src/LifeCrm.Web/Program.cs
 using Blazored.LocalStorage;
 using LifeCrm.Web.Services;
 using Microsoft.AspNetCore.Components.Web;
@@ -16,23 +17,11 @@ public class Program
 
         // ── HttpClient ──────────────────────────────────────────────────────────
         var apiBaseUrl = builder.Configuration["ApiBaseUrl"]
-    ?? throw new Exception("ApiBaseUrl saknas i wwwroot appsettings");
+            ?? throw new Exception("ApiBaseUrl is not configured in wwwroot/appsettings.json");
 
-        Console.WriteLine("API BASE URL = " + apiBaseUrl);
-        Console.WriteLine($"DEBUG ApiBaseUrl: '{apiBaseUrl}'");
-        Console.WriteLine($"ENV: {builder.HostEnvironment.Environment}");
-
-        if (string.IsNullOrWhiteSpace(apiBaseUrl))
+        builder.Services.AddScoped(_ => new HttpClient
         {
-            throw new Exception("ApiBaseUrl is not configured!");
-        }
-
-        builder.Services.AddScoped(sp =>
-        {
-            return new HttpClient
-            {
-                BaseAddress = new Uri(apiBaseUrl.TrimEnd('/') + "/")
-            };
+            BaseAddress = new Uri(apiBaseUrl.TrimEnd('/') + "/")
         });
 
         // ── MudBlazor ───────────────────────────────────────────────────────────
@@ -47,10 +36,6 @@ public class Program
 
         // ── Local Storage ───────────────────────────────────────────────────────
         builder.Services.AddBlazoredLocalStorage();
-
-        
-
-        
 
         // ── Domain API clients ──────────────────────────────────────────────────
         builder.Services.AddScoped<AuthApiClient>();
@@ -68,6 +53,12 @@ public class Program
 
         // ── Façade — must be registered AFTER domain clients ────────────────────
         builder.Services.AddScoped<ApiClient>();
+
+        // ── FIX E: Reference data cache ─────────────────────────────────────────
+        // ReferenceDataCache is Scoped (one per circuit/tab) so each browser
+        // tab gets its own cache — avoids stale data bleeding between tabs.
+        builder.Services.AddScoped<ReferenceDataCache>();
+        builder.Services.AddScoped<CachedReferenceDataService>();
 
         // ── App-level services ──────────────────────────────────────────────────
         builder.Services.AddSingleton<AppState>();

@@ -1,5 +1,5 @@
 using LifeCrm.Application.Common.Exceptions;
-using LifeCrm.Application.Contacts.DTOs;
+using LifeCrm.Contracts.Contacts.DTOs;
 using LifeCrm.Core.Entities;
 using LifeCrm.Core.Enums;
 using LifeCrm.Core.Interfaces;

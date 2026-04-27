@@ -1,4 +1,4 @@
-using LifeCrm.Application.Campaigns.DTOs;
+using LifeCrm.Contracts.Campaigns.DTOs;
 using LifeCrm.Application.Common.Exceptions;
 using LifeCrm.Core.Entities;
 using LifeCrm.Core.Interfaces;

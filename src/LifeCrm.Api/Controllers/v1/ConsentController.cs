@@ -1,4 +1,4 @@
-﻿using LifeCrm.Application.Common.DTOs;
+﻿using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Application.Consent.Commands;
 using LifeCrm.Application.Consent.Queries;
 using LifeCrm.Core.Enums;

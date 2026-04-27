@@ -1,0 +1,36 @@
+@* src/LifeCrm.Web/Shared/NavItem.razor *@
+@inject NavigationManager Nav
+
+<MudTooltip Text="@(Mini ? Label : "")" Placement="Placement.Right" Delay="200">
+    <a href="@Href"
+       class="lc-nav-item @(IsActive ? "lc-nav-item--active" : "") @(Mini ? "lc-nav-item--mini" : "")"
+       @onclick:preventDefault="false">
+        <span class="lc-nav-item__icon">
+            <MudIcon Icon="@Icon" Size="Size.Small" />
+        </span>
+        @if (!Mini)
+        {
+            <span class="lc-nav-item__label">@Label</span>
+        }
+    </a>
+</MudTooltip>
+
+@code {
+    [Parameter] public string Href        { get; set; } = "/";
+    [Parameter] public string Icon        { get; set; } = "";
+    [Parameter] public string Label       { get; set; } = "";
+    [Parameter] public bool   Mini        { get; set; }
+    [Parameter] public bool   ExactMatch  { get; set; }
+
+    private bool IsActive
+    {
+        get
+        {
+            var current = Nav.Uri.Replace(Nav.BaseUri.TrimEnd('/'), "").TrimEnd('/');
+            var href    = Href.TrimEnd('/');
+            return ExactMatch
+                ? current == href || (href == "" && current == "")
+                : current.StartsWith(href, StringComparison.OrdinalIgnoreCase) && href != "";
+        }
+    }
+}

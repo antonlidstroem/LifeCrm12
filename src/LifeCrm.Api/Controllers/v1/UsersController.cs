@@ -1,7 +1,7 @@
 // src/LifeCrm.Api/Controllers/v1/UsersController.cs
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Application.Common.Exceptions;
-using LifeCrm.Application.Users.DTOs;
+using LifeCrm.Contracts.Users.DTOs;
 using LifeCrm.Core.Enums;
 using LifeCrm.Core.Interfaces;
 using LifeCrm.Infrastructure.Persistence;

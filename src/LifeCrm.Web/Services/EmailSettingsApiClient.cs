@@ -1,5 +1,5 @@
 using Blazored.LocalStorage;
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using Microsoft.JSInterop;
 
 namespace LifeCrm.Web.Services;

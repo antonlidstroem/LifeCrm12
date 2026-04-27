@@ -1,8 +1,8 @@
 using LifeCrm.Application.Campaigns.Commands;
-using LifeCrm.Application.Campaigns.DTOs;
+using LifeCrm.Contracts.Campaigns.DTOs;
 using LifeCrm.Application.Campaigns.Queries;
-using LifeCrm.Application.Common.DTOs;
-using LifeCrm.Application.Newsletters.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
+using LifeCrm.Contracts.Newsletters.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

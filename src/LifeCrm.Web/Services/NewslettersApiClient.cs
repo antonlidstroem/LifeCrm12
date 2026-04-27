@@ -1,8 +1,8 @@
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
 using Blazored.LocalStorage;
-using LifeCrm.Application.Common.DTOs;
-using LifeCrm.Application.Newsletters.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
+using LifeCrm.Contracts.Newsletters.DTOs;
 using LifeCrm.Core.Enums;
 using Microsoft.JSInterop;
 

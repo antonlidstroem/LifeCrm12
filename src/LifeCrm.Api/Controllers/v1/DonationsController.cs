@@ -1,8 +1,8 @@
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Application.Documents.Commands;
-using LifeCrm.Application.Documents.DTOs;
+using LifeCrm.Contracts.Documents.DTOs;
 using LifeCrm.Application.Donations.Commands;
-using LifeCrm.Application.Donations.DTOs;
+using LifeCrm.Contracts.Donations.DTOs;
 using LifeCrm.Application.Donations.Queries;
 using LifeCrm.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
