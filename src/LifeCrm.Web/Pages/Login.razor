@@ -20,7 +20,7 @@
                 <div class="lc-logo__mark lc-logo__mark--lg">L</div>
                 <div class="lc-logo__wordmark">
                     <span class="lc-logo__name">LifeCrm</span>
-                    <span class="lc-logo__tagline">Relationship & Donation Management</span>
+                    <span class="lc-logo__tagline">Relationship &amp; Donation Management</span>
                 </div>
             </div>
 
@@ -43,16 +43,12 @@
                 </div>
             </div>
         </div>
-
-        <!-- Decorative grid lines -->
         <div class="lc-login__grid" aria-hidden="true"></div>
     </div>
 
     <!-- Right panel: form -->
     <div class="lc-login__form-panel">
         <div class="lc-login__form-inner">
-
-            <!-- Mobile logo (hidden on desktop) -->
             <div class="lc-login__mobile-logo">
                 <div class="lc-logo__mark">L</div>
                 <span class="lc-logo__name">LifeCrm</span>
@@ -63,63 +59,58 @@
                 <p>Sign in to your organisation account</p>
             </div>
 
-            <EditForm Model="_model" OnValidSubmit="LoginAsync">
-                <DataAnnotationsValidator />
+            <div class="lc-login__fields">
+                <MudTextField @bind-Value="_email"
+                              Label="Email address"
+                              InputType="InputType.Email"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Outlined.AlternateEmail"
+                              AdornmentColor="Color.Default"
+                              FullWidth="true"
+                              Disabled="_loading"
+                              Immediate="true" />
 
-                <div class="lc-login__fields">
-                    <MudTextField @bind-Value="_model.Email"
-                                  Label="Email address"
-                                  InputType="InputType.Email"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Outlined.AlternateEmail"
-                                  AdornmentColor="Color.Default"
-                                  FullWidth="true"
-                                  Disabled="_loading"
-                                  Immediate="true"
-                                  For="@(() => _model.Email)" />
+                <MudTextField @bind-Value="_password"
+                              Label="Password"
+                              InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_showPassword ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)"
+                              OnAdornmentClick="() => _showPassword = !_showPassword"
+                              AdornmentColor="Color.Default"
+                              FullWidth="true"
+                              Disabled="_loading"
+                              Immediate="true"
+                              OnKeyDown="OnKeyDown" />
+            </div>
 
-                    <MudTextField @bind-Value="_model.Password"
-                                  Label="Password"
-                                  InputType="@(_showPassword ? InputType.Text : InputType.Password)"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  AdornmentIcon="@(_showPassword ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)"
-                                  OnAdornmentClick="() => _showPassword = !_showPassword"
-                                  AdornmentColor="Color.Default"
-                                  FullWidth="true"
-                                  Disabled="_loading"
-                                  Immediate="true"
-                                  For="@(() => _model.Password)" />
+            @if (_error is not null)
+            {
+                <div class="lc-login__error">
+                    <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" />
+                    <span>@_error</span>
                 </div>
+            }
 
-                @if (_error is not null)
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Size="Size.Large"
+                       Disabled="_loading"
+                       OnClick="LoginAsync"
+                       Class="lc-login__submit">
+                @if (_loading)
                 {
-                    <div class="lc-login__error">
-                        <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" />
-                        <span>@_error</span>
-                    </div>
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Inherit"
+                                         Style="width:18px;height:18px;margin-right:8px;" />
+                    <span>Signing in…</span>
                 }
-
-                <MudButton ButtonType="ButtonType.Submit"
-                           Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           FullWidth="true"
-                           Size="Size.Large"
-                           Disabled="_loading"
-                           Class="lc-login__submit">
-                    @if (_loading)
-                    {
-                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Inherit"
-                                             Style="width:18px;height:18px;margin-right:8px;" />
-                        <span>Signing in…</span>
-                    }
-                    else
-                    {
-                        <span>Sign in</span>
-                    }
-                </MudButton>
-            </EditForm>
+                else
+                {
+                    <span>Sign in</span>
+                }
+            </MudButton>
 
             <div class="lc-login__footer">
                 <span>Having trouble? Contact your administrator.</span>
@@ -129,14 +120,12 @@
 </div>
 
 <style>
-    /* Login-specific styles — scoped to this page */
     .lc-login {
         min-height: 100dvh;
         display: grid;
         grid-template-columns: 1fr 1fr;
     }
 
-    /* ── Brand panel ── */
     .lc-login__brand {
         background: var(--lc-sidebar-bg);
         border-right: 1px solid var(--lc-border);
@@ -156,9 +145,7 @@
         width: 100%;
     }
 
-    .lc-logo-large {
-        display: flex; align-items: center; gap: 16px;
-    }
+    .lc-logo-large { display: flex; align-items: center; gap: 16px; }
 
     .lc-logo__mark--lg {
         width: 52px; height: 52px;
@@ -176,9 +163,7 @@
         display: block;
     }
 
-    .lc-login__features {
-        display: flex; flex-direction: column; gap: 20px;
-    }
+    .lc-login__features { display: flex; flex-direction: column; gap: 20px; }
 
     .lc-login__feature {
         display: flex; align-items: center; gap: 14px;
@@ -186,12 +171,8 @@
         font-size: 14px;
     }
 
-    .lc-login__feature .mud-icon-root {
-        color: var(--lc-accent);
-        opacity: 0.8;
-    }
+    .lc-login__feature .mud-icon-root { color: var(--lc-accent); opacity: 0.8; }
 
-    /* Decorative grid lines */
     .lc-login__grid {
         position: absolute; inset: 0; z-index: 1;
         background-image:
@@ -202,7 +183,6 @@
         mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
     }
 
-    /* ── Form panel ── */
     .lc-login__form-panel {
         display: flex;
         align-items: center;
@@ -237,9 +217,7 @@
         color: var(--lc-text-secondary);
     }
 
-    .lc-login__fields {
-        display: flex; flex-direction: column; gap: 16px;
-    }
+    .lc-login__fields { display: flex; flex-direction: column; gap: 16px; }
 
     .lc-login__error {
         display: flex; align-items: center; gap: 8px;
@@ -264,26 +242,23 @@
         color: var(--lc-text-disabled);
     }
 
-    /* ── Mobile responsive ── */
-    @media (max-width: 768px) {
-        .lc-login {
-            grid-template-columns: 1fr;
-        }
-
+    @@media (max-width: 768px) {
+        .lc-login { grid-template-columns: 1fr; }
         .lc-login__brand { display: none; }
-
         .lc-login__form-panel {
             padding: 32px 20px;
             align-items: flex-start;
             padding-top: 60px;
         }
-
         .lc-login__mobile-logo { display: flex; }
     }
 </style>
 
 @code {
-    private readonly LoginRequest _model = new();
+    // Use plain mutable fields — LoginRequest is a record with init-only properties
+    // which are incompatible with Blazor two-way @bind-Value binding.
+    private string _email    = string.Empty;
+    private string _password = string.Empty;
     private bool   _loading      = false;
     private bool   _showPassword = false;
     private string? _error;
@@ -294,6 +269,11 @@
             Nav.NavigateTo("/", forceLoad: false);
     }
 
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoginAsync();
+    }
+
     private async Task LoginAsync()
     {
         _loading = true;
@@ -301,7 +281,11 @@
 
         try
         {
-            var resp = await AuthClient.LoginAsync(_model);
+            var resp = await AuthClient.LoginAsync(new LoginRequest
+            {
+                Email    = _email,
+                Password = _password
+            });
 
             if (!resp.Success || resp.Data is null)
             {

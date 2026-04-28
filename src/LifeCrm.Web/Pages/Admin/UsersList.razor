@@ -161,7 +161,6 @@
     </DataCard>
 </div>
 
-<!-- Create/Edit Dialog -->
 @if (_showDialog)
 {
     <div class="lc-dialog-overlay" @onclick="CloseDialog">
@@ -174,7 +173,6 @@
             <div class="lc-dialog__body">
                 @if (_editingUser == null)
                 {
-                    <!-- Create form -->
                     <div class="lc-form-fields">
                         <MudTextField @bind-Value="_createReq.FullName" Label="Full name"
                                       Variant="Variant.Outlined" FullWidth="true" />
@@ -196,7 +194,6 @@
                 }
                 else
                 {
-                    <!-- Edit form -->
                     <div class="lc-form-fields">
                         <MudTextField @bind-Value="_updateReq.FullName" Label="Full name"
                                       Variant="Variant.Outlined" FullWidth="true" />
@@ -233,41 +230,8 @@
         font-size: 11px; font-weight: 600; color: var(--lc-accent); flex-shrink: 0;
     }
     .lc-form-fields { display: flex; flex-direction: column; gap: 16px; }
-    .lc-dialog-overlay {
-        position: fixed; inset: 0; z-index: 500;
-        background: rgba(8, 14, 24, 0.75);
-        display: flex; align-items: center; justify-content: center;
-        padding: 16px;
-        animation: lc-fade-in 200ms ease;
-    }
-    .lc-dialog {
-        background: var(--lc-surface);
-        border: 1px solid var(--lc-border);
-        border-radius: var(--lc-radius);
-        width: 100%; max-width: 440px;
-        box-shadow: var(--lc-shadow-panel);
-        animation: lc-slide-up 220ms cubic-bezier(0.4,0,0.2,1);
-    }
-    .lc-dialog__header {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 18px 20px 14px;
-        border-bottom: 1px solid var(--lc-border);
-    }
-    .lc-dialog__header h3 {
-        margin: 0; font-size: 15px; font-weight: 600; color: var(--lc-text-primary);
-    }
-    .lc-dialog__body { padding: 20px; }
-    .lc-dialog__footer {
-        display: flex; justify-content: flex-end; gap: 8px;
-        padding: 14px 20px; border-top: 1px solid var(--lc-border);
-    }
-    @keyframes lc-fade-in { from { opacity:0; } to { opacity:1; } }
-    @keyframes lc-slide-up {
-        from { opacity:0; transform: translateY(12px); }
-        to   { opacity:1; transform: translateY(0); }
-    }
     .lc-hide-md { }
-    @media (max-width: 1100px) { .lc-hide-md { display: none !important; } }
+    @@media (max-width: 1100px) { .lc-hide-md { display: none !important; } }
 </style>
 
 @code {
@@ -277,7 +241,6 @@
     private bool        _showDialog = false;
     private UserSummaryDto? _editingUser;
 
-    // Form models — simple mutable classes to avoid record immutability issues in forms
     private CreateUserFormModel _createReq = new();
     private UpdateUserFormModel _updateReq = new();
 
@@ -302,7 +265,7 @@
     private void OpenEditDialog(UserSummaryDto u)
     {
         _editingUser = u;
-        _updateReq   = new() { Role = u.Role };
+        _updateReq   = new() { FullName = u.FullName, Role = u.Role };
         _showDialog  = true;
     }
 
@@ -313,7 +276,8 @@
         _saving = true;
         if (_editingUser == null)
         {
-            var resp = await Api.CreateUserAsync(new Contracts.Users.DTOs.CreateUserRequest
+            // FIX: use LifeCrm.Contracts.Users.DTOs.CreateUserRequest (not Application)
+            var resp = await Api.CreateUserAsync(new CreateUserRequest
             {
                 FullName = _createReq.FullName,
                 Email    = _createReq.Email,
@@ -330,7 +294,8 @@
         }
         else
         {
-            var resp = await Api.UpdateUserAsync(_editingUser.Id, new Application.Users.DTOs.UpdateUserRequest
+            // FIX: use LifeCrm.Contracts.Users.DTOs.UpdateUserRequest (not Application.Users.DTOs)
+            var resp = await Api.UpdateUserAsync(_editingUser.Id, new UpdateUserRequest
             {
                 FullName    = _updateReq.FullName,
                 NewPassword = string.IsNullOrWhiteSpace(_updateReq.NewPassword) ? null : _updateReq.NewPassword,
@@ -363,7 +328,6 @@
 
     private async Task DeleteAsync(UserSummaryDto u)
     {
-        // Simple confirm via snackbar action — replace with dialog if preferred
         var resp = await Api.DeleteUserAsync(u.Id);
         if (resp.Success) { Snackbar.Add("User deleted.", Severity.Success); await LoadAsync(); }
         else Snackbar.Add(resp.Errors.FirstOrDefault() ?? "Failed.", Severity.Error);
@@ -378,7 +342,6 @@
         _                => "neutral"
     };
 
-    // Mutable form models (records can't be used directly in two-way binding)
     private class CreateUserFormModel
     {
         public string   FullName { get; set; } = "";

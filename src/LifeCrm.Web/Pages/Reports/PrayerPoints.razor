@@ -298,13 +298,13 @@
         display: flex; justify-content: flex-end; gap: 8px;
         padding: 14px 20px; border-top: 1px solid var(--lc-border);
     }
-    @keyframes lc-fade-in { from { opacity:0; } to { opacity:1; } }
-    @keyframes lc-slide-up {
+    @@keyframes lc-fade-in { from { opacity:0; } to { opacity:1; } }
+    @@keyframes lc-slide-up {
         from { opacity:0; transform: translateY(12px); }
         to   { opacity:1; transform: translateY(0); }
     }
 
-    @media (max-width: 768px) {
+    @@media (max-width: 768px) {
         .lc-prayer-grid { grid-template-columns: 1fr; }
         .lc-prayer-grid__answered { grid-column: 1; }
     }

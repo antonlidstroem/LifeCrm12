@@ -38,8 +38,9 @@
         </Actions>
     </PageHeader>
 
+    @* FIX RZ9996: DataCard with HeaderActions slot requires explicit ChildContent tags
+       when HeaderActions is also used. *@
     <DataCard>
-        <!-- Toolbar -->
         <HeaderActions>
             <div class="lc-search" style="min-width:260px;">
                 <MudIcon Icon="@Icons.Material.Outlined.Search"
@@ -49,146 +50,149 @@
                        @onkeyup="OnSearchKeyUp" />
             </div>
         </HeaderActions>
-
-        <!-- Desktop table -->
-        <div class="lc-hide-mobile">
-            <MudTable Items="_contacts" Dense="true" Hover="true"
-                      Loading="_loading" LoadingProgressColor="Color.Primary"
-                      FixedHeader="true" Height="calc(100vh - 260px)"
-                      RowClass="lc-table-row"
-                      OnRowClick="@((TableRowClickEventArgs<ContactListDto> args) => GoToContact(args.Item))"
-                      Style="cursor:pointer;">
-                <HeaderContent>
-                    <MudTh Style="width:36px"></MudTh>
-                    <MudTh>
-                        <MudTableSortLabel SortBy="new Func<ContactListDto, object>(x => x.Name)">
-                            Name
-                        </MudTableSortLabel>
-                    </MudTh>
-                    <MudTh Class="lc-hide-mobile">Type</MudTh>
-                    <MudTh Class="lc-hide-mobile">Email</MudTh>
-                    <MudTh Class="lc-hide-mobile">Phone</MudTh>
-                    <MudTh Class="lc-hide-mobile">Tags</MudTh>
-                    <MudTh Style="text-align:right">Donated</MudTh>
-                    <MudTh Style="width:48px"></MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd>
-                        <div class="lc-contact-avatar">
-                            @(context.Name.Length > 0 ? context.Name[0].ToString().ToUpper() : "?")
-                        </div>
-                    </MudTd>
-                    <MudTd DataLabel="Name">
-                        <span style="font-weight:500">@context.Name</span>
-                    </MudTd>
-                    <MudTd DataLabel="Type" Class="lc-hide-mobile">
-                        <StatusBadge Text="@context.Type.ToString()"
-                                     Variant="@ContactTypeBadge(context.Type)" />
-                    </MudTd>
-                    <MudTd DataLabel="Email" Class="lc-hide-mobile lc-muted"
-                           Style="font-size:13px;">
-                        @context.Email
-                    </MudTd>
-                    <MudTd DataLabel="Phone" Class="lc-hide-mobile lc-muted"
-                           Style="font-size:13px;">
-                        @context.Phone
-                    </MudTd>
-                    <MudTd DataLabel="Tags" Class="lc-hide-mobile">
-                        @if (!string.IsNullOrWhiteSpace(context.Tags))
-                        {
-                            foreach (var tag in context.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Take(3))
-                            {
-                                <span class="lc-tag">@tag.Trim()</span>
-                            }
-                        }
-                    </MudTd>
-                    <MudTd DataLabel="Donated" Style="text-align:right;">
-                        <span class="lc-mono" style="font-size:13px;">
-                            $@context.TotalDonations.ToString("N0")
-                        </span>
-                    </MudTd>
-                    <MudTd>
-                        <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
-                                       Size="Size.Small" Color="Color.Default"
-                                       OnClick="@(() => GoToContact(context))"
-                                       @onclick:stopPropagation="true" />
-                    </MudTd>
-                </RowTemplate>
-                <NoRecordsContent>
-                    <div class="lc-empty">
-                        <MudIcon Icon="@Icons.Material.Outlined.PeopleOutline"
-                                 Style="font-size:40px;color:var(--lc-text-disabled)" />
-                        <span class="lc-empty__title">No contacts found</span>
-                        <span class="lc-empty__subtitle">
-                            @(string.IsNullOrWhiteSpace(_searchText)
-                                ? "Add your first contact to get started."
-                                : $"No results for "{_searchText}".")
-                        </span>
-                    </div>
-                </NoRecordsContent>
-            </MudTable>
-        </div>
-
-        <!-- Mobile card list -->
-        <div class="lc-show-mobile lc-card-list">
-            @if (_loading)
-            {
-                @for (int i = 0; i < 5; i++)
-                {
-                    <div class="lc-skeleton-row" style="height:80px;"></div>
-                }
-            }
-            else if (!_contacts.Any())
-            {
-                <div class="lc-empty">
-                    <span class="lc-muted">No contacts found.</span>
-                </div>
-            }
-            else
-            {
-                @foreach (var c in _contacts)
-                {
-                    <div class="lc-list-card" @onclick="() => GoToContact(c)">
-                        <div class="lc-list-card__header">
-                            <div style="display:flex;align-items:center;gap:10px;">
-                                <div class="lc-contact-avatar">
-                                    @(c.Name.Length > 0 ? c.Name[0].ToString().ToUpper() : "?")
-                                </div>
-                                <span class="lc-list-card__title">@c.Name</span>
+        <ChildContent>
+            <!-- Desktop table -->
+            <div class="lc-hide-mobile">
+                <MudTable Items="_contacts" Dense="true" Hover="true"
+                          Loading="_loading" LoadingProgressColor="Color.Primary"
+                          FixedHeader="true" Height="calc(100vh - 260px)"
+                          RowClass="lc-table-row"
+                          OnRowClick="@((TableRowClickEventArgs<ContactListDto> args) => GoToContact(args.Item))"
+                          Style="cursor:pointer;">
+                    <HeaderContent>
+                        <MudTh Style="width:36px"></MudTh>
+                        <MudTh>
+                            <MudTableSortLabel SortBy="new Func<ContactListDto, object>(x => x.Name)">
+                                Name
+                            </MudTableSortLabel>
+                        </MudTh>
+                        <MudTh Class="lc-hide-mobile">Type</MudTh>
+                        <MudTh Class="lc-hide-mobile">Email</MudTh>
+                        <MudTh Class="lc-hide-mobile">Phone</MudTh>
+                        <MudTh Class="lc-hide-mobile">Tags</MudTh>
+                        <MudTh Style="text-align:right">Donated</MudTh>
+                        <MudTh Style="width:48px"></MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>
+                            <div class="lc-contact-avatar">
+                                @(context.Name.Length > 0 ? context.Name[0].ToString().ToUpper() : "?")
                             </div>
-                            <StatusBadge Text="@c.Type.ToString()"
-                                         Variant="@ContactTypeBadge(c.Type)" />
-                        </div>
-                        <div class="lc-list-card__meta">
-                            @if (!string.IsNullOrEmpty(c.Email))
+                        </MudTd>
+                        <MudTd DataLabel="Name">
+                            <span style="font-weight:500">@context.Name</span>
+                        </MudTd>
+                        <MudTd DataLabel="Type" Class="lc-hide-mobile">
+                            <StatusBadge Text="@context.Type.ToString()"
+                                         Variant="@ContactTypeBadge(context.Type)" />
+                        </MudTd>
+                        <MudTd DataLabel="Email" Class="lc-hide-mobile lc-muted"
+                               Style="font-size:13px;">
+                            @context.Email
+                        </MudTd>
+                        <MudTd DataLabel="Phone" Class="lc-hide-mobile lc-muted"
+                               Style="font-size:13px;">
+                            @context.Phone
+                        </MudTd>
+                        <MudTd DataLabel="Tags" Class="lc-hide-mobile">
+                            @if (!string.IsNullOrWhiteSpace(context.Tags))
                             {
-                                <span class="lc-list-card__meta-item">
-                                    <MudIcon Icon="@Icons.Material.Outlined.Email"
-                                             Size="Size.Small" />
-                                    @c.Email
-                                </span>
+                                foreach (var tag in context.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Take(3))
+                                {
+                                    <span class="lc-tag">@tag.Trim()</span>
+                                }
                             }
-                            @if (c.TotalDonations > 0)
-                            {
-                                <span class="lc-list-card__meta-item lc-mono">
-                                    $@c.TotalDonations.ToString("N0") donated
-                                </span>
-                            }
+                        </MudTd>
+                        <MudTd DataLabel="Donated" Style="text-align:right;">
+                            <span class="lc-mono" style="font-size:13px;">
+                                $@context.TotalDonations.ToString("N0")
+                            </span>
+                        </MudTd>
+                        <MudTd>
+                            @* FIX RZ10010: @onclick:stopPropagation and OnClick cannot both be on MudIconButton.
+                               Use a plain wrapper div with stopPropagation, then navigate inside OnClick. *@
+                            <div @onclick:stopPropagation="true">
+                                <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
+                                               Size="Size.Small" Color="Color.Default"
+                                               OnClick="@(() => GoToContact(context))" />
+                            </div>
+                        </MudTd>
+                    </RowTemplate>
+                    <NoRecordsContent>
+                        <div class="lc-empty">
+                            <MudIcon Icon="@Icons.Material.Outlined.PeopleOutline"
+                                     Style="font-size:40px;color:var(--lc-text-disabled)" />
+                            <span class="lc-empty__title">No contacts found</span>
+                            <span class="lc-empty__subtitle">
+                                @(string.IsNullOrWhiteSpace(_searchText)
+                                    ? "Add your first contact to get started."
+                                    : $"No results for \"{_searchText}\".")
+                            </span>
                         </div>
+                    </NoRecordsContent>
+                </MudTable>
+            </div>
+
+            <!-- Mobile card list -->
+            <div class="lc-show-mobile lc-card-list">
+                @if (_loading)
+                {
+                    @for (int i = 0; i < 5; i++)
+                    {
+                        <div class="lc-skeleton-row" style="height:80px;"></div>
+                    }
+                }
+                else if (!_contacts.Any())
+                {
+                    <div class="lc-empty">
+                        <span class="lc-muted">No contacts found.</span>
                     </div>
                 }
-            }
-        </div>
+                else
+                {
+                    @foreach (var c in _contacts)
+                    {
+                        <div class="lc-list-card" @onclick="() => GoToContact(c)">
+                            <div class="lc-list-card__header">
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <div class="lc-contact-avatar">
+                                        @(c.Name.Length > 0 ? c.Name[0].ToString().ToUpper() : "?")
+                                    </div>
+                                    <span class="lc-list-card__title">@c.Name</span>
+                                </div>
+                                <StatusBadge Text="@c.Type.ToString()"
+                                             Variant="@ContactTypeBadge(c.Type)" />
+                            </div>
+                            <div class="lc-list-card__meta">
+                                @if (!string.IsNullOrEmpty(c.Email))
+                                {
+                                    <span class="lc-list-card__meta-item">
+                                        <MudIcon Icon="@Icons.Material.Outlined.Email" Size="Size.Small" />
+                                        @c.Email
+                                    </span>
+                                }
+                                @if (c.TotalDonations > 0)
+                                {
+                                    <span class="lc-list-card__meta-item lc-mono">
+                                        $@c.TotalDonations.ToString("N0") donated
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
 
-        <!-- Pagination -->
-        <div class="lc-table-footer">
-            <span class="lc-muted" style="font-size:12px;">
-                Showing @(_contacts.Count) of @_totalCount contacts
-            </span>
-            <MudPagination Count="_totalPages" Selected="_currentPage"
-                           SelectedChanged="OnPageChanged"
-                           Color="Color.Primary" Size="Size.Small" />
-        </div>
+            <!-- Pagination -->
+            <div class="lc-table-footer">
+                <span class="lc-muted" style="font-size:12px;">
+                    Showing @(_contacts.Count) of @_totalCount contacts
+                </span>
+                <MudPagination Count="_totalPages" Selected="_currentPage"
+                               SelectedChanged="OnPageChanged"
+                               Color="Color.Primary" Size="Size.Small" />
+            </div>
+        </ChildContent>
     </DataCard>
 </div>
 
@@ -203,7 +207,6 @@
         color: var(--lc-accent);
         flex-shrink: 0;
     }
-
     .lc-tag {
         display: inline-block;
         padding: 1px 7px;
@@ -213,7 +216,6 @@
         font-size: 11px;
         margin-right: 4px;
     }
-
     .lc-table-footer {
         display: flex;
         align-items: center;
@@ -223,7 +225,6 @@
         gap: 12px;
         flex-wrap: wrap;
     }
-
     .lc-table-row { cursor: pointer; }
 </style>
 
@@ -287,7 +288,7 @@
         if (!resp.Success) Snackbar.Add("Export failed.", Severity.Error);
     }
 
-    private Task ImportAsync() => Task.CompletedTask; // wire to import dialog
+    private Task ImportAsync() => Task.CompletedTask;
 
     private static string ContactTypeBadge(Core.Enums.ContactType t) => t switch
     {

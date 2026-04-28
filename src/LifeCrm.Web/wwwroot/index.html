@@ -79,42 +79,24 @@
 </head>
 
 <body>
-    <!-- Loading screen — hidden after Blazor mounts -->
-    <div id="app-loading">
-        <div class="lc-boot-logo">L</div>
-        <span class="lc-boot-text">Loading LifeCrm…</span>
-    </div>
-
     <div id="app">
-        <!-- Blazor renders here -->
-    </div>
-
-    <div id="blazor-error-ui" style="display:none;position:fixed;bottom:0;left:0;right:0;
-         background:#1A2535;border-top:1px solid #EF4444;padding:12px 20px;
-         color:#EF4444;font-size:13px;z-index:10000;">
-        A critical error occurred.
-        <a href="" style="color:#2E8EFF;margin-left:8px;">Reload</a>
-        <a onclick="document.getElementById('blazor-error-ui').style.display='none'"
-           style="float:right;cursor:pointer;color:#7A95B0;">✕</a>
+        <div id="app-loading">
+            <div class="lc-boot-logo">L</div>
+            <span class="lc-boot-text">Loading LifeCrm…</span>
+        </div>
     </div>
 
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
 
     <script>
-        // Hide loading screen once Blazor has mounted
-        Blazor.start().then(() => {
-            const el = document.getElementById('app-loading');
-            if (el) { el.classList.add('hidden'); setTimeout(() => el.remove(), 350); }
-        });
-
-        // File download helper used by ApiClientBase.DownloadFileAsync
+        // Behåll bara dina egna hjälpare, ta bort Blazor.start()
         window.lifecrm = {
             downloadFile: function (filename, base64, mimeType) {
                 const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-                const blob  = new Blob([bytes], { type: mimeType });
-                const url   = URL.createObjectURL(blob);
-                const a     = document.createElement('a');
+                const blob = new Blob([bytes], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
                 a.href = url; a.download = filename;
                 document.body.appendChild(a);
                 a.click();

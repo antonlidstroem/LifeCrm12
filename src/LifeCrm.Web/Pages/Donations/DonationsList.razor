@@ -103,39 +103,39 @@
                         <StatusBadge Text="@context.Status.ToString()"
                                      Variant="@StatusBadge.VariantFromDonationStatus(context.Status)" />
                     </MudTd>
-                    <MudTd DataLabel="Campaign" Class="lc-hide-md lc-muted"
-                           Style="font-size:12px;">
+                    <MudTd DataLabel="Campaign" Class="lc-hide-md lc-muted" Style="font-size:12px;">
                         @context.CampaignName
                     </MudTd>
-                    <MudTd DataLabel="Method" Class="lc-hide-md lc-muted"
-                           Style="font-size:12px;">
+                    <MudTd DataLabel="Method" Class="lc-hide-md lc-muted" Style="font-size:12px;">
                         @context.PaymentMethod
                     </MudTd>
                     <MudTd DataLabel="Receipt">
-                        @if (context.ReceiptSent && context.ReceiptDocumentId.HasValue)
-                        {
-                            <MudTooltip Text="Download receipt">
-                                <MudIconButton Icon="@Icons.Material.Outlined.Receipt"
-                                               Size="Size.Small" Color="Color.Success"
-                                               OnClick="@(async () => await DownloadReceipt(context))"
-                                               @onclick:stopPropagation="true" />
-                            </MudTooltip>
-                        }
-                        else if (AppState.IsFinanceOrAdmin)
-                        {
-                            <MudTooltip Text="Generate receipt">
-                                <MudIconButton Icon="@Icons.Material.Outlined.ReceiptLong"
-                                               Size="Size.Small" Color="Color.Default"
-                                               OnClick="@(async () => await GenerateReceipt(context))"
-                                               @onclick:stopPropagation="true" />
-                            </MudTooltip>
-                        }
+                        @* FIX RZ10010: wrap icon buttons that need stopPropagation in a div *@
+                        <div @onclick:stopPropagation="true">
+                            @if (context.ReceiptSent && context.ReceiptDocumentId.HasValue)
+                            {
+                                <MudTooltip Text="Download receipt">
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Receipt"
+                                                   Size="Size.Small" Color="Color.Success"
+                                                   OnClick="@(async () => await DownloadReceipt(context))" />
+                                </MudTooltip>
+                            }
+                            else if (AppState.IsFinanceOrAdmin)
+                            {
+                                <MudTooltip Text="Generate receipt">
+                                    <MudIconButton Icon="@Icons.Material.Outlined.ReceiptLong"
+                                                   Size="Size.Small" Color="Color.Default"
+                                                   OnClick="@(async () => await GenerateReceipt(context))" />
+                                </MudTooltip>
+                            }
+                        </div>
                     </MudTd>
                     <MudTd>
-                        <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
-                                       Size="Size.Small"
-                                       OnClick="@(() => GoTo(context))"
-                                       @onclick:stopPropagation="true" />
+                        <div @onclick:stopPropagation="true">
+                            <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
+                                           Size="Size.Small"
+                                           OnClick="@(() => GoTo(context))" />
+                        </div>
                     </MudTd>
                 </RowTemplate>
                 <NoRecordsContent>
@@ -179,9 +179,7 @@
                             </span>
                             @if (!string.IsNullOrEmpty(d.CampaignName))
                             {
-                                <span class="lc-list-card__meta-item lc-muted">
-                                    @d.CampaignName
-                                </span>
+                                <span class="lc-list-card__meta-item lc-muted">@d.CampaignName</span>
                             }
                         </div>
                     </div>
@@ -216,8 +214,8 @@
         font-size: 11px; font-weight: 600; color: var(--lc-accent); flex-shrink: 0;
     }
     .lc-hide-md { }
-    @media (max-width: 1100px) { .lc-hide-md { display: none !important; } }
-    @media (max-width: 768px) {
+    @@media (max-width: 1100px) { .lc-hide-md { display: none !important; } }
+    @@media (max-width: 768px) {
         .lc-filter-bar { gap: 8px; }
         .lc-filter-date { max-width: 130px; }
     }
@@ -289,11 +287,7 @@
     private async Task GenerateReceipt(DonationListDto d)
     {
         var resp = await Api.GenerateReceiptAsync(d.Id, sendByEmail: false);
-        if (resp.Success)
-        {
-            Snackbar.Add("Receipt generated.", Severity.Success);
-            await LoadAsync();
-        }
+        if (resp.Success) { Snackbar.Add("Receipt generated.", Severity.Success); await LoadAsync(); }
         else Snackbar.Add(resp.Errors.FirstOrDefault() ?? "Failed.", Severity.Error);
     }
 

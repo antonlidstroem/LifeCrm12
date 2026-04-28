@@ -31,6 +31,10 @@
 		<Content Remove="wwwroot\service-worker.js" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Pages\PrayerPoints\" />
+	</ItemGroup>
+
 
 
 </Project>

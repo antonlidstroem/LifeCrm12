@@ -34,11 +34,18 @@
                             </div>
                         </div>
                     </div>
+                    @* FIX: removed ValueChanged — @bind-Value already handles two-way binding.
+                       Having both @bind-Value and ValueChanged causes RZ10010 duplicate parameter error. *@
                     <MudSwitch @bind-Value="_enabled"
-                               ValueChanged="ToggleAsync"
                                Color="Color.Primary"
-                               Label="@(_enabled ? "On" : "Off")" />
+                               Label="@(_enabled ? "On" : "Off")"
+                               T="bool" />
                 </div>
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="ToggleAsync" Disabled="_saving" Class="mt-3">
+                    @(_saving ? "Saving…" : "Save")
+                </MudButton>
 
                 <div class="lc-info-banner" style="margin-top:16px;">
                     <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
@@ -77,6 +84,7 @@
 @code {
     private bool _enabled = true;
     private bool _loading = true;
+    private bool _saving  = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -86,13 +94,14 @@
         _loading = false;
     }
 
-    private async Task ToggleAsync(bool value)
+    private async Task ToggleAsync()
     {
-        _enabled = value;
-        var resp = await SignalRApi.SetAsync(value);
+        _saving = true;
+        var resp = await SignalRApi.SetAsync(_enabled);
         if (resp.Success)
-            Snackbar.Add(value ? "SignalR hub enabled." : "SignalR hub disabled.", Severity.Info);
+            Snackbar.Add(_enabled ? "SignalR hub enabled." : "SignalR hub disabled.", Severity.Info);
         else
             Snackbar.Add(resp.Errors.FirstOrDefault() ?? "Failed.", Severity.Error);
+        _saving = false;
     }
 }

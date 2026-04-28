@@ -106,10 +106,16 @@
                         }
                     </MudTd>
                     <MudTd>
-                        <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
-                                       Size="Size.Small"
-                                       OnClick="@(() => GoTo(context))"
-                                       @onclick:stopPropagation="true" />
+                       
+
+                                       <MudTd>
+                                <div @onclick:stopPropagation="true" style="display:inline-block">
+                                    <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => GoTo(context))" />
+                                </div>
+                            </MudTd>
+
                     </MudTd>
                 </RowTemplate>
                 <NoRecordsContent>
@@ -177,7 +183,7 @@
 <style>
     .lc-filter-bar { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
     .lc-hide-md { }
-    @media (max-width: 1100px) { .lc-hide-md { display: none !important; } }
+    @@media (max-width: 1100px) { .lc-hide-md { display: none !important; } }
 </style>
 
 @code {

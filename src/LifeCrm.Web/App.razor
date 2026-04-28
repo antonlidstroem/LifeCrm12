@@ -7,45 +7,63 @@
 @inject AuthApiClient AuthClient
 @inject NavigationManager Nav
 
-<Router AppAssembly="@typeof(App).Assembly">
-    <Found Context="routeData">
-        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-            <NotAuthorized>
-                @{
-                    Nav.NavigateTo("/login", forceLoad: false);
-                }
-            </NotAuthorized>
-        </AuthorizeRouteView>
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-    <NotFound>
-        <PageTitle>Not Found — LifeCrm</PageTitle>
-        <LayoutView Layout="@typeof(MainLayout)">
-            <div class="lc-empty" style="min-height: 60vh;">
-                <MudIcon Icon="@Icons.Material.Outlined.SearchOff"
-                         Style="font-size:56px; color:var(--lc-text-disabled)" />
-                <div class="lc-empty__title">Page not found</div>
-                <div class="lc-empty__subtitle">
-                    The page you're looking for doesn't exist or has been moved.
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Not Found — LifeCrm</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <div class="lc-empty" style="min-height: 60vh;">
+                    <MudIcon Icon="@Icons.Material.Outlined.SearchOff"
+                             Style="font-size:56px; color:var(--lc-text-disabled)" />
+                    <div class="lc-empty__title">Page not found</div>
+                    <div class="lc-empty__subtitle">
+                        The page you're looking for doesn't exist or has been moved.
+                    </div>
+                    <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Outlined.Home" Class="mt-2">
+                        Go to Dashboard
+                    </MudButton>
                 </div>
-                <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary"
-                           StartIcon="@Icons.Material.Outlined.Home" Class="mt-2">
-                    Go to Dashboard
-                </MudButton>
-            </div>
-        </LayoutView>
-    </NotFound>
-</Router>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
 
 @code {
     protected override async Task OnInitializedAsync()
     {
-        await AppState.TryRestoreAsync(Storage);
-        if (!AppState.IsAuthenticated)
+        try
         {
-            var currentPath = new Uri(Nav.Uri).PathAndQuery;
-            if (currentPath != "/login")
-                Nav.NavigateTo("/login");
+            await AppState.TryRestoreAsync(Storage);
+        
+            var currentPath = Nav.ToBaseRelativePath(Nav.Uri);
+        
+            if (!AppState.IsAuthenticated)
+            {
+                if (!currentPath.StartsWith("login"))
+                    Nav.NavigateTo("/login");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Critical Startup Error: {ex.Message}");
+        }
+    }
+
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Nav.NavigateTo("/login");
         }
     }
 }

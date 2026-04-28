@@ -109,10 +109,12 @@
                         else { <span class="lc-muted">—</span> }
                     </MudTd>
                     <MudTd>
-                        <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
-                                       Size="Size.Small"
-                                       OnClick="@(() => GoTo(context))"
-                                       @onclick:stopPropagation="true" />
+                        @* FIX RZ10010: wrap in div instead of combining @onclick:stopPropagation + OnClick on same element *@
+                        <div @onclick:stopPropagation="true">
+                            <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
+                                           Size="Size.Small"
+                                           OnClick="@(() => GoTo(context))" />
+                        </div>
                     </MudTd>
                 </RowTemplate>
                 <NoRecordsContent>
@@ -194,7 +196,7 @@
     }
     .lc-filter-bar { display: flex; align-items: center; gap: 10px; }
     .lc-hide-md { }
-    @media (max-width: 1100px) { .lc-hide-md { display: none !important; } }
+    @@media (max-width: 1100px) { .lc-hide-md { display: none !important; } }
 </style>
 
 @code {
@@ -234,11 +236,8 @@
             _totalCount = resp.Data.TotalCount;
             _totalPages = resp.Data.TotalPages;
 
-            // Track submitted count for badge
             if (_statusFilter == null)
-            {
                 _counts["Awaiting"] = _reports.Count(r => r.Status == ReportStatus.Submitted);
-            }
         }
         _loading = false;
     }
