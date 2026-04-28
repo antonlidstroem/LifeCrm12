@@ -1,17 +1,225 @@
-body { font-family: 'Segoe UI', sans-serif; margin: 0; }
-/* ============================================================
-   app.css ADDITIONS
-   Append these rules to the end of wwwroot/css/app.css
+/* src/LifeCrm.Web/wwwroot/css/app.css
+   LifeCrm Enterprise Design System — Consolidated Stylesheet
+   ─────────────────────────────────────────────────────────────────────────── */
 
-   These cover patterns introduced by the remaining pages:
-   Donations, Projects, Campaigns, Newsletters, Reports,
-   Prayer Points, Admin (Users, Email Settings, SignalR, Profile)
-   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
-/* ── Shared dialog pattern ───────────────────────────────────────────────── */
-/* Already defined inline in UsersList.razor — move here for DRY reuse.
-   Remove the <style> blocks from individual pages and keep these global. */
+/* ── Design Tokens ───────────────────────────────────────────────────────── */
+:root {
+    --lc-bg: #0C1520;
+    --lc-surface: #172032;
+    --lc-surface-2: #1E2D42;
+    --lc-sidebar-bg: #111C2B;
+    --lc-border: #1F3048;
+    --lc-border-light: #253A52;
+    --lc-accent: #2E8EFF;
+    --lc-accent-dim: rgba(46, 142, 255, 0.12);
+    --lc-accent-hover: rgba(46, 142, 255, 0.08);
+    --lc-text-primary: #E8F0F8;
+    --lc-text-secondary: #7A95B0;
+    --lc-text-disabled: #3D5270;
+    --lc-success: #22C55E;
+    --lc-warning: #F59E0B;
+    --lc-error: #EF4444;
+    --lc-info: #38BDF8;
+    --lc-success-bg: rgba(34, 197, 94, 0.10);
+    --lc-warning-bg: rgba(245, 158, 11, 0.10);
+    --lc-error-bg: rgba(239, 68, 68, 0.10);
+    --lc-info-bg: rgba(56, 189, 248, 0.10);
+    --lc-neutral-bg: rgba(122, 149, 176, 0.10);
+    --lc-font-body: 'DM Sans', system-ui, sans-serif;
+    --lc-font-mono: 'IBM Plex Mono', 'Consolas', monospace;
+    --lc-radius: 6px;
+    --lc-radius-sm: 3px;
+    --lc-radius-lg: 10px;
+    --lc-sidebar-w: 240px;
+    --lc-sidebar-mini-w: 68px;
+    --lc-topbar-h: 52px;
+    --lc-bnav-h: 64px;
+    --lc-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --lc-shadow-card: 0 1px 4px rgba(0,0,0,0.5), 0 0 0 1px var(--lc-border);
+    --lc-shadow-panel: 0 8px 32px rgba(0,0,0,0.7);
+}
 
+/* ── Reset & Base ────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--lc-bg);
+    color: var(--lc-text-primary);
+    font-family: var(--lc-font-body);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+a {
+    color: var(--lc-accent);
+    text-decoration: none;
+    transition: color var(--lc-transition);
+}
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+/* ── Shell Layout ────────────────────────────────────────────────────────── */
+.lc-shell {
+    display: grid;
+    grid-template-columns: var(--lc-sidebar-w) 1fr;
+    min-height: 100dvh;
+    transition: grid-template-columns var(--lc-transition);
+}
+
+.lc-shell--collapsed {
+    grid-template-columns: var(--lc-sidebar-mini-w) 1fr;
+}
+
+.lc-main {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    overflow: hidden;
+}
+
+.lc-content {
+    flex: 1;
+    padding: 28px 32px;
+    max-width: 1440px;
+    width: 100%;
+    align-self: flex-start;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+.lc-sidebar {
+    background: var(--lc-sidebar-bg);
+    border-right: 1px solid var(--lc-border);
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    position: sticky;
+    top: 0;
+    overflow: hidden;
+    transition: width var(--lc-transition);
+    width: var(--lc-sidebar-w);
+    z-index: 50;
+}
+
+.lc-sidebar--mini {
+    width: var(--lc-sidebar-mini-w);
+}
+
+.lc-sidebar__logo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    height: var(--lc-topbar-h);
+    border-bottom: 1px solid var(--lc-border);
+    flex-shrink: 0;
+}
+
+.lc-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow: hidden;
+}
+
+.lc-logo__mark {
+    width: 32px;
+    height: 32px;
+    background: var(--lc-accent);
+    border-radius: var(--lc-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #fff;
+}
+
+.lc-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    height: 40px;
+    color: var(--lc-text-secondary);
+    transition: all var(--lc-transition);
+    text-decoration: none;
+}
+
+    .lc-nav-item:hover {
+        color: var(--lc-text-primary);
+        background: var(--lc-accent-hover);
+    }
+
+.lc-nav-item--active {
+    color: var(--lc-accent);
+    background: var(--lc-accent-dim);
+    font-weight: 500;
+}
+
+/* ── UI Components ───────────────────────────────────────────────────────── */
+
+/* KPI Cards */
+.lc-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.lc-kpi {
+    background: var(--lc-surface);
+    border: 1px solid var(--lc-border);
+    border-radius: var(--lc-radius);
+    padding: 20px;
+}
+
+.lc-kpi__number {
+    font-family: var(--lc-font-mono);
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--lc-text-primary);
+}
+
+/* Badges & Tags */
+.lc-badge {
+    display: inline-flex;
+    padding: 2px 8px;
+    border-radius: var(--lc-radius-sm);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.lc-badge--success {
+    background: var(--lc-success-bg);
+    color: var(--lc-success);
+}
+
+.lc-badge--error {
+    background: var(--lc-error-bg);
+    color: var(--lc-error);
+}
+
+.lc-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background: var(--lc-neutral-bg);
+    color: var(--lc-text-secondary);
+    font-size: 11px;
+}
+
+/* Dialogs */
 .lc-dialog-overlay {
     position: fixed;
     inset: 0;
@@ -21,7 +229,6 @@ body { font-family: 'Segoe UI', sans-serif; margin: 0; }
     align-items: center;
     justify-content: center;
     padding: 16px;
-    animation: lc-fade-in 200ms ease;
 }
 
 .lc-dialog {
@@ -31,58 +238,13 @@ body { font-family: 'Segoe UI', sans-serif; margin: 0; }
     width: 100%;
     max-width: 460px;
     box-shadow: var(--lc-shadow-panel);
-    animation: lc-slide-up 220ms cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
 }
 
-.lc-dialog--wide {
-    max-width: 640px;
-}
-
-.lc-dialog__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 18px 20px 14px;
-    border-bottom: 1px solid var(--lc-border);
-}
-
-    .lc-dialog__header h3 {
-        margin: 0;
-        font-size: 15px;
-        font-weight: 600;
-        color: var(--lc-text-primary);
-    }
-
-.lc-dialog__body {
-    padding: 20px;
-}
-
-.lc-dialog__footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    padding: 14px 20px;
-    border-top: 1px solid var(--lc-border);
-}
-
-@keyframes lc-slide-up {
-    from {
-        opacity: 0;
-        transform: translateY(12px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* ── Tab bar pattern ─────────────────────────────────────────────────────── */
+/* Tab Bar */
 .lc-tab-bar {
     display: flex;
     gap: 2px;
-    flex-wrap: wrap;
     margin-bottom: 16px;
     background: var(--lc-surface);
     border: 1px solid var(--lc-border);
@@ -92,492 +254,110 @@ body { font-family: 'Segoe UI', sans-serif; margin: 0; }
 }
 
 .lc-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
     padding: 6px 14px;
-    border: none;
-    background: none;
-    cursor: pointer;
     border-radius: calc(var(--lc-radius) - 2px);
     color: var(--lc-text-secondary);
     font-size: 13px;
-    font-weight: 500;
-    font-family: var(--lc-font-body);
-    transition: color var(--lc-transition), background var(--lc-transition);
-    white-space: nowrap;
+    cursor: pointer;
 }
-
-    .lc-tab:hover {
-        color: var(--lc-text-primary);
-        background: var(--lc-accent-hover);
-    }
 
 .lc-tab--active {
     background: var(--lc-accent-dim);
     color: var(--lc-accent);
 }
 
-.lc-tab-badge {
-    background: var(--lc-warning-bg);
-    color: var(--lc-warning);
-    font-size: 10px;
-    font-weight: 700;
-    border-radius: 3px;
-    padding: 1px 5px;
-    line-height: 1.4;
+/* ── MudBlazor Overrides ─────────────────────────────────────────────────── */
+.mud-table {
+    background: transparent !important;
 }
 
-/* ── Filter bar ──────────────────────────────────────────────────────────── */
-.lc-filter-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
+.mud-table-head .mud-table-cell {
+    background: var(--lc-surface) !important;
+    color: var(--lc-text-secondary) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    border-bottom: 1px solid var(--lc-border) !important;
 }
 
-.lc-filter-date {
-    max-width: 150px;
+.mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--lc-border-light) !important;
 }
 
-/* ── Tag inline pill ─────────────────────────────────────────────────────── */
-.lc-tag {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 3px;
-    background: var(--lc-neutral-bg);
-    color: var(--lc-text-secondary);
-    font-size: 11px;
-    font-weight: 500;
-    margin-right: 4px;
+.mud-input-outlined:hover .mud-input-outlined-border {
+    border-color: var(--lc-accent) !important;
 }
 
-/* ── Result/info banners ─────────────────────────────────────────────────── */
-.lc-result-banner {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    border-radius: var(--lc-radius);
-    font-size: 13px;
+.mud-button-filled.mud-button-filled-primary {
+    background: var(--lc-accent) !important;
+    box-shadow: 0 1px 3px rgba(46, 142, 255, 0.3) !important;
 }
 
-.lc-result-banner--success {
-    background: var(--lc-success-bg);
-    border: 1px solid rgba(34, 197, 94, 0.25);
-    color: var(--lc-success);
-}
-
-.lc-result-banner--error {
-    background: var(--lc-error-bg);
-    border: 1px solid rgba(239, 68, 68, 0.25);
-    color: var(--lc-error);
-}
-
-.lc-info-banner {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 10px 14px;
-    background: var(--lc-warning-bg);
-    border: 1px solid rgba(245, 158, 11, 0.25);
-    border-radius: var(--lc-radius);
-    color: var(--lc-warning);
-    font-size: 13px;
-    line-height: 1.5;
-}
-
-/* ── Settings two-column grid ────────────────────────────────────────────── */
-.lc-settings-grid {
-    display: grid;
-    grid-template-columns: 1fr 340px;
-    gap: 16px;
-    align-items: start;
-}
-
-.lc-settings-grid__main {
-    grid-column: 1;
-}
-
-.lc-settings-grid__side {
-    grid-column: 2;
-}
-
-.lc-settings-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid var(--lc-border);
-}
-
-/* ── Form fields column stack ────────────────────────────────────────────── */
-.lc-form-fields {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-.lc-form-row {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-}
-
-/* ── Session info / key-value rows ──────────────────────────────────────── */
-.lc-session-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.lc-session-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--lc-border);
-    font-size: 13px;
-    gap: 16px;
-}
-
-    .lc-session-row:last-child {
-        border-bottom: none;
-    }
-
-/* ── Profile identity block ──────────────────────────────────────────────── */
-.lc-profile-avatar {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: var(--lc-accent-dim);
-    border: 2px solid var(--lc-accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 26px;
-    font-weight: 600;
-    color: var(--lc-accent);
-    flex-shrink: 0;
-}
-
-.lc-profile-identity {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
-.lc-profile-name {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--lc-text-primary);
-}
-
-.lc-profile-email {
-    font-size: 13px;
-    color: var(--lc-text-secondary);
-    margin-top: 3px;
-}
-
-/* ── Guide / step list ───────────────────────────────────────────────────── */
-.lc-guide {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    margin-top: 8px;
-}
-
-.lc-guide__step {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-}
-
-.lc-guide__num {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: var(--lc-accent-dim);
-    color: var(--lc-accent);
-    font-size: 11px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    margin-top: 1px;
-}
-
-.lc-guide__title {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--lc-text-primary);
-}
-
-.lc-guide__desc {
-    font-size: 12px;
-    color: var(--lc-text-secondary);
-    margin-top: 2px;
-    line-height: 1.5;
-}
-
-    .lc-guide__desc code {
-        font-family: var(--lc-font-mono);
-        font-size: 11px;
-        background: var(--lc-surface-2);
-        padding: 1px 5px;
-        border-radius: 3px;
-        color: var(--lc-accent);
-    }
-
-/* ── Prayer points specific ──────────────────────────────────────────────── */
-.lc-prayer-grid {
-    display: grid;
-    grid-template-columns: 1fr 340px;
-    gap: 16px;
-    align-items: start;
-}
-
-.lc-prayer-grid__active {
-    grid-column: 1;
-}
-
-.lc-prayer-grid__answered {
-    grid-column: 2;
-}
-
-.lc-prayer-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.lc-prayer-card {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 14px;
-    background: var(--lc-surface-2);
-    border: 1px solid var(--lc-border);
-    border-radius: var(--lc-radius);
-    transition: border-color var(--lc-transition);
-}
-
-    .lc-prayer-card:hover {
-        border-color: var(--lc-border-light);
-    }
-
-.lc-prayer-card--answered {
-    border-color: rgba(34, 197, 94, 0.2);
-}
-
-    .lc-prayer-card--answered:hover {
-        border-color: rgba(34, 197, 94, 0.4);
-    }
-
-.lc-prayer-card__answered-icon {
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-
-.lc-prayer-card__body {
-    flex: 1;
-    min-width: 0;
-}
-
-.lc-prayer-card__title {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--lc-text-primary);
-    line-height: 1.4;
-}
-
-.lc-prayer-card__detail {
-    font-size: 12px;
-    color: var(--lc-text-secondary);
-    margin-top: 4px;
-    line-height: 1.5;
-}
-
-.lc-prayer-card__report {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    font-size: 11px;
-    color: var(--lc-accent);
-    margin-top: 6px;
-    text-decoration: none;
-}
-
-    .lc-prayer-card__report:hover {
-        text-decoration: underline;
-    }
-
-.lc-prayer-card__date {
-    font-size: 11px;
-    margin-top: 6px;
-}
-
-.lc-prayer-card__actions {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    flex-shrink: 0;
-}
-
-/* ── Project card grid ───────────────────────────────────────────────────── */
-.lc-project-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-bottom: 16px;
-}
-
-.lc-project-card {
-    background: var(--lc-surface);
-    border: 1px solid var(--lc-border);
-    border-radius: var(--lc-radius);
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    cursor: pointer;
-    transition: border-color var(--lc-transition), transform var(--lc-transition);
-}
-
-    .lc-project-card:hover {
-        border-color: var(--lc-border-light);
-        transform: translateY(-1px);
-    }
-
-.lc-project-card__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 8px;
-}
-
-.lc-project-card__title {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--lc-text-primary);
-    line-height: 1.4;
-}
-
-.lc-project-card__location {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    font-size: 11px;
-    color: var(--lc-text-secondary);
-    margin-top: 3px;
-}
-
-.lc-project-card__progress {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.lc-project-card__progress-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-}
-
-.lc-project-card__funded {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-}
-
-.lc-project-card__footer {
-    display: flex;
-    align-items: center;
-    margin-top: auto;
-    padding-top: 4px;
-    border-top: 1px solid var(--lc-border);
-}
-
-/* ── Contact avatar (shared across pages) ────────────────────────────────── */
-.lc-contact-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: var(--lc-accent-dim);
-    border: 1px solid var(--lc-accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--lc-accent);
-    flex-shrink: 0;
-}
-
-/* ── Table footer (pagination row) ──────────────────────────────────────── */
-.lc-table-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    border-top: 1px solid var(--lc-border);
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-/* ── Responsive adjustments ──────────────────────────────────────────────── */
-
-/* Hide mid-range columns */
-.lc-hide-md {
-}
-
+/* ── Responsive & Breakpoints ────────────────────────────────────────────── */
 @media (max-width: 1100px) {
-    .lc-hide-md {
-        display: none !important;
-    }
-
-    .lc-project-grid {
+    .lc-kpi-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 
-    .lc-settings-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .lc-settings-grid__side {
-        grid-column: 1;
-    }
-
-    .lc-prayer-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .lc-prayer-grid__answered {
-        grid-column: 1;
+    .lc-hide-md {
+        display: none !important;
     }
 }
 
 @media (max-width: 768px) {
-    .lc-filter-bar {
-        gap: 8px;
+    .lc-sidebar {
+        display: none;
     }
 
-    .lc-filter-date {
-        max-width: 130px;
-    }
-
-    .lc-project-grid {
+    .lc-shell {
         grid-template-columns: 1fr;
     }
 
-    .lc-form-row {
-        flex-direction: column;
+    .lc-main {
+        grid-column: 1;
     }
 
-    .lc-profile-identity {
-        flex-direction: column;
-        text-align: center;
+    .lc-kpi-grid {
+        grid-template-columns: 1fr;
     }
+
+    .lc-content {
+        padding: 16px;
+    }
+}
+
+/* ── Animations ──────────────────────────────────────────────────────────── */
+@keyframes lc-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.lc-page-enter {
+    animation: lc-page-in 250ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes lc-page-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Utility */
+.lc-mono {
+    font-family: var(--lc-font-mono);
+}
+
+.lc-muted {
+    color: var(--lc-text-secondary);
 }

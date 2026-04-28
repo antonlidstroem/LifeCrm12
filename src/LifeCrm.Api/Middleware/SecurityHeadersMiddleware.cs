@@ -10,13 +10,23 @@ public class SecurityHeadersMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         var h = context.Response.Headers;
-        h["X-Content-Type-Options"]  = "nosniff";
-        h["X-Frame-Options"]         = "DENY";
-        h["Referrer-Policy"]         = "strict-origin-when-cross-origin";
-        h["X-XSS-Protection"]        = "1; mode=block";
-        h["Permissions-Policy"]      = "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
+        h["X-Content-Type-Options"] = "nosniff";
+        h["X-Frame-Options"] = "DENY";
+        h["Referrer-Policy"] = "strict-origin-when-cross-origin";
+        h["X-XSS-Protection"] = "1; mode=block";
+        h["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
+        // 'unsafe-inline' is required for Blazor WASM bootstrap scripts and MudBlazor inline styles.
+        // 'wasm-unsafe-eval' is required for the .NET WebAssembly runtime.
         h["Content-Security-Policy"] =
-            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://localhost:* http://localhost:* wss://localhost:* ws://localhost:*; frame-ancestors 'none'; base-uri 'self'; form-action 'self';";
+            "default-src 'self'; " +
+            "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; " +
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+            "font-src 'self' https://fonts.gstatic.com; " +
+            "img-src 'self' data:; " +
+            "connect-src 'self' https://localhost:* http://localhost:* wss://localhost:* ws://localhost:*; " +
+            "frame-ancestors 'none'; " +
+            "base-uri 'self'; " +
+            "form-action 'self';";
         await _next(context);
     }
 }
