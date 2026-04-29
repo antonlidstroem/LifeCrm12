@@ -7,37 +7,33 @@
 @inject ApiClient Api
 @inject AppState AppState
 @inject NavigationManager Nav
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
 <PageTitle>Projects — LifeCrm</PageTitle>
 
 <div class="lc-page-enter">
-    <PageHeader Title="Projects"
-                Subtitle="@(_totalCount > 0 ? $"{_totalCount:N0} projects" : null)">
+    <PageHeader Title="Projects" Subtitle="@(_totalCount > 0 ? $"{_totalCount:N0} projects" : null)">
         <Actions>
             @if (AppState.CanWrite)
             {
-                <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                           Size="Size.Small"
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                            StartIcon="@Icons.Material.Outlined.CreateNewFolder"
-                           Href="/projects/new">
+                           OnClick="OpenCreateDialog">
                     New Project
                 </MudButton>
             }
         </Actions>
     </PageHeader>
 
-    <!-- Search -->
     <div class="lc-filter-bar">
         <div class="lc-search" style="min-width:280px;">
-            <MudIcon Icon="@Icons.Material.Outlined.Search"
-                     Size="Size.Small" Class="lc-search__icon" />
+            <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" Class="lc-search__icon" />
             <input class="lc-search__input" placeholder="Search projects or location…"
                    @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKey" />
         </div>
     </div>
 
-    <!-- Desktop: grid of project cards -->
     <div class="lc-hide-mobile">
         @if (_loading)
         {
@@ -52,10 +48,15 @@
         {
             <DataCard>
                 <div class="lc-empty">
-                    <MudIcon Icon="@Icons.Material.Outlined.AccountTree"
-                             Style="font-size:40px;color:var(--lc-text-disabled)" />
+                    <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Style="font-size:40px;color:var(--lc-text-disabled)" />
                     <span class="lc-empty__title">No projects yet</span>
                     <span class="lc-empty__subtitle">Create your first project to organise campaigns and donations.</span>
+                    @if (AppState.CanWrite)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-2"
+                                   StartIcon="@Icons.Material.Outlined.CreateNewFolder"
+                                   OnClick="OpenCreateDialog">New Project</MudButton>
+                    }
                 </div>
             </DataCard>
         }
@@ -64,62 +65,61 @@
             <div class="lc-project-grid">
                 @foreach (var p in _projects)
                 {
-                    <div class="lc-project-card" @onclick="() => GoTo(p)">
+                    <div class="lc-project-card">
                         <div class="lc-project-card__header">
                             <div>
-                                <h3 class="lc-project-card__title">@p.Name</h3>
+                                <h3 class="lc-project-card__title" @onclick="() => GoTo(p)" style="cursor:pointer;">@p.Name</h3>
                                 @if (!string.IsNullOrEmpty(p.Location))
                                 {
                                     <div class="lc-project-card__location">
-                                        <MudIcon Icon="@Icons.Material.Outlined.LocationOn"
-                                                 Size="Size.Small" />
+                                        <MudIcon Icon="@Icons.Material.Outlined.LocationOn" Size="Size.Small" />
                                         @p.Location
                                     </div>
                                 }
                             </div>
-                            <StatusBadge Text="@p.Status.ToString()"
-                                         Variant="@StatusBadge.VariantFromProjectStatus(p.Status)" />
+                            <div style="display:flex;gap:2px;align-items:center;">
+                                <StatusBadge Text="@p.Status.ToString()" Variant="@StatusBadge.VariantFromProjectStatus(p.Status)" />
+                                @if (AppState.CanWrite)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"
+                                                   OnClick="@(() => OpenEditDialog(p.Id))" />
+                                }
+                                @if (AppState.IsAdmin)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small"
+                                                   Color="Color.Error" OnClick="@(() => DeleteAsync(p))" />
+                                }
+                            </div>
                         </div>
 
                         @if (p.BudgetGoal.HasValue && p.BudgetGoal > 0)
                         {
                             var pct = Math.Min((double)(p.TotalFunded / p.BudgetGoal.Value * 100), 100);
-                            <div class="lc-project-card__progress">
+                            <div class="lc-project-card__progress" @onclick="() => GoTo(p)" style="cursor:pointer;">
                                 <div class="lc-project-card__progress-row">
-                                    <span class="lc-mono" style="font-size:16px;font-weight:500;color:var(--lc-text-primary);">
-                                        $@p.TotalFunded.ToString("N0")
-                                    </span>
-                                    <span class="lc-muted" style="font-size:12px;">
-                                        of $@p.BudgetGoal.Value.ToString("N0")
-                                    </span>
+                                    <span class="lc-mono" style="font-size:16px;font-weight:500;color:var(--lc-text-primary);">$@p.TotalFunded.ToString("N0")</span>
+                                    <span class="lc-muted" style="font-size:12px;">of $@p.BudgetGoal.Value.ToString("N0")</span>
                                 </div>
                                 <div class="lc-progress-bar">
-                                    <div class="lc-progress-bar__fill @(pct >= 100 ? "lc-progress-bar__fill--success" : "")"
-                                         style="width:@pct.ToString("F1")%"></div>
+                                    <div class="lc-progress-bar__fill @(pct >= 100 ? "lc-progress-bar__fill--success" : "")" style="width:@pct.ToString("F1")%"></div>
                                 </div>
                                 <span class="lc-muted" style="font-size:11px;">@pct.ToString("N1")% funded</span>
                             </div>
                         }
                         else
                         {
-                            <div class="lc-project-card__funded">
-                                <span class="lc-mono" style="font-size:16px;font-weight:500;">
-                                    $@p.TotalFunded.ToString("N0")
-                                </span>
+                            <div class="lc-project-card__funded" @onclick="() => GoTo(p)" style="cursor:pointer;">
+                                <span class="lc-mono" style="font-size:16px;font-weight:500;">$@p.TotalFunded.ToString("N0")</span>
                                 <span class="lc-muted" style="font-size:12px;">raised</span>
                             </div>
                         }
 
-                        <div class="lc-project-card__footer">
+                        <div class="lc-project-card__footer" @onclick="() => GoTo(p)" style="cursor:pointer;">
                             @if (p.StartDate.HasValue)
                             {
-                                <span class="lc-col-date" style="font-size:11px;">
-                                    @p.StartDate.Value.ToString("yyyy-MM-dd")
-                                    @(p.EndDate.HasValue ? $" → {p.EndDate.Value:yyyy-MM-dd}" : "")
-                                </span>
+                                <span class="lc-col-date" style="font-size:11px;">@p.StartDate.Value.ToString("yyyy-MM-dd")@(p.EndDate.HasValue ? $" → {p.EndDate.Value:yyyy-MM-dd}" : "")</span>
                             }
-                            <MudIcon Icon="@Icons.Material.Outlined.ChevronRight"
-                                     Size="Size.Small" Style="color:var(--lc-text-disabled);margin-left:auto;" />
+                            <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" Style="color:var(--lc-text-disabled);margin-left:auto;" />
                         </div>
                     </div>
                 }
@@ -127,7 +127,6 @@
         }
     </div>
 
-    <!-- Mobile card list -->
     <div class="lc-show-mobile lc-card-list">
         @if (_loading)
         {
@@ -143,8 +142,7 @@
                 <div class="lc-list-card" @onclick="() => GoTo(p)">
                     <div class="lc-list-card__header">
                         <span class="lc-list-card__title">@p.Name</span>
-                        <StatusBadge Text="@p.Status.ToString()"
-                                     Variant="@StatusBadge.VariantFromProjectStatus(p.Status)" />
+                        <StatusBadge Text="@p.Status.ToString()" Variant="@StatusBadge.VariantFromProjectStatus(p.Status)" />
                     </div>
                     <div class="lc-list-card__meta">
                         <span class="lc-mono">$@p.TotalFunded.ToString("N0") raised</span>
@@ -153,13 +151,6 @@
                             <span class="lc-muted">@p.Location</span>
                         }
                     </div>
-                    @if (p.BudgetGoal.HasValue && p.BudgetGoal > 0)
-                    {
-                        var pct = Math.Min((double)(p.TotalFunded / p.BudgetGoal.Value * 100), 100);
-                        <div class="lc-progress-bar" style="margin-top:4px;">
-                            <div class="lc-progress-bar__fill" style="width:@pct.ToString("F1")%"></div>
-                        </div>
-                    }
                 </div>
             }
         }
@@ -167,82 +158,16 @@
 
     <div class="lc-table-footer" style="margin-top:16px;">
         <span class="lc-muted" style="font-size:12px;">@_projects.Count of @_totalCount</span>
-        <MudPagination Count="_totalPages" Selected="_page"
-                       SelectedChanged="OnPageChanged"
-                       Color="Color.Primary" Size="Size.Small" />
+        <MudPagination Count="_totalPages" Selected="_page" SelectedChanged="OnPageChanged" Color="Color.Primary" Size="Size.Small" />
     </div>
 </div>
 
-<style>
-    .lc-project-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-        margin-bottom: 16px;
-    }
-
-    .lc-project-card {
-        background: var(--lc-surface);
-        border: 1px solid var(--lc-border);
-        border-radius: var(--lc-radius);
-        padding: 18px;
-        display: flex; flex-direction: column; gap: 12px;
-        cursor: pointer;
-        transition: border-color var(--lc-transition), transform var(--lc-transition);
-    }
-    .lc-project-card:hover {
-        border-color: var(--lc-border-light);
-        transform: translateY(-1px);
-    }
-
-    .lc-project-card__header {
-        display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
-    }
-
-    .lc-project-card__title {
-        margin: 0; font-size: 14px; font-weight: 600;
-        color: var(--lc-text-primary); line-height: 1.4;
-    }
-
-    .lc-project-card__location {
-        display: flex; align-items: center; gap: 3px;
-        font-size: 11px; color: var(--lc-text-secondary);
-        margin-top: 3px;
-    }
-
-    .lc-project-card__progress { display: flex; flex-direction: column; gap: 4px; }
-    .lc-project-card__progress-row {
-        display: flex; justify-content: space-between; align-items: baseline;
-    }
-
-    .lc-project-card__funded {
-        display: flex; align-items: baseline; gap: 6px;
-    }
-
-    .lc-project-card__footer {
-        display: flex; align-items: center;
-        margin-top: auto; padding-top: 4px;
-        border-top: 1px solid var(--lc-border);
-    }
-
-    .lc-filter-bar {
-        display: flex; align-items: center; gap: 10px;
-        margin-bottom: 16px; flex-wrap: wrap;
-    }
-
-    @@media (max-width: 1100px) { .lc-project-grid { grid-template-columns: repeat(2, 1fr); } }
-    @@media (max-width: 640px)  { .lc-project-grid { grid-template-columns: 1fr; } }
-</style>
-
 @code {
     private List<ProjectListDto> _projects = new();
-    private bool    _loading    = true;
+    private bool _loading = true;
     private string? _search;
-    private int     _page       = 1;
-    private int     _totalCount = 0;
-    private int     _totalPages = 1;
-    private const int PageSize  = 12;
-
+    private int _page = 1, _totalCount = 0, _totalPages = 1;
+    private const int PageSize = 12;
     private System.Timers.Timer? _debounce;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
@@ -250,29 +175,43 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        var resp = await Api.GetProjectsAsync(new PaginationParams
-            { Page = _page, PageSize = PageSize, Search = _search });
-        if (resp.Success && resp.Data is not null)
-        {
-            _projects   = resp.Data.Items.ToList();
-            _totalCount = resp.Data.TotalCount;
-            _totalPages = resp.Data.TotalPages;
-        }
+        var resp = await Api.GetProjectsAsync(new PaginationParams { Page = _page, PageSize = PageSize, Search = _search });
+        if (resp.Success && resp.Data is not null) { _projects = resp.Data.Items.ToList(); _totalCount = resp.Data.TotalCount; _totalPages = resp.Data.TotalPages; }
         _loading = false;
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var d = DialogService.Show<ProjectFormDialog>("New Project",
+            new DialogParameters(),
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await d.Result).Canceled) await LoadAsync();
+    }
+
+    private async Task OpenEditDialog(Guid id)
+    {
+        var d = DialogService.Show<ProjectFormDialog>("Edit Project",
+            new DialogParameters { ["ProjectId"] = id },
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await d.Result).Canceled) await LoadAsync();
+    }
+
+    private async Task DeleteAsync(ProjectListDto p)
+    {
+        var params2 = new DialogParameters { ["Title"] = "Delete Project", ["Message"] = $"Delete \"{p.Name}\"? This cannot be undone." };
+        var confirm = DialogService.Show<ConfirmDialog>("", params2);
+        if ((await confirm.Result).Canceled) return;
+        var res = await Api.DeleteProjectAsync(p.Id);
+        if (res.Success) { Snackbar.Add("Project deleted.", Severity.Success); await LoadAsync(); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
     }
 
     private void OnSearchKey(KeyboardEventArgs _)
     {
         _debounce?.Dispose();
         _debounce = new System.Timers.Timer(350);
-        _debounce.Elapsed += async (_, _) =>
-        {
-            _debounce?.Dispose();
-            _page = 1;
-            await InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); });
-        };
-        _debounce.AutoReset = false;
-        _debounce.Start();
+        _debounce.Elapsed += async (_, _) => { _debounce?.Dispose(); _page = 1; await InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); }); };
+        _debounce.AutoReset = false; _debounce.Start();
     }
 
     private async Task OnPageChanged(int p) { _page = p; await LoadAsync(); }

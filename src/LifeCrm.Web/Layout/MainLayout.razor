@@ -7,11 +7,10 @@
 @inject ISnackbar Snackbar
 @inject AuthApiClient AuthClient
 
-<MudThemeProvider Theme="_theme" IsDarkMode="true" />
-<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small" CloseOnEscapeKey="true" />
-<MudSnackbarProvider />
+
 
 <div class="lc-shell @(_drawerOpen ? "lc-shell--open" : "lc-shell--collapsed")">
+
 
     @* ── Sidebar (desktop) ───────────────────────────────────────────────── *@
     <aside class="lc-sidebar @(_drawerOpen ? "" : "lc-sidebar--mini")">
@@ -203,6 +202,11 @@
         </aside>
     }
 </div>
+
+<MudThemeProvider Theme="_theme" IsDarkMode="true" />
+<MudPopoverProvider />
+<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small" CloseOnEscapeKey="true"  />
+<MudSnackbarProvider />
 
 @code {
     private readonly MudTheme _theme = LifeCrmTheme.Create();

@@ -31,27 +31,22 @@
                 <MudButton Variant="Variant.Filled" Color="Color.Primary"
                            Size="Size.Small"
                            StartIcon="@Icons.Material.Outlined.PersonAdd"
-                           Href="/contacts/new">
+                           OnClick="OpenCreateDialog">
                     Add Contact
                 </MudButton>
             }
         </Actions>
     </PageHeader>
 
-    @* FIX RZ9996: DataCard with HeaderActions slot requires explicit ChildContent tags
-       when HeaderActions is also used. *@
     <DataCard>
         <HeaderActions>
             <div class="lc-search" style="min-width:260px;">
-                <MudIcon Icon="@Icons.Material.Outlined.Search"
-                         Size="Size.Small" Class="lc-search__icon" />
+                <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" Class="lc-search__icon" />
                 <input class="lc-search__input" placeholder="Search name, email, tag…"
-                       @bind="_searchText" @bind:event="oninput"
-                       @onkeyup="OnSearchKeyUp" />
+                       @bind="_searchText" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
             </div>
         </HeaderActions>
         <ChildContent>
-            <!-- Desktop table -->
             <div class="lc-hide-mobile">
                 <MudTable Items="_contacts" Dense="true" Hover="true"
                           Loading="_loading" LoadingProgressColor="Color.Primary"
@@ -61,17 +56,13 @@
                           Style="cursor:pointer;">
                     <HeaderContent>
                         <MudTh Style="width:36px"></MudTh>
-                        <MudTh>
-                            <MudTableSortLabel SortBy="new Func<ContactListDto, object>(x => x.Name)">
-                                Name
-                            </MudTableSortLabel>
-                        </MudTh>
+                        <MudTh>Name</MudTh>
                         <MudTh Class="lc-hide-mobile">Type</MudTh>
                         <MudTh Class="lc-hide-mobile">Email</MudTh>
                         <MudTh Class="lc-hide-mobile">Phone</MudTh>
                         <MudTh Class="lc-hide-mobile">Tags</MudTh>
                         <MudTh Style="text-align:right">Donated</MudTh>
-                        <MudTh Style="width:48px"></MudTh>
+                        <MudTh Style="width:96px"></MudTh>
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd>
@@ -79,21 +70,12 @@
                                 @(context.Name.Length > 0 ? context.Name[0].ToString().ToUpper() : "?")
                             </div>
                         </MudTd>
-                        <MudTd DataLabel="Name">
-                            <span style="font-weight:500">@context.Name</span>
-                        </MudTd>
+                        <MudTd DataLabel="Name"><span style="font-weight:500">@context.Name</span></MudTd>
                         <MudTd DataLabel="Type" Class="lc-hide-mobile">
-                            <StatusBadge Text="@context.Type.ToString()"
-                                         Variant="@ContactTypeBadge(context.Type)" />
+                            <StatusBadge Text="@context.Type.ToString()" Variant="@ContactTypeBadge(context.Type)" />
                         </MudTd>
-                        <MudTd DataLabel="Email" Class="lc-hide-mobile lc-muted"
-                               Style="font-size:13px;">
-                            @context.Email
-                        </MudTd>
-                        <MudTd DataLabel="Phone" Class="lc-hide-mobile lc-muted"
-                               Style="font-size:13px;">
-                            @context.Phone
-                        </MudTd>
+                        <MudTd DataLabel="Email" Class="lc-hide-mobile lc-muted" Style="font-size:13px;">@context.Email</MudTd>
+                        <MudTd DataLabel="Phone" Class="lc-hide-mobile lc-muted" Style="font-size:13px;">@context.Phone</MudTd>
                         <MudTd DataLabel="Tags" Class="lc-hide-mobile">
                             @if (!string.IsNullOrWhiteSpace(context.Tags))
                             {
@@ -104,36 +86,40 @@
                             }
                         </MudTd>
                         <MudTd DataLabel="Donated" Style="text-align:right;">
-                            <span class="lc-mono" style="font-size:13px;">
-                                $@context.TotalDonations.ToString("N0")
-                            </span>
+                            <span class="lc-mono" style="font-size:13px;">$@context.TotalDonations.ToString("N0")</span>
                         </MudTd>
                         <MudTd>
-                            @* FIX RZ10010: @onclick:stopPropagation and OnClick cannot both be on MudIconButton.
-                               Use a plain wrapper div with stopPropagation, then navigate inside OnClick. *@
-                            <div @onclick:stopPropagation="true">
+                            <div style="display:flex;gap:2px;" @onclick:stopPropagation="true">
+                                <MudTooltip Text="Edit">
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"
+                                                   OnClick="@(() => OpenEditDialog(context.Id))" />
+                                </MudTooltip>
+                                @if (AppState.IsAdmin)
+                                {
+                                    <MudTooltip Text="Delete">
+                                        <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
+                                                       Size="Size.Small" Color="Color.Error"
+                                                       OnClick="@(() => DeleteAsync(context))" />
+                                    </MudTooltip>
+                                }
                                 <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
-                                               Size="Size.Small" Color="Color.Default"
+                                               Size="Size.Small"
                                                OnClick="@(() => GoToContact(context))" />
                             </div>
                         </MudTd>
                     </RowTemplate>
                     <NoRecordsContent>
                         <div class="lc-empty">
-                            <MudIcon Icon="@Icons.Material.Outlined.PeopleOutline"
-                                     Style="font-size:40px;color:var(--lc-text-disabled)" />
+                            <MudIcon Icon="@Icons.Material.Outlined.PeopleOutline" Style="font-size:40px;color:var(--lc-text-disabled)" />
                             <span class="lc-empty__title">No contacts found</span>
                             <span class="lc-empty__subtitle">
-                                @(string.IsNullOrWhiteSpace(_searchText)
-                                    ? "Add your first contact to get started."
-                                    : $"No results for \"{_searchText}\".")
+                                @(string.IsNullOrWhiteSpace(_searchText) ? "Add your first contact to get started." : $"No results for \"{_searchText}\".")
                             </span>
                         </div>
                     </NoRecordsContent>
                 </MudTable>
             </div>
 
-            <!-- Mobile card list -->
             <div class="lc-show-mobile lc-card-list">
                 @if (_loading)
                 {
@@ -142,12 +128,6 @@
                         <div class="lc-skeleton-row" style="height:80px;"></div>
                     }
                 }
-                else if (!_contacts.Any())
-                {
-                    <div class="lc-empty">
-                        <span class="lc-muted">No contacts found.</span>
-                    </div>
-                }
                 else
                 {
                     @foreach (var c in _contacts)
@@ -155,27 +135,19 @@
                         <div class="lc-list-card" @onclick="() => GoToContact(c)">
                             <div class="lc-list-card__header">
                                 <div style="display:flex;align-items:center;gap:10px;">
-                                    <div class="lc-contact-avatar">
-                                        @(c.Name.Length > 0 ? c.Name[0].ToString().ToUpper() : "?")
-                                    </div>
+                                    <div class="lc-contact-avatar">@(c.Name.Length > 0 ? c.Name[0].ToString().ToUpper() : "?")</div>
                                     <span class="lc-list-card__title">@c.Name</span>
                                 </div>
-                                <StatusBadge Text="@c.Type.ToString()"
-                                             Variant="@ContactTypeBadge(c.Type)" />
+                                <StatusBadge Text="@c.Type.ToString()" Variant="@ContactTypeBadge(c.Type)" />
                             </div>
                             <div class="lc-list-card__meta">
                                 @if (!string.IsNullOrEmpty(c.Email))
                                 {
-                                    <span class="lc-list-card__meta-item">
-                                        <MudIcon Icon="@Icons.Material.Outlined.Email" Size="Size.Small" />
-                                        @c.Email
-                                    </span>
+                                    <span>@c.Email</span>
                                 }
                                 @if (c.TotalDonations > 0)
                                 {
-                                    <span class="lc-list-card__meta-item lc-mono">
-                                        $@c.TotalDonations.ToString("N0") donated
-                                    </span>
+                                    <span class="lc-mono">$@c.TotalDonations.ToString("N0") donated</span>
                                 }
                             </div>
                         </div>
@@ -183,60 +155,21 @@
                 }
             </div>
 
-            <!-- Pagination -->
             <div class="lc-table-footer">
-                <span class="lc-muted" style="font-size:12px;">
-                    Showing @(_contacts.Count) of @_totalCount contacts
-                </span>
-                <MudPagination Count="_totalPages" Selected="_currentPage"
-                               SelectedChanged="OnPageChanged"
+                <span class="lc-muted" style="font-size:12px;">Showing @(_contacts.Count) of @_totalCount contacts</span>
+                <MudPagination Count="_totalPages" Selected="_currentPage" SelectedChanged="OnPageChanged"
                                Color="Color.Primary" Size="Size.Small" />
             </div>
         </ChildContent>
     </DataCard>
 </div>
 
-<style>
-    .lc-contact-avatar {
-        width: 28px; height: 28px;
-        border-radius: 50%;
-        background: var(--lc-accent-dim);
-        border: 1px solid var(--lc-accent);
-        display: flex; align-items: center; justify-content: center;
-        font-size: 11px; font-weight: 600;
-        color: var(--lc-accent);
-        flex-shrink: 0;
-    }
-    .lc-tag {
-        display: inline-block;
-        padding: 1px 7px;
-        border-radius: 3px;
-        background: var(--lc-neutral-bg);
-        color: var(--lc-text-secondary);
-        font-size: 11px;
-        margin-right: 4px;
-    }
-    .lc-table-footer {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 12px 16px;
-        border-top: 1px solid var(--lc-border);
-        gap: 12px;
-        flex-wrap: wrap;
-    }
-    .lc-table-row { cursor: pointer; }
-</style>
-
 @code {
-    private List<ContactListDto> _contacts    = new();
-    private bool    _loading     = true;
+    private List<ContactListDto> _contacts = new();
+    private bool _loading = true;
     private string? _searchText;
-    private int     _currentPage = 1;
-    private int     _totalCount  = 0;
-    private int     _totalPages  = 1;
-    private const int PageSize   = 25;
-
+    private int _currentPage = 1, _totalCount = 0, _totalPages = 1;
+    private const int PageSize = 25;
     private System.Timers.Timer? _debounce;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
@@ -244,43 +177,63 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        var resp = await Api.GetContactsAsync(new PaginationParams
-        {
-            Page     = _currentPage,
-            PageSize = PageSize,
-            Search   = _searchText
-        });
-
+        var resp = await Api.GetContactsAsync(new PaginationParams { Page = _currentPage, PageSize = PageSize, Search = _searchText });
         if (resp.Success && resp.Data is not null)
         {
-            _contacts   = resp.Data.Items.ToList();
+            _contacts = resp.Data.Items.ToList();
             _totalCount = resp.Data.TotalCount;
             _totalPages = resp.Data.TotalPages;
         }
         _loading = false;
     }
 
-    private void OnSearchKeyUp(KeyboardEventArgs e)
+    // private async Task OpenCreateDialog()
+    // {
+    //     var d = DialogService.Show<ContactFormDialog>("New Contact",
+    //         new DialogParameters(),
+    //         new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+    //     if (!(await d.Result).Canceled) await LoadAsync();
+    // }
+
+    private async Task OpenCreateDialog()
     {
-        _debounce?.Dispose();
-        _debounce = new System.Timers.Timer(350);
-        _debounce.Elapsed += async (_, _) =>
+        var options = new DialogOptions
         {
-            _debounce?.Dispose();
-            _currentPage = 1;
-            await InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); });
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium, // Ändra till Medium för att få plats med två kolumner
+            FullWidth = true,
+            // Scrollable = true // Detta gör att innehållet scrollar men titeln och knapparna ligger kvar
         };
-        _debounce.AutoReset = false;
-        _debounce.Start();
+
+        var d = DialogService.Show<ContactFormDialog>("New Contact", new DialogParameters(), options);
+        if (!(await d.Result).Canceled) await LoadAsync();
     }
 
-    private async Task OnPageChanged(int page)
+    private async Task OpenEditDialog(Guid id)
     {
-        _currentPage = page;
-        await LoadAsync();
+        var d = DialogService.Show<ContactFormDialog>("Edit Contact",
+            new DialogParameters { ["ContactId"] = id },
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await d.Result).Canceled) await LoadAsync();
     }
 
-    private void GoToContact(ContactListDto c) => Nav.NavigateTo($"/contacts/{c.Id}");
+    private async Task DeleteAsync(ContactListDto c)
+    {
+        var p = new DialogParameters { ["Title"] = "Delete Contact", ["Message"] = $"Delete {c.Name}? This cannot be undone." };
+        var confirm = DialogService.Show<ConfirmDialog>("", p);
+        if ((await confirm.Result).Canceled) return;
+        var res = await Api.DeleteContactAsync(c.Id);
+        if (res.Success) { Snackbar.Add("Contact deleted.", Severity.Success); await LoadAsync(); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+
+    private async Task ImportAsync()
+    {
+        var d = DialogService.Show<ImportContactsDialog>("Import Contacts",
+            new DialogParameters(),
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true });
+        if (!(await d.Result).Canceled) await LoadAsync();
+    }
 
     private async Task ExportAsync()
     {
@@ -288,14 +241,23 @@
         if (!resp.Success) Snackbar.Add("Export failed.", Severity.Error);
     }
 
-    private Task ImportAsync() => Task.CompletedTask;
+    private void OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        _debounce?.Dispose();
+        _debounce = new System.Timers.Timer(350);
+        _debounce.Elapsed += async (_, _) => { _debounce?.Dispose(); _currentPage = 1; await InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); }); };
+        _debounce.AutoReset = false; _debounce.Start();
+    }
+
+    private async Task OnPageChanged(int page) { _currentPage = page; await LoadAsync(); }
+    private void GoToContact(ContactListDto c) => Nav.NavigateTo($"/contacts/{c.Id}");
 
     private static string ContactTypeBadge(Core.Enums.ContactType t) => t switch
     {
-        Core.Enums.ContactType.Individual   => "primary",
+        Core.Enums.ContactType.Individual => "primary",
         Core.Enums.ContactType.Organization => "info",
-        Core.Enums.ContactType.Church       => "success",
-        Core.Enums.ContactType.Foundation   => "warning",
-        _                                   => "neutral"
+        Core.Enums.ContactType.Church => "success",
+        Core.Enums.ContactType.Foundation => "warning",
+        _ => "neutral"
     };
 }
