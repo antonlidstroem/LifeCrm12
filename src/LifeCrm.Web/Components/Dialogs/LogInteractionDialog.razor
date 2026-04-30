@@ -11,32 +11,34 @@
             @(_isEdit ? "Edit Interaction" : "Log Interaction")
         </MudText>
     </TitleContent>
-    <DialogContent Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
-        <MudGrid Spacing="2">
-            <MudItem xs="12" sm="6">
-                <MudSelect T="string" @bind-Value="_type" Label="Type *" Variant="Variant.Outlined">
-                    <MudSelectItem Value="@("Call")">Phone call</MudSelectItem>
-                    <MudSelectItem Value="@("Email")">Email</MudSelectItem>
-                    <MudSelectItem Value="@("Meeting")">Meeting</MudSelectItem>
-                    <MudSelectItem Value="@("Note")">Note</MudSelectItem>
-                    <MudSelectItem Value="@("Other")">Other</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudDatePicker @bind-Date="_date" Label="Date *"
-                               Variant="Variant.Outlined" Editable="true" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_subject" Label="Subject"
-                              Variant="Variant.Outlined"
-                              Placeholder="Brief summary" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_body" Label="Description *"
-                              Variant="Variant.Outlined" Lines="5"
-                              Placeholder="Describe the interaction in detail…" />
-            </MudItem>
-        </MudGrid>
+    <DialogContent> 
+        <div Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="_type" Label="Type *" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("Call")">Phone call</MudSelectItem>
+                        <MudSelectItem Value="@("Email")">Email</MudSelectItem>
+                        <MudSelectItem Value="@("Meeting")">Meeting</MudSelectItem>
+                        <MudSelectItem Value="@("Note")">Note</MudSelectItem>
+                        <MudSelectItem Value="@("Other")">Other</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker @bind-Date="_date" Label="Date *"
+                                   Variant="Variant.Outlined" Editable="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_subject" Label="Subject"
+                                  Variant="Variant.Outlined"
+                                  Placeholder="Brief summary" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_body" Label="Description *"
+                                  Variant="Variant.Outlined" Lines="5"
+                                  Placeholder="Describe the interaction in detail…" />
+                </MudItem>
+            </MudGrid>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>

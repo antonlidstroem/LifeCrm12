@@ -95,7 +95,7 @@ else if (_donation is not null)
                     @* Receipt actions *@
                     @if (AppState.IsFinanceOrAdmin)
                     {
-                        @if (_donation.ReceiptDocumentId.HasValue)
+                       @*  @if (_donation.ReceiptDocumentId.HasValue)
                         {
                             <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                        StartIcon="@Icons.Material.Filled.Download"
@@ -107,7 +107,7 @@ else if (_donation is not null)
                                    StartIcon="@Icons.Material.Filled.Receipt"
                                    FullWidth="true" OnClick="OpenReceiptDialog">
                             @(_donation.ReceiptDocumentId.HasValue ? "Regenerate Receipt" : "Generate Receipt")
-                        </MudButton>
+                        </MudButton> *@
                     }
 
                     <MudDivider Class="my-3" />
@@ -167,9 +167,9 @@ else
 
     private async Task DownloadReceipt()
     {
-        if (_donation?.ReceiptDocumentId == null) return;
-        var res = await DonationsApi.DownloadReceiptAsync(Id, _donation.ReceiptDocumentId.Value);
-        if (!res.Success) Snackbar.Add("Download failed.", Severity.Error);
+        // if (_donation?.ReceiptDocumentId == null) return;
+        // var res = await DonationsApi.DownloadReceiptAsync(Id, _donation.ReceiptDocumentId.Value);
+        // if (!res.Success) Snackbar.Add("Download failed.", Severity.Error);
     }
 
     private async Task DeleteAsync()

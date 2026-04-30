@@ -1,4 +1,5 @@
-@* src/LifeCrm.Web/Shared/MobileNavItem.razor *@
+@* src/LifeCrm.Web/Shared/MobileNavItem.razor
+   FIXED: Active state uses same normalised logic as NavItem *@
 @inject NavigationManager Nav
 
 <a href="@Href" class="lc-bnav-item @(IsActive ? "lc-bnav-item--active" : "")">
@@ -16,15 +17,16 @@
     {
         get
         {
-            var current = Nav.Uri.Replace(Nav.BaseUri.TrimEnd('/'), "").TrimEnd('/');
-            var href    = Href.TrimEnd('/');
-            return ExactMatch
-                ? current == href || (href == "" && current == "")
-                : current.StartsWith(href, StringComparison.OrdinalIgnoreCase) && href != "";
+            var current = Nav.ToBaseRelativePath(Nav.Uri).TrimEnd('/');
+            var href    = Href.TrimStart('/').TrimEnd('/');
+
+            if (ExactMatch)
+                return string.Equals(current, href, StringComparison.OrdinalIgnoreCase)
+                    || (href == "" && current == "");
+
+            if (href == "") return false;
+            return current.StartsWith(href, StringComparison.OrdinalIgnoreCase)
+                && (current.Length == href.Length || current[href.Length] == '/');
         }
     }
 }
-
-
-@* src/LifeCrm.Web/Shared/MobileDrawerItem.razor *@
-@* (append to same file for brevity — in practice split into separate files) *@

@@ -10,63 +10,65 @@
             <MudIcon Icon="@Icons.Material.Filled.Groups" Class="mr-2 mb-n1" />Add People Group
         </MudText>
     </TitleContent>
-    <DialogContent Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
-        <MudGrid Spacing="2">
-            <MudItem xs="12">
-                {{!-- FIX: ValueChanged wired to OnGroupSelected so autocomplete fills the form --}}
-                <MudAutocomplete T="PeopleGroupSearchDto"
-                                 Label="Search people group (name, country, language)"
-                                 Value="_selected"
-                                 ValueChanged="OnGroupSelected"
-                                 SearchFunc="SearchGroups"
-                                 ToStringFunc="@(g => g is null ? "" : $"{g.Name} — {g.Country}")"
-                                 MinCharacters="2"
-                                 Variant="Variant.Outlined"
-                                 AdornmentIcon="@Icons.Material.Filled.Search"
-                                 HelperText="Type at least 2 characters to search the Joshua Project database" />
-            </MudItem>
-            @if (_selected is not null)
-            {
+    <DialogContent >
+        <div Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
+            <MudGrid Spacing="2">
                 <MudItem xs="12">
-                    <MudAlert Severity="Severity.Info" Dense="true">
-                        <b>@_selected.Name</b> · @_selected.Country
-                        @if (!string.IsNullOrEmpty(_selected.Language))
-                        {
-                            <text> · @_selected.Language</text>
-                        }
-                        @if (_selected.Population.HasValue)
-                        {
-                            <text> · Pop: @_selected.Population.Value.ToString("N0")</text>
-                        }
-                        @if (_selected.IsUnreached)
-                        {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Error"
-                                     Variant="Variant.Text">Unreached</MudChip>
-                        }
-                    </MudAlert>
+                    {{!-- FIX: ValueChanged wired to OnGroupSelected so autocomplete fills the form --}}
+                    <MudAutocomplete T="PeopleGroupSearchDto"
+                                     Label="Search people group (name, country, language)"
+                                     Value="_selected"
+                                     ValueChanged="OnGroupSelected"
+                                     SearchFunc="SearchGroups"
+                                     ToStringFunc="@(g => g is null ? "" : $"{g.Name} — {g.Country}")"
+                                     MinCharacters="2"
+                                     Variant="Variant.Outlined"
+                                     AdornmentIcon="@Icons.Material.Filled.Search"
+                                     HelperText="Type at least 2 characters to search the Joshua Project database" />
                 </MudItem>
-            }
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_jpCode" Label="JP Code *" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_peopleGroupName" Label="People Group Name *"
-                              Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_country" Label="Country *" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_language" Label="Language" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField @bind-Value="_estimatedReached" Label="Estimated Reached"
-                                 Variant="Variant.Outlined" Min="0" HideSpinButtons="true" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_notes" Label="Notes" Variant="Variant.Outlined" Lines="2" />
-            </MudItem>
-        </MudGrid>
+                @if (_selected is not null)
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            <b>@_selected.Name</b> · @_selected.Country
+                            @if (!string.IsNullOrEmpty(_selected.Language))
+                            {
+                                <text> · @_selected.Language</text>
+                            }
+                            @if (_selected.Population.HasValue)
+                            {
+                                <text> · Pop: @_selected.Population.Value.ToString("N0")</text>
+                            }
+                            @if (_selected.IsUnreached)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Error"
+                                         Variant="Variant.Text">Unreached</MudChip>
+                            }
+                        </MudAlert>
+                    </MudItem>
+                }
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_jpCode" Label="JP Code *" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_peopleGroupName" Label="People Group Name *"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_country" Label="Country *" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_language" Label="Language" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="_estimatedReached" Label="Estimated Reached"
+                                     Variant="Variant.Outlined" Min="0" HideSpinButtons="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_notes" Label="Notes" Variant="Variant.Outlined" Lines="2" />
+                </MudItem>
+            </MudGrid>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>

@@ -11,78 +11,80 @@
             @(_isEdit ? "Edit Contact" : "New Contact")
         </MudText>
     </TitleContent>
-    <DialogContent Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
-        <MudGrid Spacing="2">
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_name" Label="Name *" Variant="Variant.Outlined"
-                              Required="true" AutoFocus="true" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect T="string" @bind-Value="_type" Label="Type *" Variant="Variant.Outlined">
-                    <MudSelectItem Value="@("Individual")">Individual</MudSelectItem>
-                    <MudSelectItem Value="@("Organization")">Organisation</MudSelectItem>
-                    <MudSelectItem Value="@("Church")">Church</MudSelectItem>
-                    <MudSelectItem Value="@("Foundation")">Foundation</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_email" Label="Email" Variant="Variant.Outlined"
-                              InputType="InputType.Email" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_phone" Label="Phone" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_primaryContactName" Label="Contact Person"
-                              Variant="Variant.Outlined" />
-            </MudItem>
+    <DialogContent>
+        <div Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
+            <MudGrid Spacing="2">
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_name" Label="Name *" Variant="Variant.Outlined"
+                                  Required="true" AutoFocus="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="_type" Label="Type *" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("Individual")">Individual</MudSelectItem>
+                        <MudSelectItem Value="@("Organization")">Organisation</MudSelectItem>
+                        <MudSelectItem Value="@("Church")">Church</MudSelectItem>
+                        <MudSelectItem Value="@("Foundation")">Foundation</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_email" Label="Email" Variant="Variant.Outlined"
+                                  InputType="InputType.Email" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_phone" Label="Phone" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_primaryContactName" Label="Contact Person"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
 
-            <MudItem xs="12">
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1"
-                         Style="font-size:11px;letter-spacing:0.08em;font-weight:600;">ADDRESS</MudText>
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_addressLine1" Label="Address line 1"
-                              Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_addressLine2" Label="Address line 2"
-                              Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="4">
-                <MudTextField @bind-Value="_postalCode" Label="Postal code"
-                              Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="4">
-                <MudTextField @bind-Value="_city" Label="City" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="4">
-                <MudTextField @bind-Value="_stateProvince" Label="Region / State"
-                              Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_country" Label="Country" Variant="Variant.Outlined" />
-            </MudItem>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1"
+                             Style="font-size:11px;letter-spacing:0.08em;font-weight:600;">ADDRESS</MudText>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_addressLine1" Label="Address line 1"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_addressLine2" Label="Address line 2"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_postalCode" Label="Postal code"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_city" Label="City" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_stateProvince" Label="Region / State"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_country" Label="Country" Variant="Variant.Outlined" />
+                </MudItem>
 
-            <MudItem xs="12">
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1"
-                         Style="font-size:11px;letter-spacing:0.08em;font-weight:600;">OTHER</MudText>
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_tags" Label="Tags (comma-separated)"
-                              Variant="Variant.Outlined"
-                              HelperText="e.g. donor, volunteer, board-member" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_notes" Label="Notes" Variant="Variant.Outlined"
-                              Lines="3" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudCheckBox @bind-Value="_emailOptOut"
-                             Label="Opted out of email communications"
-                             Color="Color.Warning" />
-            </MudItem>
-        </MudGrid>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1"
+                             Style="font-size:11px;letter-spacing:0.08em;font-weight:600;">OTHER</MudText>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_tags" Label="Tags (comma-separated)"
+                                  Variant="Variant.Outlined"
+                                  HelperText="e.g. donor, volunteer, board-member" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_notes" Label="Notes" Variant="Variant.Outlined"
+                                  Lines="3" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudCheckBox @bind-Value="_emailOptOut"
+                                 Label="Opted out of email communications"
+                                 Color="Color.Warning" />
+                </MudItem>
+            </MudGrid>
+          </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>

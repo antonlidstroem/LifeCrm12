@@ -11,69 +11,71 @@
             @(_isEdit ? "Edit Campaign" : "New Campaign")
         </MudText>
     </TitleContent>
-    <DialogContent Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
-        @if (_loadingProjects)
-        {
-            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-        }
-        else
-        {
-            <MudGrid Spacing="2">
-                <MudItem xs="12">
-                    <MudSelect T="Guid?" @bind-Value="_projectId"
-                               Label="Project *"
-                               Variant="Variant.Outlined"
-                               HelperText="Every campaign must belong to a project"
-                               Required="true"
-                               AdornmentIcon="@Icons.Material.Filled.FolderOpen">
-                        <MudSelectItem T="Guid?" Value="@((Guid?)null)" Disabled="true">
-                            Select project…
-                        </MudSelectItem>
-                        @foreach (var p in _projects)
-                        {
-                            <MudSelectItem T="Guid?" Value="@((Guid?)p.Id)">@p.Name</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
+    <DialogContent >
+        <div Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
+            @if (_loadingProjects)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+            }
+            else
+            {
+                <MudGrid Spacing="2">
+                    <MudItem xs="12">
+                        <MudSelect T="Guid?" @bind-Value="_projectId"
+                                   Label="Project *"
+                                   Variant="Variant.Outlined"
+                                   HelperText="Every campaign must belong to a project"
+                                   Required="true"
+                                   AdornmentIcon="@Icons.Material.Filled.FolderOpen">
+                            <MudSelectItem T="Guid?" Value="@((Guid?)null)" Disabled="true">
+                                Select project…
+                            </MudSelectItem>
+                            @foreach (var p in _projects)
+                            {
+                                <MudSelectItem T="Guid?" Value="@((Guid?)p.Id)">@p.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
 
-                <MudItem xs="12">
-                    <MudTextField @bind-Value="_name" Label="Name *"
-                                  Variant="Variant.Outlined" Required="true" AutoFocus="true" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField @bind-Value="_description" Label="Description"
-                                  Variant="Variant.Outlined" Lines="3" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudNumericField @bind-Value="_budgetGoal" Label="Funding Goal (amount)"
-                                     Variant="Variant.Outlined"
-                                     Adornment="Adornment.Start"
-                                     AdornmentIcon="@Icons.Material.Filled.AttachMoney"
-                                     HideSpinButtons="true" Min="0m" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudSelect T="string" @bind-Value="_status" Label="Status" Variant="Variant.Outlined">
-                        <MudSelectItem Value="@("Draft")">Draft</MudSelectItem>
-                        <MudSelectItem Value="@("Active")">Active</MudSelectItem>
-                        <MudSelectItem Value="@("Paused")">Paused</MudSelectItem>
-                        <MudSelectItem Value="@("Completed")">Completed</MudSelectItem>
-                        <MudSelectItem Value="@("Cancelled")">Cancelled</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudDatePicker @bind-Date="_startDate" Label="Start date"
-                                   Variant="Variant.Outlined" Editable="true" Clearable="true" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudDatePicker @bind-Date="_endDate" Label="End date"
-                                   Variant="Variant.Outlined" Editable="true" Clearable="true" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField @bind-Value="_notes" Label="Notes"
-                                  Variant="Variant.Outlined" Lines="2" />
-                </MudItem>
-            </MudGrid>
-        }
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_name" Label="Name *"
+                                      Variant="Variant.Outlined" Required="true" AutoFocus="true" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_description" Label="Description"
+                                      Variant="Variant.Outlined" Lines="3" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="_budgetGoal" Label="Funding Goal (amount)"
+                                         Variant="Variant.Outlined"
+                                         Adornment="Adornment.Start"
+                                         AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                         HideSpinButtons="true" Min="0m" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string" @bind-Value="_status" Label="Status" Variant="Variant.Outlined">
+                            <MudSelectItem Value="@("Draft")">Draft</MudSelectItem>
+                            <MudSelectItem Value="@("Active")">Active</MudSelectItem>
+                            <MudSelectItem Value="@("Paused")">Paused</MudSelectItem>
+                            <MudSelectItem Value="@("Completed")">Completed</MudSelectItem>
+                            <MudSelectItem Value="@("Cancelled")">Cancelled</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudDatePicker @bind-Date="_startDate" Label="Start date"
+                                       Variant="Variant.Outlined" Editable="true" Clearable="true" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudDatePicker @bind-Date="_endDate" Label="End date"
+                                       Variant="Variant.Outlined" Editable="true" Clearable="true" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_notes" Label="Notes"
+                                      Variant="Variant.Outlined" Lines="2" />
+                    </MudItem>
+                </MudGrid>
+            }
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>

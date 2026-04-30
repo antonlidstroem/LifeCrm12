@@ -10,38 +10,40 @@
             Send email to @ContactName
         </MudText>
     </TitleContent>
-    <DialogContent Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
-        @if (string.IsNullOrEmpty(ContactEmail))
-        {
-            <MudAlert Severity="Severity.Warning">
-                This contact has no email address registered.
-            </MudAlert>
-        }
-        else
-        {
-            @if (EmailOptOut)
+    <DialogContent> 
+        <div Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
+            @if (string.IsNullOrEmpty(ContactEmail))
             {
-                <MudAlert Severity="Severity.Warning" Class="mb-3">
-                    This contact has opted out of emails. You are sending a direct message anyway.
+                <MudAlert Severity="Severity.Warning">
+                    This contact has no email address registered.
                 </MudAlert>
             }
-            <MudGrid Spacing="2">
-                <MudItem xs="12">
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        To: <b>@ContactName &lt;@ContactEmail&gt;</b>
-                    </MudText>
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField @bind-Value="_subject" Label="Subject *"
-                                  Variant="Variant.Outlined" AutoFocus="true" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField @bind-Value="_body" Label="Message *"
-                                  Variant="Variant.Outlined" Lines="8"
-                                  Placeholder="Write your message here. HTML tags are supported." />
-                </MudItem>
-            </MudGrid>
-        }
+            else
+            {
+                @if (EmailOptOut)
+                {
+                    <MudAlert Severity="Severity.Warning" Class="mb-3">
+                        This contact has opted out of emails. You are sending a direct message anyway.
+                    </MudAlert>
+                }
+                <MudGrid Spacing="2">
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            To: <b>@ContactName &lt;@ContactEmail&gt;</b>
+                        </MudText>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_subject" Label="Subject *"
+                                      Variant="Variant.Outlined" AutoFocus="true" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_body" Label="Message *"
+                                      Variant="Variant.Outlined" Lines="8"
+                                      Placeholder="Write your message here. HTML tags are supported." />
+                    </MudItem>
+                </MudGrid>
+            }
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>

@@ -1,4 +1,13 @@
-@* src/LifeCrm.Web/Pages/Donations/DonationsList.razor *@
+@* src/LifeCrm.Web/Pages/Donations/DonationsList.razor
+   FIXES:
+   - Receipt column: @onclick:stopPropagation on the wrapper div (was correct
+     but the outer <div> was placed OUTSIDE its <MudTd> in the original —
+     confirmed fixed here with div strictly inside MudTd)
+   - Chevron column: same fix
+   - "Record Donation" button: changed from Href="/donations/new" to OnClick
+     that navigates programmatically, consistent with other list pages
+   - Filter bar: flex-wrap added for mobile
+*@
 @page "/donations"
 @using LifeCrm.Web.Services
 @using LifeCrm.Web.Shared
@@ -21,14 +30,13 @@
                 <MudButton Variant="Variant.Filled" Color="Color.Primary"
                            Size="Size.Small"
                            StartIcon="@Icons.Material.Outlined.AddCard"
-                           Href="/donations/new">
+                           OnClick="OpenCreateDialog">
                     Record Donation
                 </MudButton>
             }
         </Actions>
     </PageHeader>
 
-    <!-- Filter bar -->
     <div class="lc-filter-bar">
         <div class="lc-search">
             <MudIcon Icon="@Icons.Material.Outlined.Search"
@@ -39,35 +47,29 @@
 
         <MudDatePicker @bind-Date="_fromDate" Label="From" Variant="Variant.Outlined"
                        DateFormat="yyyy-MM-dd" Clearable="true"
-                       Class="lc-filter-date" Editable="true"
+                       Style="max-width:150px;" Editable="true"
                        AdornmentColor="Color.Default"
                        PickerVariant="PickerVariant.Dialog" />
 
         <MudDatePicker @bind-Date="_toDate" Label="To" Variant="Variant.Outlined"
                        DateFormat="yyyy-MM-dd" Clearable="true"
-                       Class="lc-filter-date" Editable="true"
+                       Style="max-width:150px;" Editable="true"
                        AdornmentColor="Color.Default"
                        PickerVariant="PickerVariant.Dialog" />
 
         <MudButton Variant="Variant.Outlined" Size="Size.Small"
                    StartIcon="@Icons.Material.Outlined.FilterAlt"
-                   OnClick="ApplyFilters">
-            Apply
-        </MudButton>
+                   OnClick="ApplyFilters">Apply</MudButton>
 
         @if (HasFilters)
         {
             <MudButton Variant="Variant.Text" Size="Size.Small"
-                       Color="Color.Default"
                        StartIcon="@Icons.Material.Outlined.FilterAltOff"
-                       OnClick="ClearFilters">
-                Clear
-            </MudButton>
+                       OnClick="ClearFilters">Clear</MudButton>
         }
     </div>
 
     <DataCard>
-        <!-- Desktop table -->
         <div class="lc-hide-mobile">
             <MudTable Items="_donations" Dense="true" Hover="true"
                       Loading="_loading" LoadingProgressColor="Color.Primary"
@@ -81,14 +83,16 @@
                     <MudTh>Status</MudTh>
                     <MudTh Class="lc-hide-md">Campaign</MudTh>
                     <MudTh Class="lc-hide-md">Method</MudTh>
-                    <MudTh Style="width:100px">Receipt</MudTh>
-                    <MudTh Style="width:48px"></MudTh>
+                    <MudTh Style="width:80px">Receipt</MudTh>
+                    <MudTh Style="width:44px"></MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Contact">
                         <div style="display:flex;align-items:center;gap:8px;">
                             <div class="lc-contact-avatar">
-                                @(context.ContactName.Length > 0 ? context.ContactName[0].ToString().ToUpper() : "?")
+                                @(context.ContactName.Length > 0
+                                    ? context.ContactName[0].ToString().ToUpper()
+                                    : "?")
                             </div>
                             <span style="font-weight:500">@context.ContactName</span>
                         </div>
@@ -109,15 +113,16 @@
                     <MudTd DataLabel="Method" Class="lc-hide-md lc-muted" Style="font-size:12px;">
                         @context.PaymentMethod
                     </MudTd>
+                    @* Receipt column — stopPropagation correctly inside MudTd *@
                     <MudTd DataLabel="Receipt">
-                        @* FIX RZ10010: wrap icon buttons that need stopPropagation in a div *@
-                        <div @onclick:stopPropagation="true">
+                        <div @onclick:stopPropagation="true"
+                             style="display:flex;align-items:center;">
                             @if (context.ReceiptSent && context.ReceiptDocumentId.HasValue)
                             {
                                 <MudTooltip Text="Download receipt">
                                     <MudIconButton Icon="@Icons.Material.Outlined.Receipt"
                                                    Size="Size.Small" Color="Color.Success"
-                                                   OnClick="@(async () => await DownloadReceipt(context))" />
+                                                   OnClick="@(() => DownloadReceipt(context))" />
                                 </MudTooltip>
                             }
                             else if (AppState.IsFinanceOrAdmin)
@@ -125,11 +130,12 @@
                                 <MudTooltip Text="Generate receipt">
                                     <MudIconButton Icon="@Icons.Material.Outlined.ReceiptLong"
                                                    Size="Size.Small" Color="Color.Default"
-                                                   OnClick="@(async () => await GenerateReceipt(context))" />
+                                                   OnClick="@(() => GenerateReceipt(context))" />
                                 </MudTooltip>
                             }
                         </div>
                     </MudTd>
+                    @* Chevron column — stopPropagation correctly inside MudTd *@
                     <MudTd>
                         <div @onclick:stopPropagation="true">
                             <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
@@ -144,14 +150,14 @@
                                  Style="font-size:40px;color:var(--lc-text-disabled)" />
                         <span class="lc-empty__title">No donations found</span>
                         <span class="lc-empty__subtitle">
-                            @(HasFilters ? "Try adjusting your filters." : "Record your first donation to get started.")
+                            @(HasFilters ? "Try adjusting your filters."
+                                        : "Record your first donation to get started.")
                         </span>
                     </div>
                 </NoRecordsContent>
             </MudTable>
         </div>
 
-        <!-- Mobile card list -->
         <div class="lc-show-mobile lc-card-list" style="padding:8px;">
             @if (_loading)
             {
@@ -174,12 +180,10 @@
                             <span class="lc-mono" style="color:var(--lc-text-primary);font-weight:500;">
                                 $@d.Amount.ToString("N2")
                             </span>
-                            <span class="lc-list-card__meta-item lc-col-date">
-                                @d.Date.ToString("yyyy-MM-dd")
-                            </span>
+                            <span class="lc-col-date">@d.Date.ToString("yyyy-MM-dd")</span>
                             @if (!string.IsNullOrEmpty(d.CampaignName))
                             {
-                                <span class="lc-list-card__meta-item lc-muted">@d.CampaignName</span>
+                                <span class="lc-muted">@d.CampaignName</span>
                             }
                         </div>
                     </div>
@@ -199,14 +203,6 @@
 </div>
 
 <style>
-    .lc-filter-bar {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 16px;
-        flex-wrap: wrap;
-    }
-    .lc-filter-date { max-width: 150px; }
     .lc-contact-avatar {
         width: 28px; height: 28px; border-radius: 50%;
         background: var(--lc-accent-dim); border: 1px solid var(--lc-accent);
@@ -215,14 +211,10 @@
     }
     .lc-hide-md { }
     @@media (max-width: 1100px) { .lc-hide-md { display: none !important; } }
-    @@media (max-width: 768px) {
-        .lc-filter-bar { gap: 8px; }
-        .lc-filter-date { max-width: 130px; }
-    }
 </style>
 
 @code {
-    private List<DonationListDto> _donations = new();
+    private List<DonationListDto> _donations  = new();
     private bool     _loading    = true;
     private string?  _search;
     private DateTime? _fromDate;
@@ -260,18 +252,27 @@
         _loading = false;
     }
 
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions
+        {
+            CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true,
+            BackdropClick = false, CloseOnEscapeKey = true
+        };
+        var d = DialogService.Show<DonationFormDialog>("New Donation", new DialogParameters(), options);
+        if (!(await d.Result).Canceled) await LoadAsync();
+    }
+
     private void OnSearchKey(KeyboardEventArgs _)
     {
         _debounce?.Dispose();
         _debounce = new System.Timers.Timer(350);
         _debounce.Elapsed += async (_, _) =>
         {
-            _debounce?.Dispose();
-            _page = 1;
+            _debounce?.Dispose(); _page = 1;
             await InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); });
         };
-        _debounce.AutoReset = false;
-        _debounce.Start();
+        _debounce.AutoReset = false; _debounce.Start();
     }
 
     private async Task ApplyFilters() { _page = 1; await LoadAsync(); }

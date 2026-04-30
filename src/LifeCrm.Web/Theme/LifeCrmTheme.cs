@@ -172,9 +172,9 @@ public static class LifeCrmTheme
         {
             Drawer = 1200,
             AppBar = 1100,
-            Popover = 1300,
+            Popover = 1500,
             Dialog = 1400,
-            Snackbar = 1500,
+            Snackbar = 1600,
         },
 
         Shadows = new Shadow

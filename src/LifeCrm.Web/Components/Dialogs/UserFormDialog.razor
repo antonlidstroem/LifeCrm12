@@ -11,46 +11,48 @@
             @(_isEdit ? "Edit User" : "New User")
         </MudText>
     </TitleContent>
-    <DialogContent Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
-        <MudGrid Spacing="2">
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_fullName" Label="Full name *"
-                              Variant="Variant.Outlined" AutoFocus="true" />
-            </MudItem>
-            @if (!_isEdit)
-            {
+    <DialogContent>
+        <div Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
+            <MudGrid Spacing="2">
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_email" Label="Email *"
-                                  Variant="Variant.Outlined" InputType="InputType.Email" />
+                    <MudTextField @bind-Value="_fullName" Label="Full name *"
+                                  Variant="Variant.Outlined" AutoFocus="true" />
                 </MudItem>
-            }
-            else
-            {
+                @if (!_isEdit)
+                {
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_email" Label="Email *"
+                                      Variant="Variant.Outlined" InputType="InputType.Email" />
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Email: @ExistingUser?.Email
+                        </MudText>
+                    </MudItem>
+                }
                 <MudItem xs="12">
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        Email: @ExistingUser?.Email
-                    </MudText>
+                    <MudSelect T="UserRole" @bind-Value="_role" Label="Role *" Variant="Variant.Outlined">
+                        @foreach (UserRole r in Enum.GetValues<UserRole>())
+                        {
+                            <MudSelectItem Value="r">@r</MudSelectItem>
+                        }
+                    </MudSelect>
                 </MudItem>
-            }
-            <MudItem xs="12">
-                <MudSelect T="UserRole" @bind-Value="_role" Label="Role *" Variant="Variant.Outlined">
-                    @foreach (UserRole r in Enum.GetValues<UserRole>())
-                    {
-                        <MudSelectItem Value="r">@r</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_password"
-                              Label="@(_isEdit ? "New password (leave blank to keep current)" : "Password *")"
-                              InputType="@(_showPw ? InputType.Text : InputType.Password)"
-                              Variant="Variant.Outlined"
-                              Adornment="Adornment.End"
-                              AdornmentIcon="@(_showPw ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
-                              OnAdornmentClick="@(() => _showPw = !_showPw)"
-                              HelperText="Minimum 10 characters" />
-            </MudItem>
-        </MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_password"
+                                  Label="@(_isEdit ? "New password (leave blank to keep current)" : "Password *")"
+                                  InputType="@(_showPw ? InputType.Text : InputType.Password)"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@(_showPw ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                  OnAdornmentClick="@(() => _showPw = !_showPw)"
+                                  HelperText="Minimum 10 characters" />
+                </MudItem>
+            </MudGrid>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>

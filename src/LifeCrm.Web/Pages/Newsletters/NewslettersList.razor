@@ -1,4 +1,11 @@
-@* src/LifeCrm.Web/Pages/Newsletters/NewslettersList.razor *@
+@* src/LifeCrm.Web/Pages/Newsletters/NewslettersList.razor
+   FIXES:
+   - Removed <MudTd> nested inside <MudTd> in the actions column (invalid, causes
+     broken table layout and console errors)
+   - Action buttons are now plain icon buttons inside a single <MudTd>
+   - @onclick:stopPropagation placed correctly on wrapper div inside MudTd
+   - Status filter tabs and layout unchanged
+*@
 @page "/newsletters"
 @using LifeCrm.Web.Services
 @using LifeCrm.Web.Shared
@@ -29,24 +36,16 @@
         </Actions>
     </PageHeader>
 
-    <!-- Status filter tabs -->
     <div class="lc-tab-bar">
         <button class="lc-tab @(_statusFilter == null ? "lc-tab--active" : "")"
-                @onclick="() => SetFilter(null)">
-            All
-        </button>
+                @onclick="() => SetFilter(null)">All</button>
         <button class="lc-tab @(_statusFilter == NewsletterStatus.Draft ? "lc-tab--active" : "")"
-                @onclick="() => SetFilter(NewsletterStatus.Draft)">
-            Drafts
-        </button>
+                @onclick="() => SetFilter(NewsletterStatus.Draft)">Drafts</button>
         <button class="lc-tab @(_statusFilter == NewsletterStatus.Sent ? "lc-tab--active" : "")"
-                @onclick="() => SetFilter(NewsletterStatus.Sent)">
-            Sent
-        </button>
+                @onclick="() => SetFilter(NewsletterStatus.Sent)">Sent</button>
     </div>
 
     <DataCard>
-        <!-- Desktop table -->
         <div class="lc-hide-mobile">
             <MudTable Items="_newsletters" Dense="true" Hover="true"
                       Loading="_loading" LoadingProgressColor="Color.Primary"
@@ -60,13 +59,15 @@
                     <MudTh Style="text-align:right">Errors</MudTh>
                     <MudTh Class="lc-hide-md">Filters</MudTh>
                     <MudTh>Date</MudTh>
-                    <MudTh Style="width:96px"></MudTh>
+                    <MudTh Style="width:80px"></MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Title">
                         <div>
                             <div style="font-weight:500;">@context.Title</div>
-                            <div class="lc-muted" style="font-size:11px;margin-top:1px;">@context.Subject</div>
+                            <div class="lc-muted" style="font-size:11px;margin-top:1px;">
+                                @context.Subject
+                            </div>
                         </div>
                     </MudTd>
                     <MudTd DataLabel="Status">
@@ -109,29 +110,21 @@
                               ?? context.CreatedAt.LocalDateTime.ToString("yyyy-MM-dd"))
                         </span>
                     </MudTd>
+                    @* FIX: single MudTd for all actions — no nested MudTd *@
                     <MudTd>
-                        <div style="display:flex;gap:4px;">
+                        <div style="display:flex;gap:2px;align-items:center;"
+                             @onclick:stopPropagation="true">
                             @if (context.Status == NewsletterStatus.Draft && AppState.IsFinanceOrAdmin)
                             {
-                                <MudTooltip Text="Send newsletter">
-                                  
-                                    <MudTd>
-                                <div @onclick:stopPropagation="true" style="display:inline-block">
+                                <MudTooltip Text="Edit &amp; send">
                                     <MudIconButton Icon="@Icons.Material.Outlined.Send"
                                                    Size="Size.Small"
                                                    OnClick="@(() => GoTo(context))" />
-                                </div>
-                            </MudTd>
-                                                
                                 </MudTooltip>
                             }
-                            <MudTd>
-                                <div @onclick:stopPropagation="true" style="display:inline-block">
-                                    <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
-                                                   Size="Size.Small"
-                                                   OnClick="@(() => GoTo(context))" />
-                                </div>
-                            </MudTd>
+                            <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight"
+                                           Size="Size.Small"
+                                           OnClick="@(() => GoTo(context))" />
                         </div>
                     </MudTd>
                 </RowTemplate>
@@ -150,11 +143,13 @@
             </MudTable>
         </div>
 
-        <!-- Mobile -->
         <div class="lc-show-mobile lc-card-list" style="padding:8px;">
             @if (_loading)
             {
-                @for (int i = 0; i < 4; i++) { <div class="lc-skeleton-row" style="height:80px;"></div> }
+                @for (int i = 0; i < 4; i++)
+                {
+                    <div class="lc-skeleton-row" style="height:80px;"></div>
+                }
             }
             else
             {
@@ -189,29 +184,19 @@
 
 <style>
     .lc-tab-bar {
-        display: flex; gap: 2px;
-        margin-bottom: 16px;
-        background: var(--lc-surface);
-        border: 1px solid var(--lc-border);
-        border-radius: var(--lc-radius);
-        padding: 4px;
-        width: fit-content;
+        display: flex; gap: 2px; margin-bottom: 16px;
+        background: var(--lc-surface); border: 1px solid var(--lc-border);
+        border-radius: var(--lc-radius); padding: 4px; width: fit-content;
     }
     .lc-tab {
-        padding: 6px 16px;
-        border: none; background: none;
+        padding: 6px 16px; border: none; background: none;
         border-radius: calc(var(--lc-radius) - 2px);
-        color: var(--lc-text-secondary);
-        font-size: 13px; font-weight: 500;
-        cursor: pointer;
-        font-family: var(--lc-font-body);
+        color: var(--lc-text-secondary); font-size: 13px; font-weight: 500;
+        cursor: pointer; font-family: var(--lc-font-body);
         transition: color var(--lc-transition), background var(--lc-transition);
     }
     .lc-tab:hover { color: var(--lc-text-primary); background: var(--lc-accent-hover); }
-    .lc-tab--active {
-        background: var(--lc-accent-dim);
-        color: var(--lc-accent);
-    }
+    .lc-tab--active { background: var(--lc-accent-dim); color: var(--lc-accent); }
     .lc-tag {
         display: inline-block; padding: 1px 7px;
         border-radius: 3px; background: var(--lc-neutral-bg);
@@ -222,7 +207,7 @@
 </style>
 
 @code {
-    private List<NewsletterListDto> _newsletters = new();
+    private List<NewsletterListDto> _newsletters  = new();
     private bool              _loading      = true;
     private NewsletterStatus? _statusFilter;
     private int               _page         = 1;

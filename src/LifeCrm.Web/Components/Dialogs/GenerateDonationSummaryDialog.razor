@@ -10,25 +10,27 @@
             Generate Donation Summary
         </MudText>
     </TitleContent>
-    <DialogContent Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
-        <MudText Typo="Typo.body2" Class="mb-3">
-            Generate a PDF summary of all donations for <b>@ContactName</b> within the selected period.
-        </MudText>
-        <MudGrid Spacing="2">
-            <MudItem xs="12" sm="6">
-                <MudDatePicker @bind-Date="_periodStart" Label="Period start *"
-                               Variant="Variant.Outlined" Editable="true" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudDatePicker @bind-Date="_periodEnd" Label="Period end *"
-                               Variant="Variant.Outlined" Editable="true" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudCheckBox @bind-Value="_sendByEmail"
-                             Label="Also send summary by email to donor"
-                             Color="Color.Primary" />
-            </MudItem>
-        </MudGrid>
+    <DialogContent>
+        <div Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
+             <MudText Typo="Typo.body2" Class="mb-3">
+                Generate a PDF summary of all donations for <b>@ContactName</b> within the selected period.
+            </MudText>
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker @bind-Date="_periodStart" Label="Period start *"
+                                   Variant="Variant.Outlined" Editable="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker @bind-Date="_periodEnd" Label="Period end *"
+                                   Variant="Variant.Outlined" Editable="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudCheckBox @bind-Value="_sendByEmail"
+                                 Label="Also send summary by email to donor"
+                                 Color="Color.Primary" />
+                </MudItem>
+            </MudGrid>  
+		</div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>

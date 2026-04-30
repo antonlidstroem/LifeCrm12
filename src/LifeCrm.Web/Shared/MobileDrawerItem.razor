@@ -1,10 +1,10 @@
-@* src/LifeCrm.Web/Shared/MobileDrawerItem.razor *@
+@* src/LifeCrm.Web/Shared/MobileDrawerItem.razor
+   FIXED: Active state normalised, OnClose callback kept *@
 @inject NavigationManager Nav
 
 <a href="@Href"
    class="lc-mobile-nav-item @(IsActive ? "lc-mobile-nav-item--active" : "")"
-   @onclick="OnClose"
-   @onclick:preventDefault="false">
+   @onclick="HandleClick">
     <span class="lc-mobile-nav-item__icon">
         <MudIcon Icon="@Icon" Size="Size.Small" />
     </span>
@@ -16,21 +16,33 @@
 </a>
 
 @code {
-    [Parameter] public string Href       { get; set; } = "/";
-    [Parameter] public string Icon       { get; set; } = "";
-    [Parameter] public string Label      { get; set; } = "";
-    [Parameter] public bool   ExactMatch { get; set; }
-    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public string        Href       { get; set; } = "/";
+    [Parameter] public string        Icon       { get; set; } = "";
+    [Parameter] public string        Label      { get; set; } = "";
+    [Parameter] public bool          ExactMatch { get; set; }
+    [Parameter] public EventCallback OnClose    { get; set; }
 
     private bool IsActive
     {
         get
         {
-            var current = Nav.Uri.Replace(Nav.BaseUri.TrimEnd('/'), "").TrimEnd('/');
-            var href    = Href.TrimEnd('/');
-            return ExactMatch
-                ? current == href || (href == "" && current == "")
-                : current.StartsWith(href, StringComparison.OrdinalIgnoreCase) && href != "";
+            var current = Nav.ToBaseRelativePath(Nav.Uri).TrimEnd('/');
+            var href    = Href.TrimStart('/').TrimEnd('/');
+
+            if (ExactMatch)
+                return string.Equals(current, href, StringComparison.OrdinalIgnoreCase)
+                    || (href == "" && current == "");
+
+            if (href == "") return false;
+            return current.StartsWith(href, StringComparison.OrdinalIgnoreCase)
+                && (current.Length == href.Length || current[href.Length] == '/');
         }
+    }
+
+    // Close the drawer then let the default <a> href navigation happen
+    private async Task HandleClick()
+    {
+        if (OnClose.HasDelegate)
+            await OnClose.InvokeAsync();
     }
 }

@@ -1,10 +1,16 @@
-@* src/LifeCrm.Web/Shared/NavItem.razor *@
+@* src/LifeCrm.Web/Shared/NavItem.razor
+   FIXED:
+   - Removed @onclick:preventDefault="false" which caused double-navigation events
+   - Tooltip only shown in mini mode (was always shown)
+   - Active state computed correctly for both exact and prefix matching
+   - CSS class structure cleaned up so icon+label never overlap
+*@
 @inject NavigationManager Nav
 
-<MudTooltip Text="@(Mini ? Label : "")" Placement="Placement.Right" Delay="200">
+<MudTooltip Text="@Label" Placement="Placement.Right" Delay="300"
+            Disabled="@(!Mini)">
     <a href="@Href"
-       class="lc-nav-item @(IsActive ? "lc-nav-item--active" : "") @(Mini ? "lc-nav-item--mini" : "")"
-       @onclick:preventDefault="false">
+       class="lc-nav-item @(IsActive ? "lc-nav-item--active" : "") @(Mini ? "lc-nav-item--mini" : "")">
         <span class="lc-nav-item__icon">
             <MudIcon Icon="@Icon" Size="Size.Small" />
         </span>
@@ -12,25 +18,35 @@
         {
             <span class="lc-nav-item__label">@Label</span>
         }
+        @if (IsActive && !Mini)
+        {
+            <span class="lc-nav-item__indicator"></span>
+        }
     </a>
 </MudTooltip>
 
 @code {
-    [Parameter] public string Href        { get; set; } = "/";
-    [Parameter] public string Icon        { get; set; } = "";
-    [Parameter] public string Label       { get; set; } = "";
-    [Parameter] public bool   Mini        { get; set; }
-    [Parameter] public bool   ExactMatch  { get; set; }
+    [Parameter] public string Href       { get; set; } = "/";
+    [Parameter] public string Icon       { get; set; } = "";
+    [Parameter] public string Label      { get; set; } = "";
+    [Parameter] public bool   Mini       { get; set; }
+    [Parameter] public bool   ExactMatch { get; set; }
 
     private bool IsActive
     {
         get
         {
-            var current = Nav.Uri.Replace(Nav.BaseUri.TrimEnd('/'), "").TrimEnd('/');
-            var href    = Href.TrimEnd('/');
-            return ExactMatch
-                ? current == href || (href == "" && current == "")
-                : current.StartsWith(href, StringComparison.OrdinalIgnoreCase) && href != "";
+            // Normalise: strip base URI, strip trailing slash
+            var current = Nav.ToBaseRelativePath(Nav.Uri).TrimEnd('/');
+            var href    = Href.TrimStart('/').TrimEnd('/');
+
+            if (ExactMatch)
+                return string.Equals(current, href, StringComparison.OrdinalIgnoreCase)
+                    || (href == "" && current == "");
+
+            if (href == "") return false; // never match everything for non-exact root
+            return current.StartsWith(href, StringComparison.OrdinalIgnoreCase)
+                && (current.Length == href.Length || current[href.Length] == '/');
         }
     }
 }

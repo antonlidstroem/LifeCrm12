@@ -14,83 +14,85 @@
             @(_isEdit ? "Edit Donation" : "New Donation")
         </MudText>
     </TitleContent>
-    <DialogContent Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
-        <MudGrid Spacing="2">
-            @if (!_isEdit && !PresetContactId.HasValue)
-            {
-                <MudItem xs="12">
-                    <MudAutocomplete T="ContactListDto"
-                                     Label="Donor *"
-                                     Variant="Variant.Outlined"
-                                     @bind-Value="_selectedContact"
-                                     SearchFunc="SearchContacts"
-                                     ToStringFunc="@(c => c?.Name ?? string.Empty)"
-                                     MinCharacters="1"
-                                     AdornmentIcon="@Icons.Material.Filled.Search" />
-                </MudItem>
-            }
-
-            <MudItem xs="12" sm="6">
-                <MudNumericField @bind-Value="_amount" Label="Amount *"
-                                 Variant="Variant.Outlined"
-                                 Adornment="Adornment.Start"
-                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney"
-                                 HideSpinButtons="true" Min="0.01m" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudDatePicker @bind-Date="_date" Label="Date *"
-                               Variant="Variant.Outlined" Editable="true" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect T="string" @bind-Value="_status" Label="Status" Variant="Variant.Outlined">
-                    <MudSelectItem Value="@("Confirmed")">Confirmed</MudSelectItem>
-                    <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
-                    <MudSelectItem Value="@("Refunded")">Refunded</MudSelectItem>
-                    <MudSelectItem Value="@("Voided")">Voided</MudSelectItem>
-                    <MudSelectItem Value="@("Cancelled")">Cancelled</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_paymentMethod" Label="Payment Method"
-                              Variant="Variant.Outlined"
-                              Placeholder="e.g. Bank transfer, Card" />
-            </MudItem>
-
-            <MudItem xs="12" sm="6">
-                <MudSelect T="Guid?" Value="_projectId"
-                           ValueChanged="OnProjectChanged"
-                           Label="Project" Variant="Variant.Outlined" Clearable="true">
-                    <MudSelectItem T="Guid?" Value="@((Guid?)null)">No project</MudSelectItem>
-                    @foreach (var p in _projects)
-                    {
-                        <MudSelectItem T="Guid?" Value="@((Guid?)p.Id)">@p.Name</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-
-            <MudItem xs="12" sm="6">
-                <MudSelect T="Guid?" Value="_campaignId"
-                           ValueChanged="OnCampaignChanged"
-                           Label="Campaign" Variant="Variant.Outlined" Clearable="true">
-                    <MudSelectItem T="Guid?" Value="@((Guid?)null)">No campaign</MudSelectItem>
-                    @foreach (var c in _filteredCampaigns)
-                    {
-                        <MudSelectItem T="Guid?" Value="@((Guid?)c.Id)">@c.Name</MudSelectItem>
-                    }
-                </MudSelect>
-                @if (_projectId.HasValue && !_filteredCampaigns.Any())
+    <DialogContent> 
+        <div Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
+            <MudGrid Spacing="2">
+                @if (!_isEdit && !PresetContactId.HasValue)
                 {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                        No campaigns for selected project.
-                    </MudText>
+                    <MudItem xs="12">
+                        <MudAutocomplete T="ContactListDto"
+                                         Label="Donor *"
+                                         Variant="Variant.Outlined"
+                                         @bind-Value="_selectedContact"
+                                         SearchFunc="SearchContacts"
+                                         ToStringFunc="@(c => c?.Name ?? string.Empty)"
+                                         MinCharacters="1"
+                                         AdornmentIcon="@Icons.Material.Filled.Search" />
+                    </MudItem>
                 }
-            </MudItem>
 
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_notes" Label="Notes"
-                              Variant="Variant.Outlined" Lines="2" />
-            </MudItem>
-        </MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="_amount" Label="Amount *"
+                                     Variant="Variant.Outlined"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                     HideSpinButtons="true" Min="0.01m" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker @bind-Date="_date" Label="Date *"
+                                   Variant="Variant.Outlined" Editable="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="_status" Label="Status" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("Confirmed")">Confirmed</MudSelectItem>
+                        <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
+                        <MudSelectItem Value="@("Refunded")">Refunded</MudSelectItem>
+                        <MudSelectItem Value="@("Voided")">Voided</MudSelectItem>
+                        <MudSelectItem Value="@("Cancelled")">Cancelled</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_paymentMethod" Label="Payment Method"
+                                  Variant="Variant.Outlined"
+                                  Placeholder="e.g. Bank transfer, Card" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid?" Value="_projectId"
+                               ValueChanged="OnProjectChanged"
+                               Label="Project" Variant="Variant.Outlined" Clearable="true">
+                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">No project</MudSelectItem>
+                        @foreach (var p in _projects)
+                        {
+                            <MudSelectItem T="Guid?" Value="@((Guid?)p.Id)">@p.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid?" Value="_campaignId"
+                               ValueChanged="OnCampaignChanged"
+                               Label="Campaign" Variant="Variant.Outlined" Clearable="true">
+                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">No campaign</MudSelectItem>
+                        @foreach (var c in _filteredCampaigns)
+                        {
+                            <MudSelectItem T="Guid?" Value="@((Guid?)c.Id)">@c.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                    @if (_projectId.HasValue && !_filteredCampaigns.Any())
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                            No campaigns for selected project.
+                        </MudText>
+                    }
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_notes" Label="Notes"
+                                  Variant="Variant.Outlined" Lines="2" />
+                </MudItem>
+            </MudGrid>                              
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
