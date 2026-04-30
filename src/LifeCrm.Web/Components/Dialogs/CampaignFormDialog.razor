@@ -1,15 +1,17 @@
+@* src/LifeCrm.Web/Components/Dialogs/CampaignFormDialog.razor
+   FIXED: Scrollable dialog, proper labels in English, scroll on mobile *@
 @inject ApiClient Api
 @inject ProjectsApiClient ProjectsApi
 @inject ISnackbar Snackbar
 
-<MudDialog>
+<MudDialog Style="max-height:90vh;">
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Campaign" Class="mr-2 mb-n1" />
-            @(_isEdit ? "Redigera kampanj" : "Ny kampanj")
+            @(_isEdit ? "Edit Campaign" : "New Campaign")
         </MudText>
     </TitleContent>
-    <DialogContent>
+    <DialogContent Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
         @if (_loadingProjects)
         {
             <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
@@ -17,15 +19,15 @@
         else
         {
             <MudGrid Spacing="2">
-                <!-- Project selector — required -->
                 <MudItem xs="12">
                     <MudSelect T="Guid?" @bind-Value="_projectId"
-                               Label="Projekt *"
+                               Label="Project *"
                                Variant="Variant.Outlined"
-                               HelperText="Varje kampanj måste tillhöra ett projekt"
-                               Required="true">
+                               HelperText="Every campaign must belong to a project"
+                               Required="true"
+                               AdornmentIcon="@Icons.Material.Filled.FolderOpen">
                         <MudSelectItem T="Guid?" Value="@((Guid?)null)" Disabled="true">
-                            Välj projekt…
+                            Select project…
                         </MudSelectItem>
                         @foreach (var p in _projects)
                         {
@@ -35,15 +37,15 @@
                 </MudItem>
 
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_name" Label="Namn *"
-                                  Variant="Variant.Outlined" Required="true" />
+                    <MudTextField @bind-Value="_name" Label="Name *"
+                                  Variant="Variant.Outlined" Required="true" AutoFocus="true" />
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_description" Label="Beskrivning"
+                    <MudTextField @bind-Value="_description" Label="Description"
                                   Variant="Variant.Outlined" Lines="3" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudNumericField @bind-Value="_budgetGoal" Label="Mål (belopp)"
+                    <MudNumericField @bind-Value="_budgetGoal" Label="Funding Goal (amount)"
                                      Variant="Variant.Outlined"
                                      Adornment="Adornment.Start"
                                      AdornmentIcon="@Icons.Material.Filled.AttachMoney"
@@ -51,40 +53,40 @@
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudSelect T="string" @bind-Value="_status" Label="Status" Variant="Variant.Outlined">
-                        <MudSelectItem Value="@("Draft")">Utkast</MudSelectItem>
-                        <MudSelectItem Value="@("Active")">Aktiv</MudSelectItem>
-                        <MudSelectItem Value="@("Paused")">Pausad</MudSelectItem>
-                        <MudSelectItem Value="@("Completed")">Avslutad</MudSelectItem>
-                        <MudSelectItem Value="@("Cancelled")">Avbruten</MudSelectItem>
+                        <MudSelectItem Value="@("Draft")">Draft</MudSelectItem>
+                        <MudSelectItem Value="@("Active")">Active</MudSelectItem>
+                        <MudSelectItem Value="@("Paused")">Paused</MudSelectItem>
+                        <MudSelectItem Value="@("Completed")">Completed</MudSelectItem>
+                        <MudSelectItem Value="@("Cancelled")">Cancelled</MudSelectItem>
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudDatePicker @bind-Date="_startDate" Label="Startdatum"
+                    <MudDatePicker @bind-Date="_startDate" Label="Start date"
                                    Variant="Variant.Outlined" Editable="true" Clearable="true" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudDatePicker @bind-Date="_endDate" Label="Slutdatum"
+                    <MudDatePicker @bind-Date="_endDate" Label="End date"
                                    Variant="Variant.Outlined" Editable="true" Clearable="true" />
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_notes" Label="Anteckningar"
+                    <MudTextField @bind-Value="_notes" Label="Notes"
                                   Variant="Variant.Outlined" Lines="2" />
                 </MudItem>
             </MudGrid>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Text">Avbryt</MudButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
         <MudButton Color="Color.Primary" Variant="Variant.Filled"
                    OnClick="Submit" Disabled="@(_saving || _loadingProjects)">
-            @(_saving ? "Sparar…" : (_isEdit ? "Spara" : "Skapa"))
+            @(_saving ? "Saving…" : (_isEdit ? "Save" : "Create"))
         </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
-    [Parameter] public Guid? CampaignId     { get; set; }
+    [Parameter] public Guid? CampaignId      { get; set; }
     [Parameter] public Guid? PresetProjectId { get; set; }
 
     private bool _isEdit, _saving, _loadingProjects = true;
@@ -97,7 +99,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Load projects for the selector
         var res = await ProjectsApi.GetProjectsAsync(new PaginationParams { PageSize = 200 });
         _projects = res.Data?.Items.ToList() ?? new();
         _loadingProjects = false;
@@ -109,7 +110,7 @@
             var cRes = await Api.GetCampaignAsync(CampaignId!.Value);
             if (cRes.Data is not null)
             {
-                var c    = cRes.Data;
+                var c = cRes.Data;
                 _name        = c.Name;
                 _description = c.Description ?? string.Empty;
                 _budgetGoal  = c.BudgetGoal;
@@ -130,11 +131,11 @@
     {
         if (string.IsNullOrWhiteSpace(_name))
         {
-            Snackbar.Add("Namn är obligatoriskt.", Severity.Warning); return;
+            Snackbar.Add("Name is required.", Severity.Warning); return;
         }
         if (!_projectId.HasValue)
         {
-            Snackbar.Add("Välj ett projekt för kampanjen.", Severity.Warning); return;
+            Snackbar.Add("Please select a project for this campaign.", Severity.Warning); return;
         }
 
         _saving = true;
@@ -155,8 +156,8 @@
                     ProjectId   = _projectId
                 };
                 var res = await Api.UpdateCampaignAsync(CampaignId!.Value, req);
-                if (res.Success) { Snackbar.Add("Uppdaterad.", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
-                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Fel.", Severity.Error);
+                if (res.Success) { Snackbar.Add("Campaign updated.", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
+                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
             }
             else
             {
@@ -172,8 +173,8 @@
                     ProjectId   = _projectId
                 };
                 var res = await Api.CreateCampaignAsync(req);
-                if (res.Success) { Snackbar.Add("Skapad.", Severity.Success); MudDialog.Close(DialogResult.Ok(res.Data)); }
-                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Fel.", Severity.Error);
+                if (res.Success) { Snackbar.Add("Campaign created.", Severity.Success); MudDialog.Close(DialogResult.Ok(res.Data)); }
+                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
             }
         }
         finally { _saving = false; }

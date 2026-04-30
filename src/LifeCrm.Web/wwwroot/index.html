@@ -10,6 +10,7 @@
     <link rel="icon" type="image/png" href="icon-192.png" />
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="icon-192.png" />
+    <link href="css/lifecrm-dialog-fixes.css" rel="stylesheet" />
 
     <!-- DM Sans + IBM Plex Mono — loaded early to prevent FOUT -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -66,8 +67,15 @@
         }
 
         @keyframes lc-pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50%       { opacity: 0.7; transform: scale(0.96); }
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.7;
+                transform: scale(0.96);
+            }
         }
 
         #app-loading.hidden {

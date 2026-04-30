@@ -1,0 +1,42 @@
+@* src/LifeCrm.Web/Pages/Newsletters/NewsletterNewPage.razor *@
+@page "/newsletters/new"
+@inject NewslettersApiClient Api
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AppState AppState
+
+<MudStack AlignItems="AlignItems.Center" Justify="Justify.Center"
+          Style="min-height:200px" Class="mt-8">
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-3">Creating newsletter draft…</MudText>
+</MudStack>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        if (!AppState.CanWrite)
+        {
+            Nav.NavigateTo("/newsletters", replace: true);
+            return;
+        }
+
+        var res = await Api.CreateNewsletterAsync(new CreateNewsletterRequest
+        {
+            Title   = $"Newsletter {DateTime.Today:yyyy-MM-dd}",
+            Subject = string.Empty,
+            HtmlBody = string.Empty
+        });
+
+        if (res.Success && res.Data != default)
+        {
+            Nav.NavigateTo($"/newsletters/{res.Data}/edit", replace: true);
+        }
+        else
+        {
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Could not create newsletter.", Severity.Error);
+            Nav.NavigateTo("/newsletters", replace: true);
+        }
+    }
+}

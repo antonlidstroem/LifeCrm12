@@ -1,25 +1,32 @@
+@* src/LifeCrm.Web/Components/Dialogs/GenerateDonationSummaryDialog.razor
+   FIXED: Scrollable dialog *@
 @inject ApiClient Api
 @inject ISnackbar Snackbar
 
-<MudDialog>
+<MudDialog Style="max-height:90vh;">
     <TitleContent>
         <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.Summarize" Class="mr-2 mb-n1" />Generate Donation Summary
+            <MudIcon Icon="@Icons.Material.Filled.Summarize" Class="mr-2 mb-n1" />
+            Generate Donation Summary
         </MudText>
     </TitleContent>
-    <DialogContent>
+    <DialogContent Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
         <MudText Typo="Typo.body2" Class="mb-3">
             Generate a PDF summary of all donations for <b>@ContactName</b> within the selected period.
         </MudText>
         <MudGrid Spacing="2">
             <MudItem xs="12" sm="6">
-                <MudDatePicker @bind-Date="_periodStart" Label="Period start *" Variant="Variant.Outlined" Editable="true" />
+                <MudDatePicker @bind-Date="_periodStart" Label="Period start *"
+                               Variant="Variant.Outlined" Editable="true" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudDatePicker @bind-Date="_periodEnd" Label="Period end *" Variant="Variant.Outlined" Editable="true" />
+                <MudDatePicker @bind-Date="_periodEnd" Label="Period end *"
+                               Variant="Variant.Outlined" Editable="true" />
             </MudItem>
             <MudItem xs="12">
-                <MudCheckBox @bind-Value="_sendByEmail" Label="Also send summary by email to donor" Color="Color.Primary" />
+                <MudCheckBox @bind-Value="_sendByEmail"
+                             Label="Also send summary by email to donor"
+                             Color="Color.Primary" />
             </MudItem>
         </MudGrid>
     </DialogContent>
@@ -39,20 +46,17 @@
 
     private DateTime? _periodStart = new DateTime(DateTime.Today.Year, 1, 1);
     private DateTime? _periodEnd   = DateTime.Today;
-    private bool _sendByEmail;
-    private bool _generating;
+    private bool _sendByEmail, _generating;
 
     private async Task Submit()
     {
         if (!_periodStart.HasValue || !_periodEnd.HasValue)
         {
-            Snackbar.Add("Please select a period.", Severity.Warning);
-            return;
+            Snackbar.Add("Please select a period.", Severity.Warning); return;
         }
         if (_periodStart > _periodEnd)
         {
-            Snackbar.Add("Period start must be before period end.", Severity.Warning);
-            return;
+            Snackbar.Add("Start date must be before end date.", Severity.Warning); return;
         }
         _generating = true;
         try
@@ -69,7 +73,6 @@
             {
                 var msg = _sendByEmail ? "Summary generated and sent by email." : "Summary generated.";
                 Snackbar.Add(msg, Severity.Success);
-                // Download the generated PDF
                 if (res.Data is not null)
                     await Api.DownloadDocumentAsync(res.Data.Id);
                 MudDialog.Close(DialogResult.Ok(res.Data));

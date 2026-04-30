@@ -1,3 +1,5 @@
+// src/LifeCrm.Web/Services/ApiClient.cs
+// UPDATED: Added GetInteractionsListAsync facade method
 using Blazored.LocalStorage;
 using LifeCrm.Contracts.Campaigns.DTOs;
 using LifeCrm.Contracts.Common.DTOs;
@@ -91,12 +93,22 @@ public class ApiClient : ApiClientBase
     public Task<ApiResponse>             DeleteProjectAsync(Guid id) => _projects.DeleteProjectAsync(id);
 
     // ── Interactions ─────────────────────────────────────────────────────────
-    public Task<ApiResponse<InteractionDto>> GetInteractionAsync(Guid id) => _interactions.GetInteractionAsync(id);
-    public Task<ApiResponse<Guid>>           CreateInteractionAsync(CreateInteractionRequest req) => _interactions.CreateInteractionAsync(req);
-    public Task<ApiResponse>                 UpdateInteractionAsync(Guid id, UpdateInteractionRequest req) => _interactions.UpdateInteractionAsync(id, req);
-    public Task<ApiResponse>                 DeleteInteractionAsync(Guid id) => _interactions.DeleteInteractionAsync(id);
+    /// <summary>Get a single interaction by ID.</summary>
+    public Task<ApiResponse<InteractionDto>> GetInteractionAsync(Guid id)
+        => _interactions.GetInteractionAsync(id);
 
-    // Replace the Users section in src/LifeCrm.Web/Services/ApiClient.cs
+    /// <summary>Paginated list of ALL interactions — used by /interactions page.</summary>
+    public Task<ApiResponse<PagedResult<InteractionDto>>> GetInteractionsListAsync(
+        PaginationParams p, string? typeFilter = null)
+        => _interactions.GetInteractionsListAsync(p, typeFilter);
+
+    public Task<ApiResponse<Guid>> CreateInteractionAsync(CreateInteractionRequest req)
+        => _interactions.CreateInteractionAsync(req);
+    public Task<ApiResponse> UpdateInteractionAsync(Guid id, UpdateInteractionRequest req)
+        => _interactions.UpdateInteractionAsync(id, req);
+    public Task<ApiResponse> DeleteInteractionAsync(Guid id)
+        => _interactions.DeleteInteractionAsync(id);
+
     // ── Users ─────────────────────────────────────────────────────────────────
     public Task<ApiResponse<IReadOnlyList<UserSummaryDto>>> GetUsersAsync() => _users.GetUsersAsync();
     public Task<ApiResponse<Guid>> CreateUserAsync(CreateUserRequest req) => _users.CreateUserAsync(req);
@@ -105,8 +117,6 @@ public class ApiClient : ApiClientBase
     public Task<ApiResponse> ChangeUserRoleAsync(Guid id, UserRole role) => _users.ChangeUserRoleAsync(id, role);
     public Task<ApiResponse> DeactivateUserAsync(Guid id) => _users.DeactivateUserAsync(id);
     public Task<ApiResponse> ActivateUserAsync(Guid id) => _users.ActivateUserAsync(id);
-
-
 
     // ── Newsletters ───────────────────────────────────────────────────────────
     public Task<ApiResponse<PagedResult<NewsletterListDto>>> GetNewslettersAsync(PaginationParams p, NewsletterStatus? status = null)

@@ -1,18 +1,20 @@
+@* src/LifeCrm.Web/Components/Dialogs/SendEmailToContactDialog.razor
+   FIXED: Scrollable dialog content *@
 @inject ApiClient Api
 @inject ISnackbar Snackbar
 
-<MudDialog>
+<MudDialog Style="max-height:90vh;">
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Email" Class="mr-2 mb-n1" />
-            Skicka e-post till @ContactName
+            Send email to @ContactName
         </MudText>
     </TitleContent>
-    <DialogContent>
+    <DialogContent Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
         @if (string.IsNullOrEmpty(ContactEmail))
         {
             <MudAlert Severity="Severity.Warning">
-                Kontakten har ingen e-postadress registrerad.
+                This contact has no email address registered.
             </MudAlert>
         }
         else
@@ -20,33 +22,34 @@
             @if (EmailOptOut)
             {
                 <MudAlert Severity="Severity.Warning" Class="mb-3">
-                    Kontakten har avsagt sig e-post (opt-out). Du skickar ändå ett direktmeddelande.
+                    This contact has opted out of emails. You are sending a direct message anyway.
                 </MudAlert>
             }
             <MudGrid Spacing="2">
                 <MudItem xs="12">
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        Till: <b>@ContactName &lt;@ContactEmail&gt;</b>
+                        To: <b>@ContactName &lt;@ContactEmail&gt;</b>
                     </MudText>
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_subject" Label="Ämne *" Variant="Variant.Outlined" />
+                    <MudTextField @bind-Value="_subject" Label="Subject *"
+                                  Variant="Variant.Outlined" AutoFocus="true" />
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_body" Label="Meddelande *"
-                                  Variant="Variant.Outlined" Lines="6"
-                                  Placeholder="Skriv ditt meddelande här. HTML-taggar stöds." />
+                    <MudTextField @bind-Value="_body" Label="Message *"
+                                  Variant="Variant.Outlined" Lines="8"
+                                  Placeholder="Write your message here. HTML tags are supported." />
                 </MudItem>
             </MudGrid>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Text">Avbryt</MudButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
         @if (!string.IsNullOrEmpty(ContactEmail))
         {
             <MudButton Color="Color.Primary" Variant="Variant.Filled"
                        OnClick="Send" Disabled="_sending">
-                @(_sending ? "Skickar…" : "Skicka")
+                @(_sending ? "Sending…" : "Send")
             </MudButton>
         }
     </DialogActions>
@@ -63,8 +66,14 @@
 
     private async Task Send()
     {
-        if (string.IsNullOrWhiteSpace(_subject)) { Snackbar.Add("Ämne krävs.", Severity.Warning); return; }
-        if (string.IsNullOrWhiteSpace(_body))    { Snackbar.Add("Meddelande krävs.", Severity.Warning); return; }
+        if (string.IsNullOrWhiteSpace(_subject))
+        {
+            Snackbar.Add("Subject is required.", Severity.Warning); return;
+        }
+        if (string.IsNullOrWhiteSpace(_body))
+        {
+            Snackbar.Add("Message body is required.", Severity.Warning); return;
+        }
 
         _sending = true;
         try
@@ -72,14 +81,14 @@
             var res = await Api.SendDirectEmailAsync(
                 ContactEmail!, ContactName, _subject, _body);
 
-            if (res.Success && !res.Data?.StartsWith("Send failed") == true)
+            if (res.Success && res.Data?.StartsWith("Send failed") != true)
             {
-                Snackbar.Add("E-post skickad.", Severity.Success);
+                Snackbar.Add("Email sent.", Severity.Success);
                 MudDialog.Close(DialogResult.Ok(true));
             }
             else
             {
-                Snackbar.Add(res.Data ?? res.Errors.FirstOrDefault() ?? "Fel vid sändning.", Severity.Error);
+                Snackbar.Add(res.Data ?? res.Errors.FirstOrDefault() ?? "Send failed.", Severity.Error);
             }
         }
         finally { _sending = false; }

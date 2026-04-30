@@ -1,36 +1,39 @@
-﻿@* src/LifeCrm.Web/Components/Dialogs/UserFormDialog.razor *@
+@* src/LifeCrm.Web/Components/Dialogs/UserFormDialog.razor
+   FIXED: Scrollable, proper English throughout *@
 @inject ApiClient Api
 @inject ISnackbar Snackbar
 
-<MudDialog>
+<MudDialog Style="max-height:90vh;">
     <TitleContent>
         <MudText Typo="Typo.h6">
-            <MudIcon Icon="@(_isEdit? Icons.Material.Filled.Edit : Icons.Material.Filled.PersonAdd)"
+            <MudIcon Icon="@(_isEdit ? Icons.Material.Filled.Edit : Icons.Material.Filled.PersonAdd)"
                      Class="mr-2 mb-n1" />
-            @(_isEdit ? "Redigera användare" : "Ny användare")
+            @(_isEdit ? "Edit User" : "New User")
         </MudText>
     </TitleContent>
-    <DialogContent>
+    <DialogContent Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
         <MudGrid Spacing="2">
             <MudItem xs="12">
-                <MudTextField @bind-Value="_fullName" Label="Fullständigt namn *"
-                              Variant="Variant.Outlined" />
+                <MudTextField @bind-Value="_fullName" Label="Full name *"
+                              Variant="Variant.Outlined" AutoFocus="true" />
             </MudItem>
             @if (!_isEdit)
             {
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_email" Label="E-post *"
+                    <MudTextField @bind-Value="_email" Label="Email *"
                                   Variant="Variant.Outlined" InputType="InputType.Email" />
                 </MudItem>
             }
             else
             {
                 <MudItem xs="12">
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">E-post: @ExistingUser?.Email</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Email: @ExistingUser?.Email
+                    </MudText>
                 </MudItem>
             }
             <MudItem xs="12">
-                <MudSelect T="UserRole" @bind-Value="_role" Label="Roll *" Variant="Variant.Outlined">
+                <MudSelect T="UserRole" @bind-Value="_role" Label="Role *" Variant="Variant.Outlined">
                     @foreach (UserRole r in Enum.GetValues<UserRole>())
                     {
                         <MudSelectItem Value="r">@r</MudSelectItem>
@@ -39,21 +42,21 @@
             </MudItem>
             <MudItem xs="12">
                 <MudTextField @bind-Value="_password"
-                              Label="@(_isEdit ? "Nytt lösenord (lämna tomt för att behålla)" : "Lösenord *")"
-                              InputType="@(_showPw? InputType.Text: InputType.Password)"
+                              Label="@(_isEdit ? "New password (leave blank to keep current)" : "Password *")"
+                              InputType="@(_showPw ? InputType.Text : InputType.Password)"
                               Variant="Variant.Outlined"
                               Adornment="Adornment.End"
-                              AdornmentIcon="@(_showPw? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                              AdornmentIcon="@(_showPw ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
                               OnAdornmentClick="@(() => _showPw = !_showPw)"
-                              HelperText="Minst 10 tecken" />
+                              HelperText="Minimum 10 characters" />
             </MudItem>
         </MudGrid>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Text">Avbryt</MudButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
         <MudButton Color="Color.Primary" Variant="Variant.Filled"
                    OnClick="Submit" Disabled="_saving">
-            @(_saving ? "Sparar…" : (_isEdit ? "Spara" : "Skapa"))
+            @(_saving ? "Saving…" : (_isEdit ? "Save" : "Create"))
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -73,7 +76,7 @@
         if (ExistingUser is not null)
         {
             _fullName = ExistingUser.FullName;
-            _role = ExistingUser.Role;
+            _role     = ExistingUser.Role;
         }
     }
 
@@ -81,19 +84,19 @@
     {
         if (string.IsNullOrWhiteSpace(_fullName))
         {
-            Snackbar.Add("Namn krävs.", Severity.Warning); return;
+            Snackbar.Add("Name is required.", Severity.Warning); return;
         }
         if (!_isEdit && string.IsNullOrWhiteSpace(_email))
         {
-            Snackbar.Add("E-post krävs.", Severity.Warning); return;
+            Snackbar.Add("Email is required.", Severity.Warning); return;
         }
-        if (!_isEdit && (_password.Length < 10))
+        if (!_isEdit && _password.Length < 10)
         {
-            Snackbar.Add("Lösenord måste vara minst 10 tecken.", Severity.Warning); return;
+            Snackbar.Add("Password must be at least 10 characters.", Severity.Warning); return;
         }
         if (_isEdit && !string.IsNullOrEmpty(_password) && _password.Length < 10)
         {
-            Snackbar.Add("Lösenord måste vara minst 10 tecken.", Severity.Warning); return;
+            Snackbar.Add("Password must be at least 10 characters.", Severity.Warning); return;
         }
 
         _saving = true;
@@ -103,26 +106,26 @@
             {
                 var req = new UpdateUserRequest
                 {
-                    FullName = _fullName,
+                    FullName    = _fullName,
                     NewPassword = string.IsNullOrWhiteSpace(_password) ? null : _password,
-                    Role = _role
+                    Role        = _role
                 };
                 var res = await Api.UpdateUserAsync(UserId!.Value, req);
-                if (res.Success) { Snackbar.Add("Uppdaterad.", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
-                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Fel.", Severity.Error);
+                if (res.Success) { Snackbar.Add("User updated.", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
+                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
             }
             else
             {
                 var req = new CreateUserRequest
                 {
                     FullName = _fullName,
-                    Email = _email,
+                    Email    = _email,
                     Password = _password,
-                    Role = _role
+                    Role     = _role
                 };
                 var res = await Api.CreateUserAsync(req);
-                if (res.Success) { Snackbar.Add("Användare skapad.", Severity.Success); MudDialog.Close(DialogResult.Ok(res.Data)); }
-                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Fel.", Severity.Error);
+                if (res.Success) { Snackbar.Add("User created.", Severity.Success); MudDialog.Close(DialogResult.Ok(res.Data)); }
+                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
             }
         }
         finally { _saving = false; }
