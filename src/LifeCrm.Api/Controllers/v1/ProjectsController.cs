@@ -1,8 +1,8 @@
-using LifeCrm.Application.Common.DTOs;
-using LifeCrm.Application.Interactions.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
+using LifeCrm.Contracts.Interactions.DTOs;
 using LifeCrm.Application.Interactions.Queries;
 using LifeCrm.Application.Projects.Commands;
-using LifeCrm.Application.Projects.DTOs;
+using LifeCrm.Contracts.Projects.DTOs;
 using LifeCrm.Application.Projects.Queries;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;

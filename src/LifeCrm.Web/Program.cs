@@ -1,3 +1,4 @@
+// src/LifeCrm.Web/Program.cs
 using Blazored.LocalStorage;
 using LifeCrm.Web.Services;
 using Microsoft.AspNetCore.Components.Web;
@@ -14,16 +15,16 @@ public class Program
         builder.RootComponents.Add<App>("#app");
         builder.RootComponents.Add<HeadOutlet>("head::after");
 
-        var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
-        builder.Services.AddScoped(sp =>
+        // ── HttpClient ──────────────────────────────────────────────────────────
+        var apiBaseUrl = builder.Configuration["ApiBaseUrl"]
+            ?? throw new Exception("ApiBaseUrl is not configured in wwwroot/appsettings.json");
+
+        builder.Services.AddScoped(_ => new HttpClient
         {
-            var nav = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
-            var baseAddress = !string.IsNullOrWhiteSpace(apiBaseUrl)
-                ? apiBaseUrl.TrimEnd('/') + "/"
-                : nav.BaseUri;
-            return new HttpClient { BaseAddress = new Uri(baseAddress) };
+            BaseAddress = new Uri(apiBaseUrl.TrimEnd('/') + "/")
         });
 
+        // ── MudBlazor ───────────────────────────────────────────────────────────
         builder.Services.AddMudServices(cfg =>
         {
             cfg.SnackbarConfiguration.PositionClass        = MudBlazor.Defaults.Classes.Position.BottomRight;
@@ -33,9 +34,10 @@ public class Program
             cfg.SnackbarConfiguration.VisibleStateDuration = 4000;
         });
 
+        // ── Local Storage ───────────────────────────────────────────────────────
         builder.Services.AddBlazoredLocalStorage();
 
-        // Domain API clients
+        // ── Domain API clients ──────────────────────────────────────────────────
         builder.Services.AddScoped<AuthApiClient>();
         builder.Services.AddScoped<ContactsApiClient>();
         builder.Services.AddScoped<DonationsApiClient>();
@@ -47,11 +49,18 @@ public class Program
         builder.Services.AddScoped<ReportsApiClient>();
         builder.Services.AddScoped<NewslettersApiClient>();
         builder.Services.AddScoped<SignalRSettingsApiClient>();
+        builder.Services.AddScoped<EmailSettingsApiClient>();
 
-        // Façade — registered after domain clients so DI can inject them
+        // ── Façade — must be registered AFTER domain clients ────────────────────
         builder.Services.AddScoped<ApiClient>();
 
-        // App-level services
+        // ── FIX E: Reference data cache ─────────────────────────────────────────
+        // ReferenceDataCache is Scoped (one per circuit/tab) so each browser
+        // tab gets its own cache — avoids stale data bleeding between tabs.
+        builder.Services.AddScoped<ReferenceDataCache>();
+        builder.Services.AddScoped<CachedReferenceDataService>();
+
+        // ── App-level services ──────────────────────────────────────────────────
         builder.Services.AddSingleton<AppState>();
         builder.Services.AddScoped<SignalRService>();
 

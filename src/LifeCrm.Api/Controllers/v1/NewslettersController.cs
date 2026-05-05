@@ -1,6 +1,6 @@
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Application.Newsletters.Commands;
-using LifeCrm.Application.Newsletters.DTOs;
+using LifeCrm.Contracts.Newsletters.DTOs;
 using LifeCrm.Application.Newsletters.Queries;
 using LifeCrm.Core.Enums;
 using LifeCrm.Infrastructure.Persistence;

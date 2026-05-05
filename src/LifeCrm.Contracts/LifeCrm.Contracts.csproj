@@ -1,0 +1,55 @@
+<!-- src/LifeCrm.Contracts/LifeCrm.Contracts.csproj
+     
+     FIX B: New "Contracts" project that holds ONLY what the Blazor WASM client
+     needs: DTOs (request/response records) and enums.
+
+     Before this split the Web project referenced LifeCrm.Application, which
+     caused the entire application layer — MediatR handlers, FluentValidation
+     validators, EF Core LINQ queries, Mapster mappings — to be compiled into
+     the WASM bundle even though none of it runs in the browser. This inflated
+     the download size and slowed the initial load.
+
+     After this split:
+       LifeCrm.Web        → references LifeCrm.Contracts + LifeCrm.Core (enums)
+       LifeCrm.Application → references LifeCrm.Contracts + LifeCrm.Core
+       LifeCrm.Infrastructure → unchanged
+
+     Migration steps (do NOT generate files yet — this is the project skeleton):
+       1. Create src/LifeCrm.Contracts/ folder
+       2. Move all DTO records from LifeCrm.Application/**/DTOs/ into the
+          mirrored folder structure under LifeCrm.Contracts/
+          e.g. Application/Contacts/DTOs/ContactDtos.cs
+            →  Contracts/Contacts/ContactDtos.cs
+       3. Keep namespace as LifeCrm.Application.*.DTOs so existing using
+          statements in the Web project do not need to change (or update them —
+          either approach works; keeping namespaces is less disruptive).
+       4. Update LifeCrm.Application.csproj to reference LifeCrm.Contracts
+          instead of defining the DTOs locally.
+       5. Update LifeCrm.Web.csproj:
+            REMOVE  <ProjectReference Include="..\LifeCrm.Application\..." />
+            ADD     <ProjectReference Include="..\LifeCrm.Contracts\..." />
+            ADD     <ProjectReference Include="..\LifeCrm.Core\..." />  (already present)
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>LifeCrm.Contracts</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    Contracts only depends on Core (for enums used inside DTO properties).
+    NO dependency on Application, Infrastructure, EF Core, MediatR, or FluentValidation.
+    Keeping dependencies minimal is the whole point — this project must stay
+    safe to reference from Blazor WASM without pulling in server-only packages.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\LifeCrm.Core\LifeCrm.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    System.ComponentModel.DataAnnotations is part of the BCL and available in
+    WASM — safe to use for [Required], [MaxLength] etc. on request records.
+  -->
+</Project>

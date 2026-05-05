@@ -1,34 +1,58 @@
+@* src/LifeCrm.Web/Components/Dialogs/LogInteractionDialog.razor
+   FIXED: Scrollable, English labels, works as standalone from interactions page *@
 @inject ApiClient Api
 @inject ISnackbar Snackbar
 
-<MudDialog>
-    <TitleContent><MudText Typo="Typo.h6"><MudIcon Icon="@(_isEdit ? Icons.Material.Filled.Edit : Icons.Material.Filled.AddComment)" Class="mr-2 mb-n1" />@(_isEdit ? "Redigera interaktion" : "Logga interaktion")</MudText></TitleContent>
-    <DialogContent>
-        <MudGrid Spacing="2">
-            <MudItem xs="12" sm="6">
-                <MudSelect T="string" @bind-Value="_type" Label="Typ *" Variant="Variant.Outlined">
-                    <MudSelectItem Value="@("Call")">Telefonsamtal</MudSelectItem>
-                    <MudSelectItem Value="@("Email")">E-post</MudSelectItem>
-                    <MudSelectItem Value="@("Meeting")">Möte</MudSelectItem>
-                    <MudSelectItem Value="@("Note")">Anteckning</MudSelectItem>
-                    <MudSelectItem Value="@("Other")">Övrigt</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6"><MudDatePicker @bind-Date="_date" Label="Datum *" Variant="Variant.Outlined" Editable="true" /></MudItem>
-            <MudItem xs="12"><MudTextField @bind-Value="_subject" Label="Ämne" Variant="Variant.Outlined" /></MudItem>
-            <MudItem xs="12"><MudTextField @bind-Value="_body" Label="Beskrivning *" Variant="Variant.Outlined" Lines="4" /></MudItem>
-        </MudGrid>
+<MudDialog Style="max-height:90vh;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@(_isEdit ? Icons.Material.Filled.Edit : Icons.Material.Filled.AddComment)"
+                     Class="mr-2 mb-n1" />
+            @(_isEdit ? "Edit Interaction" : "Log Interaction")
+        </MudText>
+    </TitleContent>
+    <DialogContent> 
+        <div Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="_type" Label="Type *" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("Call")">Phone call</MudSelectItem>
+                        <MudSelectItem Value="@("Email")">Email</MudSelectItem>
+                        <MudSelectItem Value="@("Meeting")">Meeting</MudSelectItem>
+                        <MudSelectItem Value="@("Note")">Note</MudSelectItem>
+                        <MudSelectItem Value="@("Other")">Other</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker @bind-Date="_date" Label="Date *"
+                                   Variant="Variant.Outlined" Editable="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_subject" Label="Subject"
+                                  Variant="Variant.Outlined"
+                                  Placeholder="Brief summary" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_body" Label="Description *"
+                                  Variant="Variant.Outlined" Lines="5"
+                                  Placeholder="Describe the interaction in detail…" />
+                </MudItem>
+            </MudGrid>
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Text">Avbryt</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="_saving">@(_saving ? "Sparar…" : (_isEdit ? "Spara" : "Logga"))</MudButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   OnClick="Submit" Disabled="_saving">
+            @(_saving ? "Saving…" : (_isEdit ? "Save" : "Log"))
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
-    [Parameter] public Guid? ContactId { get; set; }
-    [Parameter] public Guid? ProjectId { get; set; }
+    [Parameter] public Guid? ContactId     { get; set; }
+    [Parameter] public Guid? ProjectId     { get; set; }
     [Parameter] public Guid? InteractionId { get; set; }
 
     private string _type = "Note", _subject = string.Empty, _body = string.Empty;
@@ -42,30 +66,48 @@
         var res = await Api.GetInteractionAsync(InteractionId!.Value);
         if (res.Data is null) return;
         var i = res.Data;
-        _type = i.Type.ToString(); _subject = i.Subject ?? string.Empty; _body = i.Body;
-        _date = i.OccurredAt.LocalDateTime;
+        _type    = i.Type.ToString();
+        _subject = i.Subject ?? string.Empty;
+        _body    = i.Body;
+        _date    = i.OccurredAt.LocalDateTime;
     }
 
     private async Task Submit()
     {
-        if (string.IsNullOrWhiteSpace(_body)) { Snackbar.Add("Beskrivning är obligatorisk.", Severity.Warning); return; }
+        if (string.IsNullOrWhiteSpace(_body))
+        {
+            Snackbar.Add("Description is required.", Severity.Warning); return;
+        }
         _saving = true;
         try
         {
-            var occurredAt = _date.HasValue ? new DateTimeOffset(_date.Value, TimeSpan.Zero) : DateTimeOffset.UtcNow;
+            var occurredAt = _date.HasValue
+                ? new DateTimeOffset(_date.Value, TimeSpan.Zero)
+                : DateTimeOffset.UtcNow;
+
             if (_isEdit)
             {
-                var req = new UpdateInteractionRequest { Id = InteractionId!.Value, ContactId = ContactId, ProjectId = ProjectId, Type = Enum.Parse<InteractionType>(_type), OccurredAt = occurredAt, Subject = _subject.NullIfEmpty(), Body = _body };
+                var req = new UpdateInteractionRequest
+                {
+                    Id = InteractionId!.Value, ContactId = ContactId, ProjectId = ProjectId,
+                    Type = Enum.Parse<InteractionType>(_type), OccurredAt = occurredAt,
+                    Subject = _subject.NullIfEmpty(), Body = _body
+                };
                 var res = await Api.UpdateInteractionAsync(InteractionId!.Value, req);
-                if (res.Success) { Snackbar.Add("Uppdaterad.", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
-                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Fel.", Severity.Error);
+                if (res.Success) { Snackbar.Add("Updated.", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
+                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
             }
             else
             {
-                var req = new CreateInteractionRequest { ContactId = ContactId, ProjectId = ProjectId, Type = Enum.Parse<InteractionType>(_type), OccurredAt = occurredAt, Subject = _subject.NullIfEmpty(), Body = _body };
+                var req = new CreateInteractionRequest
+                {
+                    ContactId = ContactId, ProjectId = ProjectId,
+                    Type = Enum.Parse<InteractionType>(_type), OccurredAt = occurredAt,
+                    Subject = _subject.NullIfEmpty(), Body = _body
+                };
                 var res = await Api.CreateInteractionAsync(req);
-                if (res.Success) { Snackbar.Add("Loggad.", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
-                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Fel.", Severity.Error);
+                if (res.Success) { Snackbar.Add("Logged.", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
+                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
             }
         }
         finally { _saving = false; }

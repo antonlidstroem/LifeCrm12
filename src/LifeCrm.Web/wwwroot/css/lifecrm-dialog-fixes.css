@@ -1,0 +1,96 @@
+/*
+ * lifecrm-dialog-fixes.css
+ * Append to wwwroot/css/app.css (or whatever your global stylesheet is).
+ *
+ * Fixes:
+ *   1. All MudDialog instances are scrollable when content overflows viewport
+ *   2. Dialogs are capped at 90vh on mobile so action buttons stay visible
+ *   3. MudDialogContainer doesn't clip on iOS Safari (uses dvh fallback)
+ *   4. Backdrop is dark enough on mobile OLED screens
+ */
+
+/* ── Dialog container — allow vertical scroll ────────────────────────────── */
+.mud-dialog {
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    max-height: 90dvh; /* iOS Safari dynamic viewport */
+    overflow: hidden;   /* clip at dialog boundary, not page */
+}
+
+/* ── DialogContent scrolls, TitleContent and DialogActions stay fixed ─────── */
+.mud-dialog-content {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* momentum scroll on iOS */
+    flex: 1 1 auto;
+    min-height: 0;      /* required for flex children to shrink */
+    padding-right: 8px; /* space for scrollbar */
+}
+
+/* Custom scrollbar — subtle, matches dark theme */
+.mud-dialog-content::-webkit-scrollbar {
+    width: 5px;
+}
+.mud-dialog-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+.mud-dialog-content::-webkit-scrollbar-thumb {
+    background: var(--lc-border, #1F3048);
+    border-radius: 3px;
+}
+.mud-dialog-content::-webkit-scrollbar-thumb:hover {
+    background: var(--lc-border-light, #253A52);
+}
+
+/* ── Title stays pinned at top ───────────────────────────────────────────── */
+.mud-dialog-title {
+    flex-shrink: 0;
+}
+
+/* ── Actions stay pinned at bottom ──────────────────────────────────────── */
+.mud-dialog-actions {
+    flex-shrink: 0;
+    border-top: 1px solid var(--lc-border, #1F3048);
+    padding: 12px 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* ── Backdrop ─────────────────────────────────────────────────────────────── */
+.mud-overlay {
+    background-color: rgba(8, 14, 24, 0.80) !important;
+}
+
+/* ── Mobile: full-width dialogs should use most of the viewport ──────────── */
+@media (max-width: 600px) {
+    .mud-dialog {
+        max-height: 95vh;
+        max-height: 95dvh;
+        margin: 8px;
+        width: calc(100vw - 16px) !important;
+        max-width: calc(100vw - 16px) !important;
+    }
+
+    .mud-dialog-content {
+        padding: 12px 16px;
+        padding-right: 12px;
+    }
+
+    .mud-dialog-actions {
+        padding: 10px 16px;
+    }
+
+    /* Stack action buttons vertically on very small screens */
+    .mud-dialog-actions .mud-button-root {
+        min-width: 80px;
+    }
+}
+
+/* ── Prevent body scroll while dialog is open ────────────────────────────── */
+body.mud-dialog-open {
+    overflow: hidden;
+    /* iOS Safari needs this too */
+    /*position: fixed;*/
+    width: 100%;
+}

@@ -1,4 +1,4 @@
-using LifeCrm.Application.Reports.DTOs;
+using LifeCrm.Contracts.Reports.DTOs;
 using LifeCrm.Core.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

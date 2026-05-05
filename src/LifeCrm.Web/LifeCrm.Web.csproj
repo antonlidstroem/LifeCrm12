@@ -8,7 +8,8 @@
     <UserSecretsId>540bc006-a079-4f1d-af9a-5a261cdad700</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\LifeCrm.Application\LifeCrm.Application.csproj" />
+    <ProjectReference Include="..\LifeCrm.Contracts\LifeCrm.Contracts.csproj" />
+	  <ProjectReference Include="..\LifeCrm.Application\LifeCrm.Application.csproj" />
     <ProjectReference Include="..\LifeCrm.Core\LifeCrm.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
@@ -21,8 +22,19 @@
     <PackageReference Include="System.Net.Http.Json" Version="8.0.1" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
   </ItemGroup>
-  <ItemGroup>
-    <ServiceWorker Include="wwwroot\service-worker.js" ProfileName="Development" />
-    <ServiceWorker Include="wwwroot\service-worker.published.js" ProfileName="Release" />
-  </ItemGroup>
+
+	<ItemGroup>
+		<ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(Configuration)' == 'Release'">
+		<Content Remove="wwwroot\service-worker.js" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Pages\PrayerPoints\" />
+	</ItemGroup>
+
+
+
 </Project>

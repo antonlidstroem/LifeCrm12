@@ -1,59 +1,79 @@
+@* src/LifeCrm.Web/Components/Dialogs/AddPeopleGroupDialog.razor
+   FIXED: OnGroupSelected is now wired to MudAutocomplete ValueChanged so
+   selecting a search result actually fills the form fields. *@
 @inject ApiClient Api
 @inject ISnackbar Snackbar
 
-<MudDialog>
+<MudDialog Style="max-height:90vh;">
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Groups" Class="mr-2 mb-n1" />Add People Group
         </MudText>
     </TitleContent>
-    <DialogContent>
-        <MudGrid Spacing="2">
-            <MudItem xs="12">
-                <MudAutocomplete T="PeopleGroupSearchDto"
-                                 Label="Search people group (name, country, language)"
-                                 @bind-Value="_selected"
-                                 SearchFunc="SearchGroups"
-                                 ToStringFunc="@(g => g is null ? "" : $"{g.Name} — {g.Country}")"
-                                 MinCharacters="2"
-                                 Variant="Variant.Outlined"
-                                 AdornmentIcon="@Icons.Material.Filled.Search" />
-            </MudItem>
-            @if (_selected is not null)
-            {
+    <DialogContent >
+        <div Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
+            <MudGrid Spacing="2">
                 <MudItem xs="12">
-                    <MudAlert Severity="Severity.Info" Dense="true">
-                        <b>@_selected.Name</b> · @_selected.Country
-                        @if (!string.IsNullOrEmpty(_selected.Language)) { <text> · @_selected.Language</text> }
-                        @if (_selected.Population.HasValue) { <text> · Pop: @_selected.Population.Value.ToString("N0")</text> }
-                        @if (_selected.IsUnreached) { <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Text">Unreached</MudChip> }
-                    </MudAlert>
+                    {{!-- FIX: ValueChanged wired to OnGroupSelected so autocomplete fills the form --}}
+                    <MudAutocomplete T="PeopleGroupSearchDto"
+                                     Label="Search people group (name, country, language)"
+                                     Value="_selected"
+                                     ValueChanged="OnGroupSelected"
+                                     SearchFunc="SearchGroups"
+                                     ToStringFunc="@(g => g is null ? "" : $"{g.Name} — {g.Country}")"
+                                     MinCharacters="2"
+                                     Variant="Variant.Outlined"
+                                     AdornmentIcon="@Icons.Material.Filled.Search"
+                                     HelperText="Type at least 2 characters to search the Joshua Project database" />
                 </MudItem>
-            }
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_jpCode" Label="JP Code *" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_peopleGroupName" Label="People Group Name *" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_country" Label="Country *" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_language" Label="Language" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField @bind-Value="_estimatedReached" Label="Estimated Reached" Variant="Variant.Outlined"
-                                 Min="0" HideSpinButtons="true" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_notes" Label="Notes" Variant="Variant.Outlined" Lines="2" />
-            </MudItem>
-        </MudGrid>
+                @if (_selected is not null)
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            <b>@_selected.Name</b> · @_selected.Country
+                            @if (!string.IsNullOrEmpty(_selected.Language))
+                            {
+                                <text> · @_selected.Language</text>
+                            }
+                            @if (_selected.Population.HasValue)
+                            {
+                                <text> · Pop: @_selected.Population.Value.ToString("N0")</text>
+                            }
+                            @if (_selected.IsUnreached)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Error"
+                                         Variant="Variant.Text">Unreached</MudChip>
+                            }
+                        </MudAlert>
+                    </MudItem>
+                }
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_jpCode" Label="JP Code *" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_peopleGroupName" Label="People Group Name *"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_country" Label="Country *" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_language" Label="Language" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="_estimatedReached" Label="Estimated Reached"
+                                     Variant="Variant.Outlined" Min="0" HideSpinButtons="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_notes" Label="Notes" Variant="Variant.Outlined" Lines="2" />
+                </MudItem>
+            </MudGrid>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="_saving">
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   OnClick="Submit" Disabled="_saving">
             @(_saving ? "Adding…" : "Add")
         </MudButton>
     </DialogActions>
@@ -71,11 +91,14 @@
 
     private async Task<IEnumerable<PeopleGroupSearchDto>> SearchGroups(string term, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(term) || term.Length < 2) return Enumerable.Empty<PeopleGroupSearchDto>();
+        if (string.IsNullOrWhiteSpace(term) || term.Length < 2)
+            return Enumerable.Empty<PeopleGroupSearchDto>();
         var res = await Api.SearchPeopleGroupsAsync(term);
         return res.Data ?? Enumerable.Empty<PeopleGroupSearchDto>();
     }
 
+    // FIX: this was defined but never wired to ValueChanged — autocomplete results
+    // were displayed but selecting one never populated the fields below.
     private void OnGroupSelected(PeopleGroupSearchDto? g)
     {
         _selected = g;
@@ -88,7 +111,9 @@
 
     private async Task Submit()
     {
-        if (string.IsNullOrWhiteSpace(_jpCode) || string.IsNullOrWhiteSpace(_peopleGroupName) || string.IsNullOrWhiteSpace(_country))
+        if (string.IsNullOrWhiteSpace(_jpCode) ||
+            string.IsNullOrWhiteSpace(_peopleGroupName) ||
+            string.IsNullOrWhiteSpace(_country))
         {
             Snackbar.Add("JP Code, People Group Name and Country are required.", Severity.Warning);
             return;
@@ -98,12 +123,12 @@
         {
             var req = new AddPeopleGroupRequest
             {
-                JpCode          = _jpCode.Trim(),
-                PeopleGroupName = _peopleGroupName.Trim(),
-                Country         = _country.Trim(),
-                Language        = _language.NullIfEmpty(),
+                JpCode           = _jpCode.Trim(),
+                PeopleGroupName  = _peopleGroupName.Trim(),
+                Country          = _country.Trim(),
+                Language         = _language.NullIfEmpty(),
                 EstimatedReached = _estimatedReached,
-                Notes           = _notes.NullIfEmpty()
+                Notes            = _notes.NullIfEmpty()
             };
             var res = await Api.AddPeopleGroupAsync(ReportId, req);
             if (res.Success)

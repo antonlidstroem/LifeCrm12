@@ -1,10 +1,10 @@
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Application.Contacts.Commands;
-using LifeCrm.Application.Contacts.DTOs;
+using LifeCrm.Contracts.Contacts.DTOs;
 using LifeCrm.Application.Contacts.Queries;
-using LifeCrm.Application.Donations.DTOs;
+using LifeCrm.Contracts.Donations.DTOs;
 using LifeCrm.Application.Donations.Queries;
-using LifeCrm.Application.Interactions.DTOs;
+using LifeCrm.Contracts.Interactions.DTOs;
 using LifeCrm.Application.Interactions.Queries;
 using LifeCrm.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;

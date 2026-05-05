@@ -1,74 +1,182 @@
+@* src/LifeCrm.Web/Components/Dialogs/CampaignFormDialog.razor
+   FIXED: Scrollable dialog, proper labels in English, scroll on mobile *@
 @inject ApiClient Api
+@inject ProjectsApiClient ProjectsApi
 @inject ISnackbar Snackbar
 
-<MudDialog>
-    <TitleContent><MudText Typo="Typo.h6"><MudIcon Icon="@Icons.Material.Filled.Campaign" Class="mr-2 mb-n1" />@(_isEdit ? "Redigera kampanj" : "Ny kampanj")</MudText></TitleContent>
-    <DialogContent>
-        <MudGrid Spacing="2">
-            <MudItem xs="12"><MudTextField @bind-Value="_name" Label="Namn *" Variant="Variant.Outlined" Required="true" /></MudItem>
-            <MudItem xs="12"><MudTextField @bind-Value="_description" Label="Beskrivning" Variant="Variant.Outlined" Lines="3" /></MudItem>
-            <MudItem xs="12" sm="6"><MudNumericField @bind-Value="_budgetGoal" Label="Mål (belopp)" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AttachMoney" HideSpinButtons="true" Min="0m" /></MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect T="string" @bind-Value="_status" Label="Status" Variant="Variant.Outlined">
-                    <MudSelectItem Value="@("Draft")">Utkast</MudSelectItem>
-                    <MudSelectItem Value="@("Active")">Aktiv</MudSelectItem>
-                    <MudSelectItem Value="@("Paused")">Pausad</MudSelectItem>
-                    <MudSelectItem Value="@("Completed")">Avslutad</MudSelectItem>
-                    <MudSelectItem Value="@("Cancelled")">Avbruten</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6"><MudDatePicker @bind-Date="_startDate" Label="Startdatum" Variant="Variant.Outlined" Editable="true" Clearable="true" /></MudItem>
-            <MudItem xs="12" sm="6"><MudDatePicker @bind-Date="_endDate" Label="Slutdatum" Variant="Variant.Outlined" Editable="true" Clearable="true" /></MudItem>
-            <MudItem xs="12"><MudTextField @bind-Value="_notes" Label="Anteckningar" Variant="Variant.Outlined" Lines="2" /></MudItem>
-        </MudGrid>
+<MudDialog Style="max-height:90vh;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Campaign" Class="mr-2 mb-n1" />
+            @(_isEdit ? "Edit Campaign" : "New Campaign")
+        </MudText>
+    </TitleContent>
+    <DialogContent >
+        <div Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
+            @if (_loadingProjects)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+            }
+            else
+            {
+                <MudGrid Spacing="2">
+                    <MudItem xs="12">
+                        <MudSelect T="Guid?" @bind-Value="_projectId"
+                                   Label="Project *"
+                                   Variant="Variant.Outlined"
+                                   HelperText="Every campaign must belong to a project"
+                                   Required="true"
+                                   AdornmentIcon="@Icons.Material.Filled.FolderOpen">
+                            <MudSelectItem T="Guid?" Value="@((Guid?)null)" Disabled="true">
+                                Select project…
+                            </MudSelectItem>
+                            @foreach (var p in _projects)
+                            {
+                                <MudSelectItem T="Guid?" Value="@((Guid?)p.Id)">@p.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_name" Label="Name *"
+                                      Variant="Variant.Outlined" Required="true" AutoFocus="true" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_description" Label="Description"
+                                      Variant="Variant.Outlined" Lines="3" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="_budgetGoal" Label="Funding Goal (amount)"
+                                         Variant="Variant.Outlined"
+                                         Adornment="Adornment.Start"
+                                         AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                         HideSpinButtons="true" Min="0m" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string" @bind-Value="_status" Label="Status" Variant="Variant.Outlined">
+                            <MudSelectItem Value="@("Draft")">Draft</MudSelectItem>
+                            <MudSelectItem Value="@("Active")">Active</MudSelectItem>
+                            <MudSelectItem Value="@("Paused")">Paused</MudSelectItem>
+                            <MudSelectItem Value="@("Completed")">Completed</MudSelectItem>
+                            <MudSelectItem Value="@("Cancelled")">Cancelled</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudDatePicker @bind-Date="_startDate" Label="Start date"
+                                       Variant="Variant.Outlined" Editable="true" Clearable="true" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudDatePicker @bind-Date="_endDate" Label="End date"
+                                       Variant="Variant.Outlined" Editable="true" Clearable="true" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_notes" Label="Notes"
+                                      Variant="Variant.Outlined" Lines="2" />
+                    </MudItem>
+                </MudGrid>
+            }
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Text">Avbryt</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="_saving">@(_saving ? "Sparar…" : (_isEdit ? "Spara" : "Skapa"))</MudButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   OnClick="Submit" Disabled="@(_saving || _loadingProjects)">
+            @(_saving ? "Saving…" : (_isEdit ? "Save" : "Create"))
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
-    [Parameter] public Guid? CampaignId { get; set; }
+    [Parameter] public Guid? CampaignId      { get; set; }
+    [Parameter] public Guid? PresetProjectId { get; set; }
 
-    private bool _isEdit, _saving;
-    private string _name = string.Empty, _description = string.Empty, _status = "Draft", _notes = string.Empty;
+    private bool _isEdit, _saving, _loadingProjects = true;
+    private string _name = string.Empty, _description = string.Empty;
+    private string _status = "Active", _notes = string.Empty;
     private decimal? _budgetGoal;
     private DateTime? _startDate, _endDate;
+    private Guid? _projectId;
+    private List<ProjectListDto> _projects = new();
 
     protected override async Task OnInitializedAsync()
     {
+        var res = await ProjectsApi.GetProjectsAsync(new PaginationParams { PageSize = 200 });
+        _projects = res.Data?.Items.ToList() ?? new();
+        _loadingProjects = false;
+
         _isEdit = CampaignId.HasValue;
-        if (!_isEdit) return;
-        var res = await Api.GetCampaignAsync(CampaignId!.Value);
-        if (res.Data is null) return;
-        var c = res.Data;
-        _name = c.Name; _description = c.Description ?? string.Empty; _budgetGoal = c.BudgetGoal;
-        _status = c.Status.ToString(); _notes = c.Notes ?? string.Empty;
-        _startDate = c.StartDate?.ToDateTime(TimeOnly.MinValue);
-        _endDate   = c.EndDate?.ToDateTime(TimeOnly.MinValue);
+
+        if (_isEdit)
+        {
+            var cRes = await Api.GetCampaignAsync(CampaignId!.Value);
+            if (cRes.Data is not null)
+            {
+                var c = cRes.Data;
+                _name        = c.Name;
+                _description = c.Description ?? string.Empty;
+                _budgetGoal  = c.BudgetGoal;
+                _status      = c.Status.ToString();
+                _notes       = c.Notes ?? string.Empty;
+                _startDate   = c.StartDate?.ToDateTime(TimeOnly.MinValue);
+                _endDate     = c.EndDate?.ToDateTime(TimeOnly.MinValue);
+                _projectId   = c.ProjectId;
+            }
+        }
+        else
+        {
+            _projectId = PresetProjectId;
+        }
     }
 
     private async Task Submit()
     {
-        if (string.IsNullOrWhiteSpace(_name)) { Snackbar.Add("Namn är obligatoriskt.", Severity.Warning); return; }
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            Snackbar.Add("Name is required.", Severity.Warning); return;
+        }
+        if (!_projectId.HasValue)
+        {
+            Snackbar.Add("Please select a project for this campaign.", Severity.Warning); return;
+        }
+
         _saving = true;
         try
         {
             if (_isEdit)
             {
-                var req = new UpdateCampaignRequest { Id = CampaignId!.Value, Name = _name, Description = _description.NullIfEmpty(), BudgetGoal = _budgetGoal > 0 ? _budgetGoal : null, Status = Enum.Parse<CampaignStatus>(_status), StartDate = _startDate.HasValue ? DateOnly.FromDateTime(_startDate.Value) : null, EndDate = _endDate.HasValue ? DateOnly.FromDateTime(_endDate.Value) : null, Notes = _notes.NullIfEmpty() };
+                var req = new UpdateCampaignRequest
+                {
+                    Id          = CampaignId!.Value,
+                    Name        = _name,
+                    Description = _description.NullIfEmpty(),
+                    BudgetGoal  = _budgetGoal > 0 ? _budgetGoal : null,
+                    Status      = Enum.Parse<CampaignStatus>(_status),
+                    StartDate   = _startDate.HasValue ? DateOnly.FromDateTime(_startDate.Value) : null,
+                    EndDate     = _endDate.HasValue   ? DateOnly.FromDateTime(_endDate.Value)   : null,
+                    Notes       = _notes.NullIfEmpty(),
+                    ProjectId   = _projectId
+                };
                 var res = await Api.UpdateCampaignAsync(CampaignId!.Value, req);
-                if (res.Success) { Snackbar.Add("Uppdaterad.", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
-                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Fel.", Severity.Error);
+                if (res.Success) { Snackbar.Add("Campaign updated.", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
+                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
             }
             else
             {
-                var req = new CreateCampaignRequest { Name = _name, Description = _description.NullIfEmpty(), BudgetGoal = _budgetGoal > 0 ? _budgetGoal : null, Status = Enum.Parse<CampaignStatus>(_status), StartDate = _startDate.HasValue ? DateOnly.FromDateTime(_startDate.Value) : null, EndDate = _endDate.HasValue ? DateOnly.FromDateTime(_endDate.Value) : null, Notes = _notes.NullIfEmpty() };
+                var req = new CreateCampaignRequest
+                {
+                    Name        = _name,
+                    Description = _description.NullIfEmpty(),
+                    BudgetGoal  = _budgetGoal > 0 ? _budgetGoal : null,
+                    Status      = Enum.Parse<CampaignStatus>(_status),
+                    StartDate   = _startDate.HasValue ? DateOnly.FromDateTime(_startDate.Value) : null,
+                    EndDate     = _endDate.HasValue   ? DateOnly.FromDateTime(_endDate.Value)   : null,
+                    Notes       = _notes.NullIfEmpty(),
+                    ProjectId   = _projectId
+                };
                 var res = await Api.CreateCampaignAsync(req);
-                if (res.Success) { Snackbar.Add("Skapad.", Severity.Success); MudDialog.Close(DialogResult.Ok(res.Data)); }
-                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Fel.", Severity.Error);
+                if (res.Success) { Snackbar.Add("Campaign created.", Severity.Success); MudDialog.Close(DialogResult.Ok(res.Data)); }
+                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
             }
         }
         finally { _saving = false; }

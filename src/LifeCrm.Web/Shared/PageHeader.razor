@@ -1,0 +1,45 @@
+@* src/LifeCrm.Web/Shared/PageHeader.razor *@
+
+<div class="lc-page-header">
+    <div class="lc-page-header__left">
+        @if (Breadcrumbs is not null && Breadcrumbs.Any())
+        {
+            <div class="lc-breadcrumb">
+                @for (int i = 0; i < Breadcrumbs.Count; i++)
+                {
+                    var crumb = Breadcrumbs[i];
+                    var isLast = i == Breadcrumbs.Count - 1;
+                    if (!isLast && crumb.Href is not null)
+                    {
+                        <a href="@crumb.Href" class="lc-breadcrumb__link">@crumb.Text</a>
+                        <span class="lc-breadcrumb__sep">/</span>
+                    }
+                    else
+                    {
+                        <span class="lc-breadcrumb__current">@crumb.Text</span>
+                    }
+                }
+            </div>
+        }
+        <h1 class="lc-page-header__title">@Title</h1>
+        @if (!string.IsNullOrEmpty(Subtitle))
+        {
+            <p class="lc-page-header__subtitle">@Subtitle</p>
+        }
+    </div>
+    @if (Actions is not null)
+    {
+        <div class="lc-page-header__actions">
+            @Actions
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string  Title     { get; set; } = "";
+    [Parameter] public string? Subtitle  { get; set; }
+    [Parameter] public RenderFragment?              Actions     { get; set; }
+    [Parameter] public List<BreadcrumbItem>?        Breadcrumbs { get; set; }
+}
+
+

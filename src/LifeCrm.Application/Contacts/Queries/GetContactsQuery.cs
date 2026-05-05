@@ -1,5 +1,5 @@
-using LifeCrm.Application.Common.DTOs;
-using LifeCrm.Application.Contacts.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
+using LifeCrm.Contracts.Contacts.DTOs;
 using LifeCrm.Core.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

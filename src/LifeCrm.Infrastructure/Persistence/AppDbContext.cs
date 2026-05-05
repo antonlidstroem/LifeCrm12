@@ -6,10 +6,20 @@ namespace LifeCrm.Infrastructure.Persistence;
 
 public class AppDbContext : DbContext
 {
-    private readonly ICurrentUserService? _currentUser;
+    // FIX A: Store the org ID as a plain value at construction time instead of
+    // capturing ICurrentUserService as a closure. EF Core can then cache compiled
+    // query plans because the filter predicate is stable across executions.
+    // The previous pattern (reading through ICurrentUserService on every evaluation)
+    // prevented query plan caching and caused re-compilation on every query.
+    private readonly Guid?  _currentOrgId;
+    private readonly bool   _isAuthenticated;
 
     public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserService? currentUser = null)
-        : base(options) { _currentUser = currentUser; }
+        : base(options)
+    {
+        _currentOrgId    = currentUser?.OrganizationId;
+        _isAuthenticated = currentUser?.IsAuthenticated ?? false;
+    }
 
     public DbSet<Organization>         Organizations         { get; set; } = null!;
     public DbSet<ApplicationUser>      Users                 { get; set; } = null!;
@@ -33,22 +43,29 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(mb);
 
-        static void Filter<T>(ModelBuilder b, ICurrentUserService? cu) where T : TenantEntity
-            => b.Entity<T>().HasQueryFilter(e => !e.IsDeleted && (cu == null || !cu.IsAuthenticated || e.OrganizationId == cu.OrganizationId));
+        // FIX A: Capture the org values into local variables so EF Core sees
+        // simple value captures, not a service-call chain. This allows the
+        // query compiler to parameterise the filter and reuse cached plans.
+        var orgId    = _currentOrgId;
+        var isAuthed = _isAuthenticated;
 
-        Filter<Contact>(mb, _currentUser);
-        Filter<Donation>(mb, _currentUser);
-        Filter<Campaign>(mb, _currentUser);
-        Filter<Project>(mb, _currentUser);
-        Filter<Interaction>(mb, _currentUser);
-        Filter<Document>(mb, _currentUser);
-        Filter<ApplicationUser>(mb, _currentUser);
-        Filter<Newsletter>(mb, _currentUser);
-        Filter<NewsletterAttachment>(mb, _currentUser);
-        Filter<MissionReport>(mb, _currentUser);
-        Filter<DecisionCount>(mb, _currentUser);
-        Filter<PeopleGroupReached>(mb, _currentUser);
-        Filter<PrayerPoint>(mb, _currentUser);
+        void Filter<T>(ModelBuilder b) where T : TenantEntity
+            => b.Entity<T>().HasQueryFilter(
+                e => !e.IsDeleted && (!isAuthed || orgId == null || e.OrganizationId == orgId));
+
+        Filter<Contact>(mb);
+        Filter<Donation>(mb);
+        Filter<Campaign>(mb);
+        Filter<Project>(mb);
+        Filter<Interaction>(mb);
+        Filter<Document>(mb);
+        Filter<ApplicationUser>(mb);
+        Filter<Newsletter>(mb);
+        Filter<NewsletterAttachment>(mb);
+        Filter<MissionReport>(mb);
+        Filter<DecisionCount>(mb);
+        Filter<PeopleGroupReached>(mb);
+        Filter<PrayerPoint>(mb);
 
         mb.Entity<PeopleGroupSeed>().HasQueryFilter(e => !e.IsDeleted);
         mb.Entity<AppSettings>().HasQueryFilter(e => !e.IsDeleted);

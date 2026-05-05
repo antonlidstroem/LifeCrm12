@@ -1,16 +1,23 @@
 using Blazored.LocalStorage;
-using LifeCrm.Application.Campaigns.DTOs;
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Campaigns.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using Microsoft.JSInterop;
 
 namespace LifeCrm.Web.Services;
 
 public class CampaignsApiClient : ApiClientBase
 {
-    public CampaignsApiClient(HttpClient h, ILocalStorageService s, IJSRuntime js) : base(h, s, js) { }
+    public CampaignsApiClient(HttpClient h, ILocalStorageService s, IJSRuntime js)
+        : base(h, s, js) { }
 
-    public async Task<ApiResponse<PagedResult<CampaignListDto>>> GetCampaignsAsync(PaginationParams p)
-        => await GetAsync<PagedResult<CampaignListDto>>($"api/v1/campaigns?page={p.Page}&pageSize={p.PageSize}&search={Uri.EscapeDataString(p.Search ?? "")}");
+    public async Task<ApiResponse<PagedResult<CampaignListDto>>> GetCampaignsAsync(
+        PaginationParams p, Guid? projectId = null)
+    {
+        var url = $"api/v1/campaigns?page={p.Page}&pageSize={p.PageSize}" +
+                  $"&search={Uri.EscapeDataString(p.Search ?? "")}";
+        if (projectId.HasValue) url += $"&projectId={projectId.Value}";
+        return await GetAsync<PagedResult<CampaignListDto>>(url);
+    }
 
     public async Task<ApiResponse<CampaignDto>> GetCampaignAsync(Guid id)
         => await GetAsync<CampaignDto>($"api/v1/campaigns/{id}");

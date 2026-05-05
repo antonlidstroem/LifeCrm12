@@ -1,3 +1,4 @@
+// src/LifeCrm.Application/Reports/Commands/DeleteReportCommand.cs
 using LifeCrm.Application.Common.Exceptions;
 using LifeCrm.Core.Entities;
 using LifeCrm.Core.Enums;
@@ -9,7 +10,12 @@ namespace LifeCrm.Application.Reports.Commands;
 public class DeleteReportCommand : IRequest<Unit>
 {
     public Guid ReportId { get; }
-    public DeleteReportCommand(Guid id) { ReportId = id; }
+    public bool IsAdmin { get; }
+    public DeleteReportCommand(Guid id, bool isAdmin = false)
+    {
+        ReportId = id;
+        IsAdmin = isAdmin;
+    }
 }
 
 public sealed class DeleteReportHandler : IRequestHandler<DeleteReportCommand, Unit>
@@ -21,8 +27,11 @@ public sealed class DeleteReportHandler : IRequestHandler<DeleteReportCommand, U
     {
         var rpt = await _uow.Reports.GetByIdAsync(cmd.ReportId, ct)
             ?? throw new NotFoundException(nameof(MissionReport), cmd.ReportId);
-        if (rpt.Status == ReportStatus.Approved)
-            throw new ConflictException("Approved reports cannot be deleted.");
+
+        // Admins can delete any report including Approved ones
+        if (rpt.Status == ReportStatus.Approved && !cmd.IsAdmin)
+            throw new ConflictException("Only admins can delete approved reports.");
+
         _uow.Reports.Delete(rpt);
         await _uow.SaveChangesAsync(ct);
         return Unit.Value;

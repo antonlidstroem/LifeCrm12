@@ -1,6 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using Blazored.LocalStorage;
-using LifeCrm.Application.Common.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Core.Constants;
 
 namespace LifeCrm.Web.Services;

@@ -1,0 +1,42 @@
+@* src/LifeCrm.Web/Pages/Donations/DonationNewPage.razor *@
+@page "/donations/new"
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudStack AlignItems="AlignItems.Center" Justify="Justify.Center"
+          Style="min-height:200px" Class="mt-8">
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-3">Opening donation form…</MudText>
+</MudStack>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        if (!AppState.IsFinanceOrAdmin)
+        {
+            Nav.NavigateTo("/donations", replace: true);
+            return;
+        }
+
+        var options = new DialogOptions
+        {
+            CloseButton    = true,
+            MaxWidth       = MaxWidth.Small,
+            FullWidth      = true,
+            BackdropClick  = false,
+            CloseOnEscapeKey = true
+        };
+
+        var d = DialogService.Show<DonationFormDialog>("New Donation", new DialogParameters(), options);
+        var result = await d.Result;
+
+        if (!result.Canceled)
+            Nav.NavigateTo("/donations", replace: true);
+        else
+            Nav.NavigateTo("/donations", replace: true);
+    }
+}

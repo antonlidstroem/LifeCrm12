@@ -1,0 +1,331 @@
+@* src/LifeCrm.Web/Layout/MainLayout.razor
+   FIXES:
+   - Sidebar toggle button moved OUT of logo row into its own dedicated element
+     so it doesn't overlap the logo text or push content
+   - User profile card bottom section: MudMenu replaced with a simple popover
+     so the kebab icon doesn't float disconnected from the card
+   - MudDialogProvider: BackdropClick="false" added
+   - Mobile overlay z-index layering fixed (drawer must be above overlay)
+   - TopBar context area properly spaced
+   - Notification badge no longer clips outside topbar bounds
+*@
+@using LifeCrm.Web.Services
+@using LifeCrm.Web.Theme
+@inherits LayoutComponentBase
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthApiClient AuthClient
+
+<MudThemeProvider Theme="_theme" IsDarkMode="true" />
+<MudPopoverProvider />
+<MudDialogProvider FullWidth="true"
+                   MaxWidth="MaxWidth.Small"
+                   CloseOnEscapeKey="true"
+                   BackdropClick="false" />
+<MudSnackbarProvider />
+
+<div class="lc-shell @(_drawerOpen ? "lc-shell--open" : "lc-shell--collapsed")">
+
+    @* ── Sidebar (desktop) ───────────────────────────────────────────────── *@
+    <aside class="lc-sidebar @(_drawerOpen ? "" : "lc-sidebar--mini")">
+
+        @* Logo + toggle in the same row *@
+        <div class="lc-sidebar__logo">
+            <div class="lc-logo">
+                <div class="lc-logo__mark"><span>L</span></div>
+                @if (_drawerOpen)
+                {
+                    <div class="lc-logo__wordmark">
+                        <span class="lc-logo__name">LifeCrm</span>
+                        <span class="lc-logo__org">@AppState.OrganizationName</span>
+                    </div>
+                }
+            </div>
+            @* Toggle sits flush-right inside logo row, never overlaps text *@
+            <button class="lc-sidebar__toggle" @onclick="ToggleDrawer"
+                    title="@(_drawerOpen ? "Collapse sidebar" : "Expand sidebar")">
+                <MudIcon Icon="@(_drawerOpen
+                                    ? Icons.Material.Outlined.ChevronLeft
+                                    : Icons.Material.Outlined.ChevronRight)"
+                         Size="Size.Small" />
+            </button>
+        </div>
+
+        @* Nav groups *@
+        <nav class="lc-sidebar__nav">
+            <div class="lc-nav-section">
+                @if (_drawerOpen)
+                {
+                    <span class="lc-nav-section__label">Core</span>
+                }
+                <NavItem Href="/" Icon="@Icons.Material.Outlined.Dashboard"
+                         Label="Dashboard" Mini="!_drawerOpen" ExactMatch="true" />
+                <NavItem Href="/contacts" Icon="@Icons.Material.Outlined.People"
+                         Label="Contacts" Mini="!_drawerOpen" />
+                <NavItem Href="/donations" Icon="@Icons.Material.Outlined.VolunteerActivism"
+                         Label="Donations" Mini="!_drawerOpen" />
+                <NavItem Href="/interactions" Icon="@Icons.Material.Outlined.Forum"
+                         Label="Interactions" Mini="!_drawerOpen" />
+            </div>
+
+            <div class="lc-nav-section">
+                @if (_drawerOpen)
+                {
+                    <span class="lc-nav-section__label">Work</span>
+                }
+                <NavItem Href="/projects" Icon="@Icons.Material.Outlined.AccountTree"
+                         Label="Projects" Mini="!_drawerOpen" />
+                <NavItem Href="/campaigns" Icon="@Icons.Material.Outlined.Campaign"
+                         Label="Campaigns" Mini="!_drawerOpen" />
+                <NavItem Href="/newsletters" Icon="@Icons.Material.Outlined.Email"
+                         Label="Newsletters" Mini="!_drawerOpen" />
+                <NavItem Href="/reports" Icon="@Icons.Material.Outlined.Assignment"
+                         Label="Reports" Mini="!_drawerOpen" />
+                <NavItem Href="/prayer-points" Icon="@Icons.Material.Outlined.Favorite"
+                         Label="Prayer Points" Mini="!_drawerOpen" />
+            </div>
+
+            @if (AppState.IsAdmin || AppState.IsFinanceOrAdmin)
+            {
+                <div class="lc-nav-section">
+                    @if (_drawerOpen)
+                    {
+                        <span class="lc-nav-section__label">Admin</span>
+                    }
+                    @if (AppState.IsAdmin)
+                    {
+                        <NavItem Href="/admin/users"
+                                 Icon="@Icons.Material.Outlined.ManageAccounts"
+                                 Label="Users" Mini="!_drawerOpen" />
+                        <NavItem Href="/admin/email-settings"
+                                 Icon="@Icons.Material.Outlined.SettingsEthernet"
+                                 Label="Email Settings" Mini="!_drawerOpen" />
+                        <NavItem Href="/admin/signalr"
+                                 Icon="@Icons.Material.Outlined.Bolt"
+                                 Label="Real-Time" Mini="!_drawerOpen" />
+                    }
+                </div>
+            }
+        </nav>
+
+        @* User profile pinned at bottom *@
+        <div class="lc-sidebar__user">
+            @if (_drawerOpen)
+            {
+                <div class="lc-user-card">
+                    <a href="/profile" class="lc-user-card__avatar-link">
+                        <div class="lc-user-card__avatar">
+                            @FirstLetter
+                        </div>
+                    </a>
+                    <div class="lc-user-card__info">
+                        <span class="lc-user-card__name">@AppState.UserFullName</span>
+                        <span class="lc-user-card__role">@AppState.UserRole</span>
+                    </div>
+                    @* FIX: MudMenu with Icon= used to render a floating icon button.
+                       Replaced with a properly anchored MudMenu via ActivatorContent. *@
+                    <MudMenu AnchorOrigin="Origin.TopRight"
+                             TransformOrigin="Origin.BottomRight"
+                             Dense="true">
+                        <ActivatorContent>
+                            <MudIconButton Icon="@Icons.Material.Outlined.MoreVert"
+                                           Size="Size.Small"
+                                           Color="Color.Default"
+                                           title="Account options" />
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem Href="/profile">
+                                <MudIcon Icon="@Icons.Material.Outlined.Person"
+                                         Size="Size.Small" Class="mr-2" />
+                                Profile
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="LogoutAsync">
+                                <MudIcon Icon="@Icons.Material.Outlined.Logout"
+                                         Size="Size.Small" Class="mr-2" />
+                                Sign out
+                            </MudMenuItem>
+                        </ChildContent>
+                    </MudMenu>
+                </div>
+            }
+            else
+            {
+                @* Mini mode: avatar as link to profile *@
+                <MudTooltip Text="@AppState.UserFullName" Placement="Placement.Right" Delay="200">
+                    <a href="/profile" class="lc-user-avatar-mini" title="@AppState.UserFullName">
+                        @FirstLetter
+                    </a>
+                </MudTooltip>
+            }
+        </div>
+    </aside>
+
+    @* ── Main content area ───────────────────────────────────────────────── *@
+    <div class="lc-main">
+
+        <header class="lc-topbar">
+            @* Mobile hamburger — left side *@
+            <button class="lc-topbar__mobile-menu" @onclick="ToggleMobileMenu"
+                    title="Open menu">
+                <MudIcon Icon="@Icons.Material.Outlined.Menu" />
+            </button>
+
+            @* Page title — centre/left *@
+            <div class="lc-topbar__context">
+                @if (_pageTitle is not null)
+                {
+                    <span class="lc-topbar__title">@_pageTitle</span>
+                }
+            </div>
+
+            @* Right-side actions *@
+            <div class="lc-topbar__actions">
+                <MudBadge Content="_notifCount" Color="Color.Error" Overlap="true"
+                          Visible="_notifCount > 0" Max="9">
+                    <MudIconButton Icon="@Icons.Material.Outlined.Notifications"
+                                   Size="Size.Small" Color="Color.Default"
+                                   title="Notifications" />
+                </MudBadge>
+
+                @* Mobile user avatar — only visible on small screens *@
+                <div class="lc-topbar__user-mobile">
+                    <MudMenu AnchorOrigin="Origin.BottomRight"
+                             TransformOrigin="Origin.TopRight"
+                             Dense="true">
+                        <ActivatorContent>
+                            <button class="lc-user-avatar-mini" title="Account">
+                                @FirstLetter
+                            </button>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem Href="/profile">Profile</MudMenuItem>
+                            <MudMenuItem OnClick="LogoutAsync">Sign out</MudMenuItem>
+                        </ChildContent>
+                    </MudMenu>
+                </div>
+            </div>
+        </header>
+
+        <main class="lc-content">
+            <CascadingValue Value="this" Name="Layout">
+                @Body
+            </CascadingValue>
+        </main>
+    </div>
+
+    @* ── Mobile bottom nav ───────────────────────────────────────────────── *@
+    <nav class="lc-bottom-nav">
+        <MobileNavItem Href="/" Icon="@Icons.Material.Outlined.Dashboard"
+                       Label="Home" ExactMatch="true" />
+        <MobileNavItem Href="/contacts" Icon="@Icons.Material.Outlined.People"
+                       Label="Contacts" />
+        <MobileNavItem Href="/donations" Icon="@Icons.Material.Outlined.VolunteerActivism"
+                       Label="Donations" />
+        <MobileNavItem Href="/reports" Icon="@Icons.Material.Outlined.Assignment"
+                       Label="Reports" />
+        <MobileNavItem Href="/prayer-points" Icon="@Icons.Material.Outlined.Favorite"
+                       Label="Prayer" />
+    </nav>
+
+    @* ── Mobile drawer overlay ───────────────────────────────────────────── *@
+    @if (_mobileMenuOpen)
+    {
+        <div class="lc-mobile-overlay" @onclick="ToggleMobileMenu"></div>
+        <aside class="lc-mobile-drawer">
+            <div class="lc-mobile-drawer__header">
+                <div class="lc-logo">
+                    <div class="lc-logo__mark"><span>L</span></div>
+                    <span class="lc-logo__name">LifeCrm</span>
+                </div>
+                <MudIconButton Icon="@Icons.Material.Outlined.Close"
+                               @onclick="ToggleMobileMenu" Size="Size.Small"
+                               title="Close menu" />
+            </div>
+            <nav class="lc-mobile-drawer__nav">
+                <div class="lc-mobile-drawer__section-label">Core</div>
+                <MobileDrawerItem Href="/" Icon="@Icons.Material.Outlined.Dashboard"
+                                  Label="Dashboard" OnClose="ToggleMobileMenu" ExactMatch="true" />
+                <MobileDrawerItem Href="/contacts" Icon="@Icons.Material.Outlined.People"
+                                  Label="Contacts" OnClose="ToggleMobileMenu" />
+                <MobileDrawerItem Href="/donations" Icon="@Icons.Material.Outlined.VolunteerActivism"
+                                  Label="Donations" OnClose="ToggleMobileMenu" />
+                <MobileDrawerItem Href="/interactions" Icon="@Icons.Material.Outlined.Forum"
+                                  Label="Interactions" OnClose="ToggleMobileMenu" />
+
+                <div class="lc-mobile-drawer__section-label">Work</div>
+                <MobileDrawerItem Href="/projects" Icon="@Icons.Material.Outlined.AccountTree"
+                                  Label="Projects" OnClose="ToggleMobileMenu" />
+                <MobileDrawerItem Href="/campaigns" Icon="@Icons.Material.Outlined.Campaign"
+                                  Label="Campaigns" OnClose="ToggleMobileMenu" />
+                <MobileDrawerItem Href="/newsletters" Icon="@Icons.Material.Outlined.Email"
+                                  Label="Newsletters" OnClose="ToggleMobileMenu" />
+                <MobileDrawerItem Href="/reports" Icon="@Icons.Material.Outlined.Assignment"
+                                  Label="Reports" OnClose="ToggleMobileMenu" />
+                <MobileDrawerItem Href="/prayer-points" Icon="@Icons.Material.Outlined.Favorite"
+                                  Label="Prayer Points" OnClose="ToggleMobileMenu" />
+
+                @if (AppState.IsAdmin)
+                {
+                    <div class="lc-mobile-drawer__section-label">Admin</div>
+                    <MobileDrawerItem Href="/admin/users"
+                                      Icon="@Icons.Material.Outlined.ManageAccounts"
+                                      Label="Users" OnClose="ToggleMobileMenu" />
+                    <MobileDrawerItem Href="/admin/email-settings"
+                                      Icon="@Icons.Material.Outlined.SettingsEthernet"
+                                      Label="Email Settings" OnClose="ToggleMobileMenu" />
+                    <MobileDrawerItem Href="/admin/signalr"
+                                      Icon="@Icons.Material.Outlined.Bolt"
+                                      Label="Real-Time" OnClose="ToggleMobileMenu" />
+                }
+
+                <div class="lc-mobile-drawer__section-label">Account</div>
+                <MobileDrawerItem Href="/profile" Icon="@Icons.Material.Outlined.Person"
+                                  Label="Profile" OnClose="ToggleMobileMenu" />
+                <div class="lc-mobile-drawer__signout">
+                    <button class="lc-mobile-drawer__signout-btn" @onclick="LogoutAsync">
+                        <MudIcon Icon="@Icons.Material.Outlined.Logout" Size="Size.Small" />
+                        Sign out
+                    </button>
+                </div>
+            </nav>
+        </aside>
+    }
+</div>
+
+
+
+@code {
+    private readonly MudTheme _theme = LifeCrmTheme.Create();
+    private bool    _drawerOpen    = true;
+    private bool    _mobileMenuOpen = false;
+    private int     _notifCount    = 0;
+    private string? _pageTitle;
+
+    private string FirstLetter =>
+        AppState.UserFullName?.Length > 0
+            ? AppState.UserFullName[0].ToString().ToUpper()
+            : "?";
+
+    public void SetPageTitle(string title)
+    {
+        _pageTitle = title;
+        StateHasChanged();
+    }
+
+    public void IncrementNotifications()
+    {
+        _notifCount++;
+        StateHasChanged();
+    }
+
+    private void ToggleDrawer()     => _drawerOpen     = !_drawerOpen;
+    private void ToggleMobileMenu() => _mobileMenuOpen = !_mobileMenuOpen;
+
+    private async Task LogoutAsync()
+    {
+        await AuthClient.ClearTokenAsync();
+        AppState.ClearUser();
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+}

@@ -1,7 +1,9 @@
-using LifeCrm.Application.Common.DTOs;
+// src/LifeCrm.Api/Controllers/v1/MissionReportsController.cs
+using LifeCrm.Contracts.Common.DTOs;
 using LifeCrm.Application.Reports.Commands;
-using LifeCrm.Application.Reports.DTOs;
+using LifeCrm.Contracts.Reports.DTOs;
 using LifeCrm.Application.Reports.Queries;
+using LifeCrm.Core.Constants;
 using LifeCrm.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -12,8 +14,14 @@ namespace LifeCrm.Api.Controllers.v1;
 public class MissionReportsController : ApiControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] PaginationParams paging, [FromQuery] Guid? campaignId, [FromQuery] Guid? projectId, [FromQuery] ReportStatus? status, CancellationToken ct)
-        => OkResponse(await Mediator.Send(new GetReportsQuery(paging, campaignId, projectId, status), ct));
+    public async Task<IActionResult> GetAll(
+        [FromQuery] PaginationParams paging,
+        [FromQuery] Guid? campaignId,
+        [FromQuery] Guid? projectId,
+        [FromQuery] ReportStatus? status,
+        CancellationToken ct)
+        => OkResponse(await Mediator.Send(
+            new GetReportsQuery(paging, campaignId, projectId, status), ct));
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
@@ -22,7 +30,8 @@ public class MissionReportsController : ApiControllerBase
     [HttpPost]
     [Authorize(Policy = "CanWrite")]
     [ProducesResponseType(typeof(ApiResponse<Guid>), StatusCodes.Status201Created)]
-    public async Task<IActionResult> Create([FromBody] CreateReportRequest request, CancellationToken ct)
+    public async Task<IActionResult> Create(
+        [FromBody] CreateReportRequest request, CancellationToken ct)
     {
         var id = await Mediator.Send(new CreateReportCommand(request), ct);
         return CreatedResponse(nameof(GetById), new { id }, id);
@@ -30,7 +39,8 @@ public class MissionReportsController : ApiControllerBase
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = "CanWrite")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateReportRequest request, CancellationToken ct)
+    public async Task<IActionResult> Update(
+        Guid id, [FromBody] UpdateReportRequest request, CancellationToken ct)
     {
         await Mediator.Send(new UpdateReportCommand(request with { Id = id }), ct);
         return NoContentResponse();
@@ -40,7 +50,8 @@ public class MissionReportsController : ApiControllerBase
     [Authorize(Policy = "CanWrite")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        await Mediator.Send(new DeleteReportCommand(id), ct);
+        var isAdmin = User.IsInRole(Roles.Admin);
+        await Mediator.Send(new DeleteReportCommand(id, isAdmin), ct);
         return NoContentResponse();
     }
 
@@ -63,7 +74,8 @@ public class MissionReportsController : ApiControllerBase
 
     [HttpPost("{id:guid}/return")]
     [Authorize(Policy = "FinanceOrAdmin")]
-    public async Task<IActionResult> Return(Guid id, [FromBody] ReturnForRevisionRequest request, CancellationToken ct)
+    public async Task<IActionResult> Return(
+        Guid id, [FromBody] ReturnForRevisionRequest request, CancellationToken ct)
     {
         await Mediator.Send(new ReturnReportCommand(id, request), ct);
         return NoContentResponse();
@@ -71,30 +83,36 @@ public class MissionReportsController : ApiControllerBase
 
     [HttpPut("{id:guid}/decisions")]
     [Authorize(Policy = "CanWrite")]
-    public async Task<IActionResult> UpsertDecision(Guid id, [FromBody] UpsertDecisionCountRequest request, CancellationToken ct)
+    public async Task<IActionResult> UpsertDecision(
+        Guid id, [FromBody] UpsertDecisionCountRequest request, CancellationToken ct)
         => OkResponse(await Mediator.Send(new UpsertDecisionCountCommand(id, request), ct));
 
     [HttpPost("{id:guid}/people-groups")]
     [Authorize(Policy = "CanWrite")]
-    public async Task<IActionResult> AddPeopleGroup(Guid id, [FromBody] AddPeopleGroupRequest request, CancellationToken ct)
+    public async Task<IActionResult> AddPeopleGroup(
+        Guid id, [FromBody] AddPeopleGroupRequest request, CancellationToken ct)
         => OkResponse(await Mediator.Send(new AddPeopleGroupCommand(id, request), ct));
 
     [HttpDelete("{id:guid}/people-groups/{entryId:guid}")]
     [Authorize(Policy = "CanWrite")]
-    public async Task<IActionResult> RemovePeopleGroup(Guid id, Guid entryId, CancellationToken ct)
+    public async Task<IActionResult> RemovePeopleGroup(
+        Guid id, Guid entryId, CancellationToken ct)
     {
         await Mediator.Send(new RemovePeopleGroupCommand(id, entryId), ct);
         return NoContentResponse();
     }
 
     [HttpGet("people-groups/search")]
-    public async Task<IActionResult> SearchPeopleGroups([FromQuery] string q, CancellationToken ct)
+    public async Task<IActionResult> SearchPeopleGroups(
+        [FromQuery] string q, CancellationToken ct)
         => OkResponse(await Mediator.Send(new SearchPeopleGroupsQuery(q ?? ""), ct));
 
     [HttpPost("{id:guid}/prayer-points")]
     [Authorize(Policy = "CanWrite")]
-    public async Task<IActionResult> AddPrayerPoint(Guid id, [FromBody] CreatePrayerPointRequest request, CancellationToken ct)
-        => OkResponse(await Mediator.Send(new CreatePrayerPointCommand(request with { ReportId = id }), ct));
+    public async Task<IActionResult> AddPrayerPoint(
+        Guid id, [FromBody] CreatePrayerPointRequest request, CancellationToken ct)
+        => OkResponse(await Mediator.Send(
+            new CreatePrayerPointCommand(request with { ReportId = id }), ct));
 
     [HttpGet("answered-prayers/this-month")]
     public async Task<IActionResult> AnsweredPrayersThisMonth(CancellationToken ct)

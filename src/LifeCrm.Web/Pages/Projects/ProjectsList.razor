@@ -1,0 +1,219 @@
+@* src/LifeCrm.Web/Pages/Projects/ProjectsList.razor *@
+@page "/projects"
+@using LifeCrm.Web.Services
+@using LifeCrm.Web.Shared
+@using LifeCrm.Contracts.Common.DTOs
+@using LifeCrm.Contracts.Projects.DTOs
+@inject ApiClient Api
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Projects — LifeCrm</PageTitle>
+
+<div class="lc-page-enter">
+    <PageHeader Title="Projects" Subtitle="@(_totalCount > 0 ? $"{_totalCount:N0} projects" : null)">
+        <Actions>
+            @if (AppState.CanWrite)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                           StartIcon="@Icons.Material.Outlined.CreateNewFolder"
+                           OnClick="OpenCreateDialog">
+                    New Project
+                </MudButton>
+            }
+        </Actions>
+    </PageHeader>
+
+    <div class="lc-filter-bar">
+        <div class="lc-search" style="min-width:280px;">
+            <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" Class="lc-search__icon" />
+            <input class="lc-search__input" placeholder="Search projects or location…"
+                   @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKey" />
+        </div>
+    </div>
+
+    <div class="lc-hide-mobile">
+        @if (_loading)
+        {
+            <div class="lc-project-grid">
+                @for (int i = 0; i < 6; i++)
+                {
+                    <div class="lc-skeleton-row" style="height:160px;border-radius:6px;"></div>
+                }
+            </div>
+        }
+        else if (!_projects.Any())
+        {
+            <DataCard>
+                <div class="lc-empty">
+                    <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Style="font-size:40px;color:var(--lc-text-disabled)" />
+                    <span class="lc-empty__title">No projects yet</span>
+                    <span class="lc-empty__subtitle">Create your first project to organise campaigns and donations.</span>
+                    @if (AppState.CanWrite)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-2"
+                                   StartIcon="@Icons.Material.Outlined.CreateNewFolder"
+                                   OnClick="OpenCreateDialog">New Project</MudButton>
+                    }
+                </div>
+            </DataCard>
+        }
+        else
+        {
+            <div class="lc-project-grid">
+                @foreach (var p in _projects)
+                {
+                    <div class="lc-project-card">
+                        <div class="lc-project-card__header">
+                            <div>
+                                <h3 class="lc-project-card__title" @onclick="() => GoTo(p)" style="cursor:pointer;">@p.Name</h3>
+                                @if (!string.IsNullOrEmpty(p.Location))
+                                {
+                                    <div class="lc-project-card__location">
+                                        <MudIcon Icon="@Icons.Material.Outlined.LocationOn" Size="Size.Small" />
+                                        @p.Location
+                                    </div>
+                                }
+                            </div>
+                            <div style="display:flex;gap:2px;align-items:center;">
+                                <StatusBadge Text="@p.Status.ToString()" Variant="@StatusBadge.VariantFromProjectStatus(p.Status)" />
+                                @if (AppState.CanWrite)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"
+                                                   OnClick="@(() => OpenEditDialog(p.Id))" />
+                                }
+                                @if (AppState.IsAdmin)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small"
+                                                   Color="Color.Error" OnClick="@(() => DeleteAsync(p))" />
+                                }
+                            </div>
+                        </div>
+
+                        @if (p.BudgetGoal.HasValue && p.BudgetGoal > 0)
+                        {
+                            var pct = Math.Min((double)(p.TotalFunded / p.BudgetGoal.Value * 100), 100);
+                            <div class="lc-project-card__progress" @onclick="() => GoTo(p)" style="cursor:pointer;">
+                                <div class="lc-project-card__progress-row">
+                                    <span class="lc-mono" style="font-size:16px;font-weight:500;color:var(--lc-text-primary);">$@p.TotalFunded.ToString("N0")</span>
+                                    <span class="lc-muted" style="font-size:12px;">of $@p.BudgetGoal.Value.ToString("N0")</span>
+                                </div>
+                                <div class="lc-progress-bar">
+                                    <div class="lc-progress-bar__fill @(pct >= 100 ? "lc-progress-bar__fill--success" : "")" style="width:@pct.ToString("F1")%"></div>
+                                </div>
+                                <span class="lc-muted" style="font-size:11px;">@pct.ToString("N1")% funded</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="lc-project-card__funded" @onclick="() => GoTo(p)" style="cursor:pointer;">
+                                <span class="lc-mono" style="font-size:16px;font-weight:500;">$@p.TotalFunded.ToString("N0")</span>
+                                <span class="lc-muted" style="font-size:12px;">raised</span>
+                            </div>
+                        }
+
+                        <div class="lc-project-card__footer" @onclick="() => GoTo(p)" style="cursor:pointer;">
+                            @if (p.StartDate.HasValue)
+                            {
+                                <span class="lc-col-date" style="font-size:11px;">@p.StartDate.Value.ToString("yyyy-MM-dd")@(p.EndDate.HasValue ? $" → {p.EndDate.Value:yyyy-MM-dd}" : "")</span>
+                            }
+                            <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" Style="color:var(--lc-text-disabled);margin-left:auto;" />
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="lc-show-mobile lc-card-list">
+        @if (_loading)
+        {
+            @for (int i = 0; i < 4; i++)
+            {
+                <div class="lc-skeleton-row" style="height:100px;"></div>
+            }
+        }
+        else
+        {
+            @foreach (var p in _projects)
+            {
+                <div class="lc-list-card" @onclick="() => GoTo(p)">
+                    <div class="lc-list-card__header">
+                        <span class="lc-list-card__title">@p.Name</span>
+                        <StatusBadge Text="@p.Status.ToString()" Variant="@StatusBadge.VariantFromProjectStatus(p.Status)" />
+                    </div>
+                    <div class="lc-list-card__meta">
+                        <span class="lc-mono">$@p.TotalFunded.ToString("N0") raised</span>
+                        @if (!string.IsNullOrEmpty(p.Location))
+                        {
+                            <span class="lc-muted">@p.Location</span>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="lc-table-footer" style="margin-top:16px;">
+        <span class="lc-muted" style="font-size:12px;">@_projects.Count of @_totalCount</span>
+        <MudPagination Count="_totalPages" Selected="_page" SelectedChanged="OnPageChanged" Color="Color.Primary" Size="Size.Small" />
+    </div>
+</div>
+
+@code {
+    private List<ProjectListDto> _projects = new();
+    private bool _loading = true;
+    private string? _search;
+    private int _page = 1, _totalCount = 0, _totalPages = 1;
+    private const int PageSize = 12;
+    private System.Timers.Timer? _debounce;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var resp = await Api.GetProjectsAsync(new PaginationParams { Page = _page, PageSize = PageSize, Search = _search });
+        if (resp.Success && resp.Data is not null) { _projects = resp.Data.Items.ToList(); _totalCount = resp.Data.TotalCount; _totalPages = resp.Data.TotalPages; }
+        _loading = false;
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var d = DialogService.Show<ProjectFormDialog>("New Project",
+            new DialogParameters(),
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await d.Result).Canceled) await LoadAsync();
+    }
+
+    private async Task OpenEditDialog(Guid id)
+    {
+        var d = DialogService.Show<ProjectFormDialog>("Edit Project",
+            new DialogParameters { ["ProjectId"] = id },
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await d.Result).Canceled) await LoadAsync();
+    }
+
+    private async Task DeleteAsync(ProjectListDto p)
+    {
+        var params2 = new DialogParameters { ["Title"] = "Delete Project", ["Message"] = $"Delete \"{p.Name}\"? This cannot be undone." };
+        var confirm = DialogService.Show<ConfirmDialog>("", params2);
+        if ((await confirm.Result).Canceled) return;
+        var res = await Api.DeleteProjectAsync(p.Id);
+        if (res.Success) { Snackbar.Add("Project deleted.", Severity.Success); await LoadAsync(); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+
+    private void OnSearchKey(KeyboardEventArgs _)
+    {
+        _debounce?.Dispose();
+        _debounce = new System.Timers.Timer(350);
+        _debounce.Elapsed += async (_, _) => { _debounce?.Dispose(); _page = 1; await InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); }); };
+        _debounce.AutoReset = false; _debounce.Start();
+    }
+
+    private async Task OnPageChanged(int p) { _page = p; await LoadAsync(); }
+    private void GoTo(ProjectListDto p) => Nav.NavigateTo($"/projects/{p.Id}");
+}

@@ -1,5 +1,6 @@
+// src/LifeCrm.Application/Projects/Queries/GetProjectByIdQuery.cs
 using LifeCrm.Application.Common.Exceptions;
-using LifeCrm.Application.Projects.DTOs;
+using LifeCrm.Contracts.Projects.DTOs;
 using LifeCrm.Core.Entities;
 using LifeCrm.Core.Interfaces;
 using MediatR;
@@ -20,10 +21,40 @@ public sealed class GetProjectByIdHandler : IRequestHandler<GetProjectByIdQuery,
 
     public async Task<ProjectDto> Handle(GetProjectByIdQuery q, CancellationToken ct)
     {
-        var p = await _uow.Projects.GetByIdAsync(q.ProjectId, ct) ?? throw new NotFoundException(nameof(Project), q.ProjectId);
-        var funded = await _uow.Donations.Query().Where(d => d.ProjectId == p.Id).SumAsync(d => (decimal?)d.Amount, ct) ?? 0;
-        var dc = await _uow.Donations.CountAsync(d => d.ProjectId == p.Id, ct);
-        var ic = await _uow.Interactions.CountAsync(i => i.ProjectId == p.Id, ct);
-        return new ProjectDto { Id = p.Id, Name = p.Name, Description = p.Description, Status = p.Status, Location = p.Location, BudgetGoal = p.BudgetGoal, TotalFunded = funded, StartDate = p.StartDate, EndDate = p.EndDate, Notes = p.Notes, DonationCount = dc, InteractionCount = ic, CreatedAt = p.CreatedAt, LastModifiedAt = p.LastModifiedAt };
+        // FIX D: Consolidate 4 sequential round-trips into a single projection query.
+        // Previous: GetByIdAsync + SumAsync(funded) + CountAsync(donations) + CountAsync(interactions)
+        // Now: one SELECT with three subquery aggregations translated by EF Core.
+
+        var result = await _uow.Projects.Query()
+            .Where(p => p.Id == q.ProjectId)
+            .Select(p => new
+            {
+                p.Id, p.Name, p.Description, p.Status,
+                p.Location, p.BudgetGoal, p.StartDate, p.EndDate,
+                p.Notes, p.CreatedAt, p.LastModifiedAt,
+                TotalFunded      = p.Donations.Where(d => !d.IsDeleted).Sum(d => (decimal?)d.Amount) ?? 0,
+                DonationCount    = p.Donations.Count(d => !d.IsDeleted),
+                InteractionCount = p.Interactions.Count(i => !i.IsDeleted)
+            })
+            .FirstOrDefaultAsync(ct)
+            ?? throw new NotFoundException(nameof(Project), q.ProjectId);
+
+        return new ProjectDto
+        {
+            Id               = result.Id,
+            Name             = result.Name,
+            Description      = result.Description,
+            Status           = result.Status,
+            Location         = result.Location,
+            BudgetGoal       = result.BudgetGoal,
+            TotalFunded      = result.TotalFunded,
+            StartDate        = result.StartDate,
+            EndDate          = result.EndDate,
+            Notes            = result.Notes,
+            DonationCount    = result.DonationCount,
+            InteractionCount = result.InteractionCount,
+            CreatedAt        = result.CreatedAt,
+            LastModifiedAt   = result.LastModifiedAt
+        };
     }
 }

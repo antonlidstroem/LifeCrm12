@@ -1,1 +1,804 @@
-body { font-family: 'Segoe UI', sans-serif; margin: 0; }
+from weasyprint import HTML
+
+# Consolidated CSS content
+css_content = """/* src/LifeCrm.Web/wwwroot/css/app.css
+LifeCrm Enterprise Design System — Consolidated & Optimized
+─────────────────────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
+/* ── Design tokens ───────────────────────────────────────────────────────── */
+:root {
+    --lc-bg: #0C1520;
+    --lc-surface: #172032;
+    --lc-surface-2: #1E2D42;
+    --lc-sidebar-bg: #111C2B;
+    --lc-border: #1F3048;
+    --lc-border-light: #253A52;
+    --lc-accent: #2E8EFF;
+    --lc-accent-dim: rgba(46, 142, 255, 0.12);
+    --lc-accent-hover: rgba(46, 142, 255, 0.08);
+    --lc-text-primary: #E8F0F8;
+    --lc-text-secondary: #7A95B0;
+    --lc-text-disabled: #3D5270;
+    --lc-success: #22C55E;
+    --lc-warning: #F59E0B;
+    --lc-error: #EF4444;
+    --lc-info: #38BDF8;
+    --lc-success-bg: rgba(34, 197, 94, 0.10);
+    --lc-warning-bg: rgba(245, 158, 11, 0.10);
+    --lc-error-bg: rgba(239, 68, 68, 0.10);
+    --lc-info-bg: rgba(56, 189, 248, 0.10);
+    --lc-neutral-bg: rgba(122, 149, 176, 0.10);
+    --lc-font-body: 'DM Sans', system-ui, sans-serif;
+    --lc-font-mono: 'IBM Plex Mono', 'Consolas', monospace;
+    --lc-radius: 6px;
+    --lc-radius-sm: 3px;
+    --lc-radius-lg: 10px;
+    --lc-sidebar-w: 240px;
+    --lc-sidebar-width: 240px; /* Alias for layout fixes */
+    --lc-sidebar-mini-w: 64px;
+    --lc-sidebar-mini-width: 64px; /* Alias for layout fixes */
+    --lc-topbar-h: 52px;
+    --lc-bnav-h: 64px;
+    --lc-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --lc-shadow-card: 0 1px 4px rgba(0,0,0,0.5), 0 0 0 1px var(--lc-border);
+    --lc-shadow-panel: 0 8px 32px rgba(0,0,0,0.7);
+}
+
+/* ── Reset & base ────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--lc-bg);
+    color: var(--lc-text-primary);
+    font-family: var(--lc-font-body);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+    body.mud-dialog-open {
+        overflow: hidden;
+        width: 100%;
+    }
+
+a {
+    color: var(--lc-accent);
+    text-decoration: none;
+}
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+/* ── Shell layout ────────────────────────────────────────────────────────── */
+.lc-shell {
+    display: grid;
+    grid-template-columns: var(--lc-sidebar-w) 1fr;
+    grid-template-rows: 1fr;
+    min-height: 100dvh;
+    transition: grid-template-columns var(--lc-transition);
+    overflow: hidden;
+}
+
+.lc-shell--collapsed {
+    grid-template-columns: var(--lc-sidebar-mini-w) 1fr;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+.lc-sidebar {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
+    background: var(--lc-sidebar-bg);
+    border-right: 1px solid var(--lc-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    transition: width var(--lc-transition);
+}
+
+.lc-sidebar__logo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    height: var(--lc-topbar-h);
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--lc-border);
+    gap: 8px;
+}
+
+.lc-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.lc-logo__mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--lc-accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.lc-logo__wordmark {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.lc-logo__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--lc-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lc-logo__org {
+    font-size: 11px;
+    color: var(--lc-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lc-sidebar__toggle {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--lc-border);
+    border-radius: 6px;
+    background: var(--lc-surface-2);
+    color: var(--lc-text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 150ms, color 150ms, border-color 150ms;
+    padding: 0;
+}
+
+    .lc-sidebar__toggle:hover {
+        background: var(--lc-accent-dim);
+        color: var(--lc-accent);
+        border-color: var(--lc-accent);
+    }
+
+.lc-sidebar__nav {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px 8px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    scrollbar-width: none;
+}
+
+    .lc-sidebar__nav::-webkit-scrollbar {
+        display: none;
+    }
+
+.lc-nav-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-bottom: 8px;
+}
+
+.lc-nav-section__label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--lc-text-disabled);
+    text-transform: uppercase;
+    padding: 4px 10px 2px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* ── Nav item ───────────────────────────────────────────────────────────── */
+.lc-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--lc-radius);
+    color: var(--lc-text-secondary);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 150ms, color 150ms;
+    position: relative;
+    white-space: nowrap;
+    overflow: hidden;
+    min-height: 36px;
+}
+
+    .lc-nav-item:hover {
+        background: var(--lc-accent-hover);
+        color: var(--lc-text-primary);
+        text-decoration: none;
+    }
+
+.lc-nav-item--active {
+    background: var(--lc-accent-dim);
+    color: var(--lc-accent);
+    font-weight: 600;
+}
+
+.lc-nav-item__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+}
+
+.lc-nav-item__label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lc-nav-item__indicator {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 16px;
+    background: var(--lc-accent);
+    border-radius: 3px 0 0 3px;
+}
+
+.lc-nav-item--mini {
+    padding: 8px;
+    justify-content: center;
+    gap: 0;
+}
+
+    .lc-nav-item--mini .lc-nav-item__label {
+        display: none;
+    }
+
+    .lc-nav-item--mini .lc-nav-item__icon {
+        width: 24px;
+        height: 24px;
+    }
+
+/* ── User card at bottom ────────────────────────────────────────────────── */
+.lc-sidebar__user {
+    flex-shrink: 0;
+    padding: 8px;
+    border-top: 1px solid var(--lc-border);
+}
+
+.lc-user-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    border-radius: var(--lc-radius);
+}
+
+.lc-user-card__avatar-link {
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.lc-user-card__avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--lc-accent-dim);
+    border: 1px solid var(--lc-accent);
+    color: var(--lc-accent);
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: border-color 150ms;
+}
+
+.lc-user-card__avatar-link:hover .lc-user-card__avatar {
+    border-color: var(--lc-accent);
+    background: var(--lc-accent);
+    color: #fff;
+}
+
+.lc-user-card__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.lc-user-card__name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--lc-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lc-user-card__role {
+    font-size: 10px;
+    color: var(--lc-text-secondary);
+    white-space: nowrap;
+}
+
+.lc-user-avatar-mini {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--lc-accent-dim);
+    border: 1px solid var(--lc-accent);
+    color: var(--lc-accent);
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 150ms;
+}
+
+    .lc-user-avatar-mini:hover {
+        background: var(--lc-accent);
+        color: #fff;
+    }
+
+/* ── Main content ────────────────────────────────────────────────────────── */
+.lc-main {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 100dvh;
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
+.lc-topbar {
+    display: flex;
+    align-items: center;
+    height: var(--lc-topbar-h);
+    padding: 0 16px;
+    gap: 12px;
+    border-bottom: 1px solid var(--lc-border);
+    background: var(--lc-sidebar-bg);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    flex-shrink: 0;
+}
+
+.lc-topbar__mobile-menu {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: none;
+    color: var(--lc-text-secondary);
+    cursor: pointer;
+    border-radius: var(--lc-radius);
+    flex-shrink: 0;
+    padding: 0;
+}
+
+    .lc-topbar__mobile-menu:hover {
+        background: var(--lc-surface-2);
+        color: var(--lc-text-primary);
+    }
+
+.lc-topbar__context {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.lc-topbar__title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--lc-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lc-topbar__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.lc-topbar__user-mobile {
+    display: none;
+}
+
+/* ── Page content ────────────────────────────────────────────────────────── */
+.lc-content {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    min-width: 0;
+}
+
+/* ── Page header ─────────────────────────────────────────────────────────── */
+.lc-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.lc-page-header__left {
+    min-width: 0;
+    flex: 1;
+}
+
+.lc-page-header__title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--lc-text-primary);
+    letter-spacing: -0.3px;
+    line-height: 1.3;
+}
+
+.lc-page-header__subtitle {
+    margin: 3px 0 0;
+    font-size: 13px;
+    color: var(--lc-text-secondary);
+}
+
+.lc-page-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.lc-card {
+    background: var(--lc-surface);
+    border: 1px solid var(--lc-border);
+    border-radius: var(--lc-radius);
+    overflow: hidden;
+}
+
+.lc-card--padded .lc-card__body {
+    padding: 20px;
+}
+
+.lc-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--lc-border);
+    gap: 12px;
+}
+
+.lc-card__title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--lc-text-primary);
+}
+
+/* ── KPI Cards ───────────────────────────────────────────────────────────── */
+.lc-kpi {
+    background: var(--lc-surface);
+    border: 1px solid var(--lc-border);
+    border-radius: var(--lc-radius);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lc-kpi__number {
+    font-family: var(--lc-font-mono);
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--lc-text-primary);
+}
+
+.lc-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+/* ── Tables ──────────────────────────────────────────────────────────────── */
+.mud-table {
+    background: transparent !important;
+}
+
+.mud-table-head .mud-table-cell {
+    background: var(--lc-surface) !important;
+    color: var(--lc-text-secondary) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    border-bottom: 1px solid var(--lc-border) !important;
+    padding: 10px 16px !important;
+}
+
+.mud-table-body .mud-table-row:hover {
+    background: rgba(46, 142, 255, 0.04) !important;
+}
+
+.mud-table-body .mud-table-cell {
+    padding: 12px 16px !important;
+    font-size: 13.5px !important;
+    color: var(--lc-text-primary) !important;
+    border-bottom: 1px solid var(--lc-border) !important;
+}
+
+/* ── MudBlazor Dialogs (Consolidated with scrolling fixes) ──────────────── */
+.mud-dialog {
+    background: var(--lc-surface) !important;
+    border: 1px solid var(--lc-border) !important;
+    border-radius: var(--lc-radius) !important;
+    box-shadow: var(--lc-shadow-panel) !important;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    max-height: 90dvh;
+    overflow: hidden;
+    z-index: 3001 !important;
+}
+
+.mud-dialog-title {
+    padding: 20px 24px 16px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    border-bottom: 1px solid var(--lc-border);
+    color: var(--lc-text-primary) !important;
+    flex-shrink: 0;
+}
+
+.mud-dialog-content {
+    padding: 24px !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding-right: 8px;
+}
+
+.mud-dialog-actions {
+    padding: 16px 24px !important;
+    border-top: 1px solid var(--lc-border);
+    justify-content: flex-end !important;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.mud-overlay {
+    z-index: 3000 !important;
+    background-color: rgba(8, 14, 24, 0.80) !important;
+}
+
+/* ── Mobile bottom nav ─────────────────────────────────────────────────── */
+.lc-bottom-nav {
+    display: none;
+}
+
+/* ── Mobile drawer ───────────────────────────────────────────────────────── */
+.lc-mobile-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(8, 14, 24, 0.7);
+}
+
+.lc-mobile-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 85vw;
+    z-index: 201;
+    background: var(--lc-sidebar-bg);
+    border-right: 1px solid var(--lc-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: lc-slide-in-left 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes lc-slide-in-left {
+    from {
+        transform: translateX(-100%);
+        opacity: 0.6;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.lc-mobile-drawer__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    height: 52px;
+    border-bottom: 1px solid var(--lc-border);
+    flex-shrink: 0;
+}
+
+.lc-mobile-drawer__nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.lc-mobile-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--lc-radius);
+    color: var(--lc-text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 150ms;
+}
+
+.lc-mobile-nav-item--active {
+    background: var(--lc-accent-dim);
+    color: var(--lc-accent);
+}
+
+/* ── Utilities ───────────────────────────────────────────────────────────── */
+.lc-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.lc-amount {
+    font-family: var(--lc-font-mono);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* ── Scrollbars ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--lc-border-light);
+    border-radius: 3px;
+}
+
+.mud-dialog-content::-webkit-scrollbar {
+    width: 5px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+    .lc-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .lc-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .lc-sidebar {
+        display: none;
+    }
+
+    .lc-main {
+        grid-column: 1;
+        padding-bottom: 60px;
+    }
+
+    .lc-topbar__mobile-menu, .lc-topbar__user-mobile {
+        display: flex;
+    }
+
+    .lc-bottom-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: var(--lc-sidebar-bg);
+        border-top: 1px solid var(--lc-border);
+        z-index: 100;
+    }
+
+    .lc-bnav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: var(--lc-text-secondary);
+        font-size: 10px;
+        text-decoration: none;
+    }
+
+    .lc-bnav-item--active {
+        color: var(--lc-accent);
+    }
+
+    .lc-page-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .lc-page-header__actions {
+        width: 100%;
+    }
+
+    .mud-dialog {
+        max-height: 95dvh;
+        margin: 8px;
+        width: calc(100vw - 16px) !important;
+        max-width: calc(100vw - 16px) !important;
+    }
+}
+
+"""
+
+with open("app.css", "w", encoding="utf-8") as f:
+f.write(css_content)

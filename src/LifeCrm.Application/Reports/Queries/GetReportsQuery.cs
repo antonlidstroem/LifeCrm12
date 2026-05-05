@@ -1,5 +1,5 @@
-using LifeCrm.Application.Common.DTOs;
-using LifeCrm.Application.Reports.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
+using LifeCrm.Contracts.Reports.DTOs;
 using LifeCrm.Core.Enums;
 using LifeCrm.Core.Interfaces;
 using MediatR;

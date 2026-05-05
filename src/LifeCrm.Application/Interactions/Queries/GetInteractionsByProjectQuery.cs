@@ -1,14 +1,14 @@
-using LifeCrm.Application.Interactions.DTOs;
+using LifeCrm.Contracts.Interactions.DTOs;
 using LifeCrm.Core.Interfaces;
 using MediatR;
 
 namespace LifeCrm.Application.Interactions.Queries;
 
-public class GetInteractionsByProjectQuery : IRequest<IReadOnlyList<InteractionDto>>
-{
-    public Guid ProjectId { get; }
-    public GetInteractionsByProjectQuery(Guid id) { ProjectId = id; }
-}
+//public class GetInteractionsByProjectQuery : IRequest<IReadOnlyList<InteractionDto>>
+//{
+//    public Guid ProjectId { get; }
+//    public GetInteractionsByProjectQuery(Guid id) { ProjectId = id; }
+//}
 
 public sealed class GetInteractionsByProjectHandler : IRequestHandler<GetInteractionsByProjectQuery, IReadOnlyList<InteractionDto>>
 {

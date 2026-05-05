@@ -1,8 +1,8 @@
 using LifeCrm.Application.Campaigns.Commands;
-using LifeCrm.Application.Campaigns.DTOs;
+using LifeCrm.Contracts.Campaigns.DTOs;
 using LifeCrm.Application.Campaigns.Queries;
-using LifeCrm.Application.Common.DTOs;
-using LifeCrm.Application.Newsletters.DTOs;
+using LifeCrm.Contracts.Common.DTOs;
+using LifeCrm.Contracts.Newsletters.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,8 +13,11 @@ public class CampaignsController : ApiControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<CampaignListDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll([FromQuery] PaginationParams paging, CancellationToken ct)
-        => OkResponse(await Mediator.Send(new GetCampaignsQuery(paging), ct));
+    public async Task<IActionResult> GetAll(
+        [FromQuery] PaginationParams paging,
+        [FromQuery] Guid? projectId,
+        CancellationToken ct)
+        => OkResponse(await Mediator.Send(new GetCampaignsQuery(paging, projectId), ct));
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
@@ -47,11 +50,13 @@ public class CampaignsController : ApiControllerBase
 
     [HttpGet("{id:guid}/newsletter/preview")]
     [Authorize(Policy = "FinanceOrAdmin")]
-    public async Task<IActionResult> PreviewNewsletter(Guid id, [FromQuery] string? tagFilter, CancellationToken ct)
+    public async Task<IActionResult> PreviewNewsletter(
+        Guid id, [FromQuery] string? tagFilter, CancellationToken ct)
         => OkResponse(await Mediator.Send(new PreviewNewsletterCommand(id, tagFilter), ct));
 
     [HttpPost("{id:guid}/newsletter/send")]
     [Authorize(Policy = "FinanceOrAdmin")]
-    public async Task<IActionResult> SendNewsletter(Guid id, [FromBody] CampaignSendNewsletterRequest request, CancellationToken ct)
+    public async Task<IActionResult> SendNewsletter(
+        Guid id, [FromBody] CampaignSendNewsletterRequest request, CancellationToken ct)
         => OkResponse(await Mediator.Send(new CampaignSendNewsletterCommand(id, request), ct));
 }

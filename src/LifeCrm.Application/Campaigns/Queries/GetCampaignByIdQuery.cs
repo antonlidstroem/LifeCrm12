@@ -1,4 +1,5 @@
-using LifeCrm.Application.Campaigns.DTOs;
+// src/LifeCrm.Application/Campaigns/Queries/GetCampaignByIdQuery.cs
+using LifeCrm.Contracts.Campaigns.DTOs;
 using LifeCrm.Application.Common.Exceptions;
 using LifeCrm.Core.Entities;
 using LifeCrm.Core.Interfaces;
@@ -20,17 +21,47 @@ public sealed class GetCampaignByIdHandler : IRequestHandler<GetCampaignByIdQuer
 
     public async Task<CampaignDto> Handle(GetCampaignByIdQuery q, CancellationToken ct)
     {
-        var c = await _uow.Campaigns.GetByIdAsync(q.CampaignId, ct)
+        // Use Select projection with subquery for Project name — avoids Include+Select conflict
+        var c = await _uow.Campaigns.Query()
+            .Where(x => x.Id == q.CampaignId)
+            .Select(x => new
+            {
+                x.Id,
+                x.Name,
+                x.Description,
+                x.Status,
+                x.BudgetGoal,
+                x.StartDate,
+                x.EndDate,
+                x.Notes,
+                x.ProjectId,
+                x.CreatedAt,
+                x.LastModifiedAt,
+                ProjectName = x.Project != null ? x.Project.Name : string.Empty,
+                TotalRaised = x.Donations.Where(d => !d.IsDeleted).Sum(d => (decimal?)d.Amount) ?? 0,
+                DonationCount = x.Donations.Count(d => !d.IsDeleted)
+            })
+            .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException(nameof(Campaign), q.CampaignId);
-        var raised = await _uow.Donations.Query().Where(d => d.CampaignId == c.Id).SumAsync(d => (decimal?)d.Amount, ct) ?? 0;
-        var count  = await _uow.Donations.CountAsync(d => d.CampaignId == c.Id, ct);
+
         return new CampaignDto
         {
-            Id = c.Id, Name = c.Name, Description = c.Description, Status = c.Status,
-            BudgetGoal = c.BudgetGoal, TotalRaised = raised,
-            ProgressPercent = c.BudgetGoal.HasValue && c.BudgetGoal > 0 ? Math.Round(raised / c.BudgetGoal.Value * 100, 1) : null,
-            StartDate = c.StartDate, EndDate = c.EndDate, Notes = c.Notes,
-            DonationCount = count, CreatedAt = c.CreatedAt, LastModifiedAt = c.LastModifiedAt
+            Id = c.Id,
+            Name = c.Name,
+            Description = c.Description,
+            Status = c.Status,
+            BudgetGoal = c.BudgetGoal,
+            TotalRaised = c.TotalRaised,
+            ProgressPercent = c.BudgetGoal.HasValue && c.BudgetGoal > 0
+                ? Math.Round(c.TotalRaised / c.BudgetGoal.Value * 100, 1) : null,
+            StartDate = c.StartDate,
+            EndDate = c.EndDate,
+            Notes = c.Notes,
+            ProjectId = c.ProjectId,
+            ProjectName = c.ProjectName,
+            DonationCount = c.DonationCount,
+            CreatedAt = c.CreatedAt,
+            LastModifiedAt = c.LastModifiedAt
         };
     }
 }

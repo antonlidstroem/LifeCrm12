@@ -1,0 +1,137 @@
+@* src/LifeCrm.Web/Components/Dialogs/UserFormDialog.razor
+   FIXED: Scrollable, proper English throughout *@
+@inject ApiClient Api
+@inject ISnackbar Snackbar
+
+<MudDialog Style="max-height:90vh;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@(_isEdit ? Icons.Material.Filled.Edit : Icons.Material.Filled.PersonAdd)"
+                     Class="mr-2 mb-n1" />
+            @(_isEdit ? "Edit User" : "New User")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <div Style="overflow-y:auto;max-height:calc(90vh - 140px);padding-right:8px;">
+            <MudGrid Spacing="2">
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_fullName" Label="Full name *"
+                                  Variant="Variant.Outlined" AutoFocus="true" />
+                </MudItem>
+                @if (!_isEdit)
+                {
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_email" Label="Email *"
+                                      Variant="Variant.Outlined" InputType="InputType.Email" />
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Email: @ExistingUser?.Email
+                        </MudText>
+                    </MudItem>
+                }
+                <MudItem xs="12">
+                    <MudSelect T="UserRole" @bind-Value="_role" Label="Role *" Variant="Variant.Outlined">
+                        @foreach (UserRole r in Enum.GetValues<UserRole>())
+                        {
+                            <MudSelectItem Value="r">@r</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_password"
+                                  Label="@(_isEdit ? "New password (leave blank to keep current)" : "Password *")"
+                                  InputType="@(_showPw ? InputType.Text : InputType.Password)"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@(_showPw ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                  OnAdornmentClick="@(() => _showPw = !_showPw)"
+                                  HelperText="Minimum 10 characters" />
+                </MudItem>
+            </MudGrid>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   OnClick="Submit" Disabled="_saving">
+            @(_saving ? "Saving…" : (_isEdit ? "Save" : "Create"))
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid? UserId { get; set; }
+    [Parameter] public UserSummaryDto? ExistingUser { get; set; }
+
+    private bool _isEdit => UserId.HasValue;
+    private string _fullName = string.Empty, _email = string.Empty, _password = string.Empty;
+    private UserRole _role = UserRole.Manager;
+    private bool _saving, _showPw;
+
+    protected override void OnInitialized()
+    {
+        if (ExistingUser is not null)
+        {
+            _fullName = ExistingUser.FullName;
+            _role     = ExistingUser.Role;
+        }
+    }
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_fullName))
+        {
+            Snackbar.Add("Name is required.", Severity.Warning); return;
+        }
+        if (!_isEdit && string.IsNullOrWhiteSpace(_email))
+        {
+            Snackbar.Add("Email is required.", Severity.Warning); return;
+        }
+        if (!_isEdit && _password.Length < 10)
+        {
+            Snackbar.Add("Password must be at least 10 characters.", Severity.Warning); return;
+        }
+        if (_isEdit && !string.IsNullOrEmpty(_password) && _password.Length < 10)
+        {
+            Snackbar.Add("Password must be at least 10 characters.", Severity.Warning); return;
+        }
+
+        _saving = true;
+        try
+        {
+            if (_isEdit)
+            {
+                var req = new UpdateUserRequest
+                {
+                    FullName    = _fullName,
+                    NewPassword = string.IsNullOrWhiteSpace(_password) ? null : _password,
+                    Role        = _role
+                };
+                var res = await Api.UpdateUserAsync(UserId!.Value, req);
+                if (res.Success) { Snackbar.Add("User updated.", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
+                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+            }
+            else
+            {
+                var req = new CreateUserRequest
+                {
+                    FullName = _fullName,
+                    Email    = _email,
+                    Password = _password,
+                    Role     = _role
+                };
+                var res = await Api.CreateUserAsync(req);
+                if (res.Success) { Snackbar.Add("User created.", Severity.Success); MudDialog.Close(DialogResult.Ok(res.Data)); }
+                else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+            }
+        }
+        finally { _saving = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

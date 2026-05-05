@@ -1,0 +1,14 @@
+@* src/LifeCrm.Web/Layout/EmptyLayout.razor *@
+@using LifeCrm.Web.Theme
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="_theme" IsDarkMode="true" />
+
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+@Body
+
+@code {
+    private readonly MudTheme _theme = LifeCrmTheme.Create();
+}

@@ -6,6 +6,7 @@
     <RootNamespace>LifeCrm.Application</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\LifeCrm.Contracts\LifeCrm.Contracts.csproj" />
     <ProjectReference Include="..\LifeCrm.Core\LifeCrm.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
@@ -20,5 +21,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Common\Security\" />
+    <Folder Include="Users\" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,311 @@
+@* src/LifeCrm.Web/Pages/Login.razor *@
+@page "/login"
+@using LifeCrm.Web.Services
+@using LifeCrm.Contracts.Common.DTOs
+@using Blazored.LocalStorage
+@layout EmptyLayout
+@inject AuthApiClient AuthClient
+@inject AppState AppState
+@inject ILocalStorageService Storage
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Sign In — LifeCrm</PageTitle>
+
+<div class="lc-login">
+    <!-- Left panel: brand -->
+    <div class="lc-login__brand">
+        <div class="lc-login__brand-inner">
+            <div class="lc-logo-large">
+                <div class="lc-logo__mark lc-logo__mark--lg">L</div>
+                <div class="lc-logo__wordmark">
+                    <span class="lc-logo__name">LifeCrm</span>
+                    <span class="lc-logo__tagline">Relationship &amp; Donation Management</span>
+                </div>
+            </div>
+
+            <div class="lc-login__features">
+                <div class="lc-login__feature">
+                    <MudIcon Icon="@Icons.Material.Outlined.VolunteerActivism" />
+                    <span>Track donations and generate receipts</span>
+                </div>
+                <div class="lc-login__feature">
+                    <MudIcon Icon="@Icons.Material.Outlined.People" />
+                    <span>Manage contacts and interactions</span>
+                </div>
+                <div class="lc-login__feature">
+                    <MudIcon Icon="@Icons.Material.Outlined.Email" />
+                    <span>Send newsletters to your community</span>
+                </div>
+                <div class="lc-login__feature">
+                    <MudIcon Icon="@Icons.Material.Outlined.Assignment" />
+                    <span>Submit and review mission reports</span>
+                </div>
+            </div>
+        </div>
+        <div class="lc-login__grid" aria-hidden="true"></div>
+    </div>
+
+    <!-- Right panel: form -->
+    <div class="lc-login__form-panel">
+        <div class="lc-login__form-inner">
+            <div class="lc-login__mobile-logo">
+                <div class="lc-logo__mark">L</div>
+                <span class="lc-logo__name">LifeCrm</span>
+            </div>
+
+            <div class="lc-login__heading">
+                <h1>Welcome back</h1>
+                <p>Sign in to your organisation account</p>
+            </div>
+
+            <div class="lc-login__fields">
+                <MudTextField @bind-Value="_email"
+                              Label="Email address"
+                              InputType="InputType.Email"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Outlined.AlternateEmail"
+                              AdornmentColor="Color.Default"
+                              FullWidth="true"
+                              Disabled="_loading"
+                              Immediate="true" />
+
+                <MudTextField @bind-Value="_password"
+                              Label="Password"
+                              InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_showPassword ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)"
+                              OnAdornmentClick="() => _showPassword = !_showPassword"
+                              AdornmentColor="Color.Default"
+                              FullWidth="true"
+                              Disabled="_loading"
+                              Immediate="true"
+                              OnKeyDown="OnKeyDown" />
+            </div>
+
+            @if (_error is not null)
+            {
+                <div class="lc-login__error">
+                    <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" />
+                    <span>@_error</span>
+                </div>
+            }
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Size="Size.Large"
+                       Disabled="_loading"
+                       OnClick="LoginAsync"
+                       Class="lc-login__submit">
+                @if (_loading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Inherit"
+                                         Style="width:18px;height:18px;margin-right:8px;" />
+                    <span>Signing in…</span>
+                }
+                else
+                {
+                    <span>Sign in</span>
+                }
+            </MudButton>
+
+            <div class="lc-login__footer">
+                <span>Having trouble? Contact your administrator.</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .lc-login {
+        min-height: 100dvh;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .lc-login__brand {
+        background: var(--lc-sidebar-bg);
+        border-right: 1px solid var(--lc-border);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 48px;
+    }
+
+    .lc-login__brand-inner {
+        position: relative; z-index: 2;
+        display: flex; flex-direction: column;
+        gap: 48px;
+        max-width: 400px;
+        width: 100%;
+    }
+
+    .lc-logo-large { display: flex; align-items: center; gap: 16px; }
+
+    .lc-logo__mark--lg {
+        width: 52px; height: 52px;
+        font-size: 24px; font-weight: 700;
+        background: var(--lc-accent);
+        color: #fff;
+        border-radius: var(--lc-radius);
+        display: flex; align-items: center; justify-content: center;
+    }
+
+    .lc-logo__tagline {
+        font-size: 12px;
+        color: var(--lc-text-secondary);
+        margin-top: 2px;
+        display: block;
+    }
+
+    .lc-login__features { display: flex; flex-direction: column; gap: 20px; }
+
+    .lc-login__feature {
+        display: flex; align-items: center; gap: 14px;
+        color: var(--lc-text-secondary);
+        font-size: 14px;
+    }
+
+    .lc-login__feature .mud-icon-root { color: var(--lc-accent); opacity: 0.8; }
+
+    .lc-login__grid {
+        position: absolute; inset: 0; z-index: 1;
+        background-image:
+            linear-gradient(var(--lc-border) 1px, transparent 1px),
+            linear-gradient(90deg, var(--lc-border) 1px, transparent 1px);
+        background-size: 48px 48px;
+        opacity: 0.4;
+        mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+    }
+
+    .lc-login__form-panel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 48px 32px;
+        background: var(--lc-bg);
+    }
+
+    .lc-login__form-inner {
+        width: 100%;
+        max-width: 380px;
+        display: flex; flex-direction: column;
+        gap: 28px;
+    }
+
+    .lc-login__mobile-logo {
+        display: none;
+        align-items: center; gap: 10px;
+        margin-bottom: 8px;
+    }
+
+    .lc-login__heading h1 {
+        margin: 0;
+        font-size: 24px; font-weight: 600;
+        color: var(--lc-text-primary);
+        letter-spacing: -0.4px;
+    }
+
+    .lc-login__heading p {
+        margin: 6px 0 0;
+        font-size: 14px;
+        color: var(--lc-text-secondary);
+    }
+
+    .lc-login__fields { display: flex; flex-direction: column; gap: 16px; }
+
+    .lc-login__error {
+        display: flex; align-items: center; gap: 8px;
+        background: var(--lc-error-bg);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        border-radius: var(--lc-radius);
+        padding: 10px 14px;
+        color: var(--lc-error);
+        font-size: 13px;
+    }
+
+    .lc-login__submit {
+        height: 44px !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        margin-top: 4px;
+    }
+
+    .lc-login__footer {
+        text-align: center;
+        font-size: 12px;
+        color: var(--lc-text-disabled);
+    }
+
+    @@media (max-width: 768px) {
+        .lc-login { grid-template-columns: 1fr; }
+        .lc-login__brand { display: none; }
+        .lc-login__form-panel {
+            padding: 32px 20px;
+            align-items: flex-start;
+            padding-top: 60px;
+        }
+        .lc-login__mobile-logo { display: flex; }
+    }
+</style>
+
+@code {
+    // Use plain mutable fields — LoginRequest is a record with init-only properties
+    // which are incompatible with Blazor two-way @bind-Value binding.
+    private string _email    = string.Empty;
+    private string _password = string.Empty;
+    private bool   _loading      = false;
+    private bool   _showPassword = false;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (AppState.IsAuthenticated)
+            Nav.NavigateTo("/", forceLoad: false);
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoginAsync();
+    }
+
+    private async Task LoginAsync()
+    {
+        _loading = true;
+        _error   = null;
+
+        try
+        {
+            var resp = await AuthClient.LoginAsync(new LoginRequest
+            {
+                Email    = _email,
+                Password = _password
+            });
+
+            if (!resp.Success || resp.Data is null)
+            {
+                _error = resp.Errors.FirstOrDefault() ?? "Sign in failed. Check your credentials.";
+                return;
+            }
+
+            await AuthClient.SaveTokenAsync(resp.Data.Token);
+            AppState.SetUser(resp.Data);
+            await AppState.PersistAsync(Storage);
+
+            Nav.NavigateTo("/", forceLoad: false);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Connection error: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

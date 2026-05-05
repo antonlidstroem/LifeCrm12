@@ -1,0 +1,188 @@
+@* src/LifeCrm.Web/Pages/Donations/DonationDetailPage.razor *@
+@page "/donations/{Id:guid}"
+@using LifeCrm.Web.Components.Dialogs
+@inject DonationsApiClient DonationsApi
+@inject AppState AppState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager Nav
+
+<PageTitle>Donation Detail — LifeCrm</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="@(() => Nav.NavigateTo("/donations"))" />
+    <MudText Typo="Typo.h5">Donation Detail</MudText>
+    <MudSpacer />
+    @if (AppState.IsFinanceOrAdmin && _donation is not null)
+    {
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Edit"
+                   OnClick="OpenEditDialog" Class="mr-2">Edit</MudButton>
+    }
+    @if (AppState.IsAdmin && _donation is not null)
+    {
+        <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                   StartIcon="@Icons.Material.Filled.Delete"
+                   OnClick="DeleteAsync">Delete</MudButton>
+    }
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (_donation is not null)
+{
+    <MudGrid>
+        <MudItem xs="12" md="5">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudStack AlignItems="AlignItems.Center" Class="mb-4">
+                        <div class="lc-contact-avatar"
+                             style="width:64px;height:64px;font-size:24px;font-weight:600;border-radius:50%;
+                                    background:var(--lc-accent-dim);border:2px solid var(--lc-accent);
+                                    display:flex;align-items:center;justify-content:center;color:var(--lc-accent);">
+                            $
+                        </div>
+                        <MudText Typo="Typo.h4">$@_donation.Amount.ToString("N2")</MudText>
+                        <StatusBadge Text="@_donation.Status.ToString()"
+                                     Variant="@StatusBadge.VariantFromDonationStatus(_donation.Status)" />
+                    </MudStack>
+
+                    <MudDivider Class="my-3" />
+
+                    <MudList T="string" Dense="true">
+                        <MudListItem Icon="@Icons.Material.Filled.Person">
+                            <MudLink Href="@($"/contacts/{_donation.ContactId}")">
+                                @_donation.ContactName
+                            </MudLink>
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.CalendarToday">
+                            @_donation.Date.ToString("MMMM d, yyyy")
+                        </MudListItem>
+                        @if (!string.IsNullOrEmpty(_donation.PaymentMethod))
+                        {
+                            <MudListItem Icon="@Icons.Material.Filled.Payment">
+                                @_donation.PaymentMethod
+                            </MudListItem>
+                        }
+                        @if (_donation.CampaignId.HasValue && !string.IsNullOrEmpty(_donation.CampaignName))
+                        {
+                            <MudListItem Icon="@Icons.Material.Filled.Campaign">
+                                <MudLink Href="@($"/campaigns/{_donation.CampaignId}")">
+                                    @_donation.CampaignName
+                                </MudLink>
+                            </MudListItem>
+                        }
+                        @if (_donation.ProjectId.HasValue && !string.IsNullOrEmpty(_donation.ProjectName))
+                        {
+                            <MudListItem Icon="@Icons.Material.Filled.FolderOpen">
+                                <MudLink Href="@($"/projects/{_donation.ProjectId}")">
+                                    @_donation.ProjectName
+                                </MudLink>
+                            </MudListItem>
+                        }
+                        @if (!string.IsNullOrEmpty(_donation.Notes))
+                        {
+                            <MudListItem Icon="@Icons.Material.Filled.Notes">
+                                @_donation.Notes
+                            </MudListItem>
+                        }
+                    </MudList>
+
+                    <MudDivider Class="my-3" />
+
+                    @* Receipt actions *@
+                    @if (AppState.IsFinanceOrAdmin)
+                    {
+                       @*  @if (_donation.ReceiptDocumentId.HasValue)
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Download"
+                                       FullWidth="true" OnClick="DownloadReceipt" Class="mb-2">
+                                Download Receipt
+                            </MudButton>
+                        }
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                                   StartIcon="@Icons.Material.Filled.Receipt"
+                                   FullWidth="true" OnClick="OpenReceiptDialog">
+                            @(_donation.ReceiptDocumentId.HasValue ? "Regenerate Receipt" : "Generate Receipt")
+                        </MudButton> *@
+                    }
+
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Recorded @_donation.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                    </MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+}
+else
+{
+    <MudAlert Severity="Severity.Warning">Donation not found.</MudAlert>
+    <MudButton Class="mt-2" Href="/donations">Back to Donations</MudButton>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private DonationDto? _donation;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var res = await DonationsApi.GetDonationAsync(Id);
+        _donation = res.Data;
+        _loading = false;
+    }
+
+    private async Task OpenEditDialog()
+    {
+        var options = new DialogOptions
+        {
+            CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true,
+            BackdropClick = false, CloseOnEscapeKey = true
+        };
+        var d = DialogService.Show<DonationFormDialog>("Edit Donation",
+            new DialogParameters { ["DonationId"] = Id }, options);
+        if (!(await d.Result).Canceled) await LoadAsync();
+    }
+
+    private async Task OpenReceiptDialog()
+    {
+        var options = new DialogOptions
+        {
+            CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true,
+            BackdropClick = false, CloseOnEscapeKey = true
+        };
+        var d = DialogService.Show<GenerateReceiptDialog>("Generate Receipt",
+            new DialogParameters { ["DonationId"] = Id }, options);
+        var result = await d.Result;
+        if (!result.Canceled) await LoadAsync();
+    }
+
+    private async Task DownloadReceipt()
+    {
+        // if (_donation?.ReceiptDocumentId == null) return;
+        // var res = await DonationsApi.DownloadReceiptAsync(Id, _donation.ReceiptDocumentId.Value);
+        // if (!res.Success) Snackbar.Add("Download failed.", Severity.Error);
+    }
+
+    private async Task DeleteAsync()
+    {
+        var p = new DialogParameters
+        {
+            ["Title"]   = "Delete Donation",
+            ["Message"] = $"Delete this donation of ${_donation?.Amount:N2}? This cannot be undone."
+        };
+        var confirm = DialogService.Show<ConfirmDialog>("", p);
+        if ((await confirm.Result).Canceled) return;
+        var res = await DonationsApi.DeleteDonationAsync(Id);
+        if (res.Success) { Snackbar.Add("Donation deleted.", Severity.Success); Nav.NavigateTo("/donations"); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error.", Severity.Error);
+    }
+}

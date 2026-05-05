@@ -1,0 +1,56 @@
+@* src/LifeCrm.Web/Shared/StatusBadge.razor *@
+
+<span class="lc-badge lc-badge--@Variant.ToLower() @CssClass">@Text</span>
+
+@code {
+    /// <summary>Text shown in the badge.</summary>
+    [Parameter] public string Text    { get; set; } = "";
+
+    /// <summary>
+    /// Semantic color variant: success | warning | error | info | neutral | primary
+    /// </summary>
+    [Parameter] public string Variant { get; set; } = "neutral";
+
+    [Parameter] public string CssClass { get; set; } = "";
+
+    // ── Convenience factory helpers ──────────────────────────────────────────
+
+    public static string VariantFromDonationStatus(Core.Enums.DonationStatus s) => s switch
+    {
+        Core.Enums.DonationStatus.Confirmed => "success",
+        Core.Enums.DonationStatus.Pending   => "warning",
+        Core.Enums.DonationStatus.Refunded  => "info",
+        Core.Enums.DonationStatus.Voided    => "error",
+        Core.Enums.DonationStatus.Cancelled => "error",
+        _                                   => "neutral"
+    };
+
+    public static string VariantFromCampaignStatus(Core.Enums.CampaignStatus s) => s switch
+    {
+        Core.Enums.CampaignStatus.Active    => "success",
+        Core.Enums.CampaignStatus.Completed => "info",
+        Core.Enums.CampaignStatus.Draft     => "neutral",
+        Core.Enums.CampaignStatus.Paused    => "warning",
+        Core.Enums.CampaignStatus.Cancelled => "error",
+        _                                   => "neutral"
+    };
+
+    public static string VariantFromProjectStatus(Core.Enums.ProjectStatus s) => s switch
+    {
+        Core.Enums.ProjectStatus.Active    => "success",
+        Core.Enums.ProjectStatus.Planning  => "warning",
+        Core.Enums.ProjectStatus.Completed => "info",
+        Core.Enums.ProjectStatus.OnHold    => "warning",
+        Core.Enums.ProjectStatus.Archived  => "neutral",
+        _                                  => "neutral"
+    };
+
+    public static string VariantFromReportStatus(Core.Enums.ReportStatus s) => s switch
+    {
+        Core.Enums.ReportStatus.Draft               => "neutral",
+        Core.Enums.ReportStatus.Submitted           => "warning",
+        Core.Enums.ReportStatus.Approved            => "success",
+        Core.Enums.ReportStatus.ReturnedForRevision => "error",
+        _                                           => "neutral"
+    };
+}

@@ -1,6 +1,6 @@
 using LifeCrm.Application.Common.Behaviours;
 using LifeCrm.Application.Common.Exceptions;
-using LifeCrm.Application.Contacts.DTOs;
+using LifeCrm.Contracts.Contacts.DTOs;
 using LifeCrm.Core.Entities;
 using LifeCrm.Core.Interfaces;
 using MediatR;

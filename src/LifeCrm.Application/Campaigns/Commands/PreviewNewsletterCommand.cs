@@ -1,5 +1,5 @@
 using LifeCrm.Application.Common.Exceptions;
-using LifeCrm.Application.Newsletters.DTOs;
+using LifeCrm.Contracts.Newsletters.DTOs;
 using LifeCrm.Core.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

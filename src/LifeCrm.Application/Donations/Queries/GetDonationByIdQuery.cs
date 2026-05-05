@@ -1,5 +1,5 @@
 using LifeCrm.Application.Common.Exceptions;
-using LifeCrm.Application.Donations.DTOs;
+using LifeCrm.Contracts.Donations.DTOs;
 using LifeCrm.Core.Entities;
 using LifeCrm.Core.Interfaces;
 using MediatR;

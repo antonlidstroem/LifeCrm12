@@ -19,6 +19,11 @@ builder.Services.AddControllers().AddJsonOptions(opts =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
 
+if (!builder.Environment.IsDevelopment())
+{
+    builder.Services.AddApplicationInsightsTelemetry();
+}
+
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddApiAuthorization();
 builder.Services.AddApiCors(builder.Configuration);
