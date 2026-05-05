@@ -179,34 +179,35 @@ public static class LifeCrmTheme
 
         Shadows = new Shadow
         {
-            Elevation = new[]
-            {
-                "none",
-                "0 1px 3px rgba(0,0,0,0.4)",
-                "0 2px 6px rgba(0,0,0,0.5)",
-                "0 4px 12px rgba(0,0,0,0.5)",
-                "0 6px 20px rgba(0,0,0,0.6)",
-                "0 8px 28px rgba(0,0,0,0.6)",
-                "0 12px 36px rgba(0,0,0,0.7)",
-                "0 16px 48px rgba(0,0,0,0.7)",
-                "0 20px 60px rgba(0,0,0,0.8)",
-                "0 24px 72px rgba(0,0,0,0.8)",
-                "0 28px 84px rgba(0,0,0,0.8)",
-                "0 32px 96px rgba(0,0,0,0.85)",
-                "0 36px 108px rgba(0,0,0,0.85)",
-                "0 40px 120px rgba(0,0,0,0.9)",
-                "0 44px 132px rgba(0,0,0,0.9)",
-                "0 48px 144px rgba(0,0,0,0.9)",
-                "0 52px 156px rgba(0,0,0,0.92)",
-                "0 56px 168px rgba(0,0,0,0.92)",
-                "0 60px 180px rgba(0,0,0,0.94)",
-                "0 64px 192px rgba(0,0,0,0.94)",
-                "0 68px 204px rgba(0,0,0,0.95)",
-                "0 72px 216px rgba(0,0,0,0.95)",
-                "0 76px 228px rgba(0,0,0,0.96)",
-                "0 80px 240px rgba(0,0,0,0.96)",
-                "0 84px 252px rgba(0,0,0,0.97)",
-            }
+            // Vi skapar en array med exakt 25 platser för att garantera att index inte hamnar utanför
+            Elevation = new string[]
+    {
+        "none",                                  // 0
+        "0 1px 3px rgba(0,0,0,0.4)",             // 1
+        "0 2px 6px rgba(0,0,0,0.5)",             // 2
+        "0 4px 12px rgba(0,0,0,0.5)",            // 3
+        "0 6px 20px rgba(0,0,0,0.6)",            // 4
+        "0 8px 28px rgba(0,0,0,0.6)",            // 5
+        "0 12px 36px rgba(0,0,0,0.7)",           // 6
+        "0 16px 48px rgba(0,0,0,0.7)",           // 7
+        "0 20px 60px rgba(0,0,0,0.8)",           // 8
+        "0 24px 72px rgba(0,0,0,0.8)",           // 9
+        "0 28px 84px rgba(0,0,0,0.8)",           // 10
+        "0 32px 96px rgba(0,0,0,0.85)",          // 11
+        "0 36px 108px rgba(0,0,0,0.85)",         // 12
+        "0 40px 120px rgba(0,0,0,0.9)",          // 13
+        "0 44px 132px rgba(0,0,0,0.9)",          // 14
+        "0 48px 144px rgba(0,0,0,0.9)",          // 15
+        "0 52px 156px rgba(0,0,0,0.92)",         // 16
+        "0 56px 168px rgba(0,0,0,0.92)",         // 17
+        "0 60px 180px rgba(0,0,0,0.94)",         // 18
+        "0 64px 192px rgba(0,0,0,0.94)",         // 19
+        "0 68px 204px rgba(0,0,0,0.95)",         // 20
+        "0 72px 216px rgba(0,0,0,0.95)",         // 21
+        "0 76px 228px rgba(0,0,0,0.96)",         // 22
+        "0 80px 240px rgba(0,0,0,0.96)",         // 23
+        "0 84px 252px rgba(0,0,0,0.97)"          // 24
+    }
         }
     };
 }

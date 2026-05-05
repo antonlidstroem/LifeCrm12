@@ -91,6 +91,6 @@
 body.mud-dialog-open {
     overflow: hidden;
     /* iOS Safari needs this too */
-    position: fixed;
+    /*position: fixed;*/
     width: 100%;
 }

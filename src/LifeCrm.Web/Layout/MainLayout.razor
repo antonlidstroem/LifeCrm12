@@ -17,6 +17,14 @@
 @inject ISnackbar Snackbar
 @inject AuthApiClient AuthClient
 
+<MudThemeProvider Theme="_theme" IsDarkMode="true" />
+<MudPopoverProvider />
+<MudDialogProvider FullWidth="true"
+                   MaxWidth="MaxWidth.Small"
+                   CloseOnEscapeKey="true"
+                   BackdropClick="false" />
+<MudSnackbarProvider />
+
 <div class="lc-shell @(_drawerOpen ? "lc-shell--open" : "lc-shell--collapsed")">
 
     @* ── Sidebar (desktop) ───────────────────────────────────────────────── *@
@@ -285,13 +293,7 @@
     }
 </div>
 
-<MudThemeProvider Theme="_theme" IsDarkMode="true" />
-<MudPopoverProvider />
-<MudDialogProvider FullWidth="true"
-                   MaxWidth="MaxWidth.Small"
-                   CloseOnEscapeKey="true"
-                   BackdropClick="true" />
-<MudSnackbarProvider />
+
 
 @code {
     private readonly MudTheme _theme = LifeCrmTheme.Create();
